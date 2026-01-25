@@ -1,0 +1,73 @@
+package valueobjects
+
+import (
+	"strings"
+
+	"github.com/rafaelblt/go-auth/internal/domain/shared/errors"
+)
+
+type Email struct {
+	value string
+}
+
+var ErrEmailEmpty = errors.NewDomainError("EMAIL_EMPTY", "The email is empty.")
+var ErrEmailInvalidFormat = errors.NewDomainError("EMAIL_INVALID_FORMAT", "The email is invalid.")
+
+func NewEmail(email string) (Email, error) {
+	normalized := normalize(email)
+
+	if normalized == "" {
+		return Email{}, ErrEmailEmpty
+	}
+
+	if hasValidFormat(normalized) {
+		return Email{value: normalized}, nil 
+	}
+
+	return Email{}, ErrEmailInvalidFormat
+}
+
+func ValidateEmail(email string) []errors.DomainError {
+	normalized := normalize(email)
+
+	var errs []errors.DomainError
+
+	if normalized == "" {
+		errs = append(errs, ErrEmailEmpty)
+		return errs
+	}
+	if !hasValidFormat(normalized) {
+		errs = append(errs, ErrEmailInvalidFormat)
+	}
+
+	return errs
+}
+
+func normalize(raw string) string {
+	return strings.TrimSpace(strings.ToLower(raw))
+}
+
+func hasValidFormat(email string) bool {
+	if email == "" {
+		return false // empty
+	}
+	if strings.Contains(email, " ") {
+		return false // email contains spaces
+	}
+	at := strings.IndexByte(email, '@')
+	if at <= 0 || at != strings.LastIndex(email, "@") || at == len(email)-1 {
+		return false // invalid '@' placement
+	}
+	domain := email[at+1:]
+	if domain == "" ||
+		strings.HasPrefix(domain, ".") ||
+		strings.HasSuffix(domain, ".") ||
+		!strings.Contains(domain, ".") {
+		return false // invalid domain
+	}
+	return true
+}
+
+func (e Email) String() string {
+	return e.value
+}
