@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run All Tests",
+			"type": "shell",
+			"command": "go test ./...",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Run All Tests (gotestsum)",
+			"type": "shell",
+			"command": "gotestsum --format dots-v2 --hide-summary output",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}
