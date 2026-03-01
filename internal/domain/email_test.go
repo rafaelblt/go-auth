@@ -92,7 +92,7 @@ func TestValidateEmail_ShouldReturnExpectedErrors(t *testing.T) {
 	}
 }
 
-func TestValidateEmail_ShouldReturnNil_WhenInputIsValid(t *testing.T) {
+func TestValidateEmail_ShouldReturnEmpty_WhenInputIsValid(t *testing.T) {
 	for _, input := range validEmails {
 		t.Run(input, func(t *testing.T) {
 			errs := ValidateEmail(input)
