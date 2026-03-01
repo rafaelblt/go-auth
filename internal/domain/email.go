@@ -12,7 +12,7 @@ var ErrEmailEmpty = NewDomainError("EMAIL_EMPTY", "the email is empty")
 var ErrEmailInvalidFormat = NewDomainError("EMAIL_INVALID_FORMAT", "the email is invalid")
 
 func NewEmail(email string) (Email, error) {
-	normalized := normalize(email)
+	normalized := normalizeEmail(email)
 
 	if normalized == "" {
 		return Email{}, ErrEmailEmpty
@@ -26,7 +26,7 @@ func NewEmail(email string) (Email, error) {
 }
 
 func ValidateEmail(email string) []DomainError {
-	normalized := normalize(email)
+	normalized := normalizeEmail(email)
 
 	var errs []DomainError
 
@@ -41,7 +41,7 @@ func ValidateEmail(email string) []DomainError {
 	return errs
 }
 
-func normalize(raw string) string {
+func normalizeEmail(raw string) string {
 	return strings.TrimSpace(strings.ToLower(raw))
 }
 
