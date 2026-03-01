@@ -6,7 +6,7 @@ type Username struct {
 	value string
 }
 
-var ErrUsernameEmpty = NewDomainError("USERNAME_EMPTY", "The username is empty.")
+var ErrUsernameEmpty = NewDomainError("USERNAME_EMPTY", "the username is empty")
 
 func NewUsername(value string) (Username, error) {
 	normalized := normalizeUsername(value)
