@@ -48,34 +48,13 @@ func TestNewEmail_ShouldReturnInvalidFormatError_WhenInputIsInvalid(t *testing.T
 		desc  string
 		input string
 	}{
-		{
-			desc:  "email with spaces",
-			input: "spider man @ oscorp.com",
-		},
-		{
-			desc:  "email without @",
-			input: "doctor-strange.magic.io",
-		},
-		{
-			desc:  "email with @ at the end",
-			input: "barry-allen@starlab@",
-		},
-		{
-			desc:  "email with @ at the beginning",
-			input: "@robin@batmail.com",
-		},
-		{
-			desc:  "domain without dot",
-			input: "batman@batmail",
-		},
-		{
-			desc:  "domain with dot at the end",
-			input: "superman@super.net.",
-		},
-		{
-			desc:  "domain with dot at the beginning",
-			input: "odin@.asgard.net",
-		},
+		{desc: "email with spaces", input: "spider man @ oscorp.com"},
+		{desc: "email without @", input: "doctor-strange.magic.io"},
+		{desc: "email with @ at the end", input: "barry-allen@starlab@"},
+		{desc: "email with @ at the beginning", input: "@robin@batmail.com"},
+		{desc: "domain without dot", input: "batman@batmail"},
+		{desc: "domain with dot at the end", input: "superman@super.net."},
+		{desc: "domain with dot at the beginning", input: "odin@.asgard.net"},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -94,13 +73,13 @@ func TestValidateEmail_ShouldReturnExpectedErrors(t *testing.T) {
 		expected []DomainError
 	}{
 		{
-			desc:  "email empty",
-			input: "",
+			desc:     "email empty",
+			input:    "",
 			expected: []DomainError{ErrEmailEmpty},
 		},
 		{
-			desc:  "email with invalid format",
-			input: "invalid",
+			desc:     "email with invalid format",
+			input:    "invalid",
 			expected: []DomainError{ErrEmailInvalidFormat},
 		},
 	}
