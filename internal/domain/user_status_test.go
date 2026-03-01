@@ -8,10 +8,10 @@ import (
 
 func TestIsActive_ShouldReturnTrue_WhenIsStatusActive(t *testing.T) {
 	testCases := []struct {
-		status Status
+		status UserStatus
 		expect bool
 	}{
-		{ status: StatusActive, expect: true },
+		{ status: UserStatusActive, expect: true },
 	}
 	for _, tC := range testCases {
 		t.Run(tC.status.String(), func(t *testing.T) {
