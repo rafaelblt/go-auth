@@ -5,7 +5,7 @@ type HashedPassword struct {
 }
 
 var ErrHashedPasswordEmpty = NewDomainError(
-	"HASHED_PASSWORD_EMPTY", "The hashed password is empty.",
+	"HASHED_PASSWORD_EMPTY", "the hashed password is empty",
 )
 
 func NewHashedPassword(hash string) (HashedPassword, error) {

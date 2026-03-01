@@ -8,8 +8,8 @@ type Email struct {
 	value string
 }
 
-var ErrEmailEmpty = NewDomainError("EMAIL_EMPTY", "The email is empty.")
-var ErrEmailInvalidFormat = NewDomainError("EMAIL_INVALID_FORMAT", "The email is invalid.")
+var ErrEmailEmpty = NewDomainError("EMAIL_EMPTY", "the email is empty")
+var ErrEmailInvalidFormat = NewDomainError("EMAIL_INVALID_FORMAT", "the email is invalid")
 
 func NewEmail(email string) (Email, error) {
 	normalized := normalize(email)
