@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsActive_ShouldReturnTrue_WhenIsStatusActive(t *testing.T) {
+func TestIsActive_ShouldReturnTrue_WhenStatusIsActive(t *testing.T) {
 	testCases := []struct {
 		status UserStatus
 		expect bool
