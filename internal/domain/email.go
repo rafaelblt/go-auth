@@ -1,17 +1,15 @@
-package valueobjects
+package domain
 
 import (
 	"strings"
-
-	"github.com/rafaelblt/go-auth/internal/domain/shared/errors"
 )
 
 type Email struct {
 	value string
 }
 
-var ErrEmailEmpty = errors.NewDomainError("EMAIL_EMPTY", "The email is empty.")
-var ErrEmailInvalidFormat = errors.NewDomainError("EMAIL_INVALID_FORMAT", "The email is invalid.")
+var ErrEmailEmpty = NewDomainError("EMAIL_EMPTY", "The email is empty.")
+var ErrEmailInvalidFormat = NewDomainError("EMAIL_INVALID_FORMAT", "The email is invalid.")
 
 func NewEmail(email string) (Email, error) {
 	normalized := normalize(email)
@@ -27,10 +25,10 @@ func NewEmail(email string) (Email, error) {
 	return Email{}, ErrEmailInvalidFormat
 }
 
-func ValidateEmail(email string) []errors.DomainError {
+func ValidateEmail(email string) []DomainError {
 	normalized := normalize(email)
 
-	var errs []errors.DomainError
+	var errs []DomainError
 
 	if normalized == "" {
 		errs = append(errs, ErrEmailEmpty)

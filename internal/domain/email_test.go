@@ -1,9 +1,8 @@
-package valueobjects
+package domain
 
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain/shared/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,17 +91,17 @@ func TestValidateEmail_ShouldReturnExpectedErrors(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		input    string
-		expected []errors.DomainError
+		expected []DomainError
 	}{
 		{
 			desc:  "email empty",
 			input: "",
-			expected: []errors.DomainError{ErrEmailEmpty},
+			expected: []DomainError{ErrEmailEmpty},
 		},
 		{
 			desc:  "email with invalid format",
 			input: "invalid",
-			expected: []errors.DomainError{ErrEmailInvalidFormat},
+			expected: []DomainError{ErrEmailInvalidFormat},
 		},
 	}
 	for _, tC := range testCases {

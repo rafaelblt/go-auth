@@ -1,4 +1,4 @@
-package user
+package domain
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ func TestNewHashedPassword_ShouldReturnObject_WhenHashIsValid(t *testing.T) {
 	hash := "masd9of8j)!@Pkjfsda[fl[!@+_)ief[sdapfç]asd="
 	obj, err := NewHashedPassword(hash)
 	assert.NoError(t, err)
-	assert.Equal(t, hash, obj.String())
+	assert.Equal(t, hash, obj.Value())
 }
 
 func TestNewHashedPassword_ShouldReturnEmptyError_WhenHashIsEmpty(t *testing.T) {
@@ -18,5 +18,5 @@ func TestNewHashedPassword_ShouldReturnEmptyError_WhenHashIsEmpty(t *testing.T) 
 	obj, err := NewHashedPassword(hash)
 	assert.Error(t, err)
 	assert.EqualError(t, ErrHashedPasswordEmpty, err.Error())
-	assert.Empty(t, hash, obj.String())
+	assert.Empty(t, hash, obj.Value())
 }
