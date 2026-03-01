@@ -14,7 +14,7 @@ func TestNewHashedPassword_ShouldReturnObject_WhenHashIsValid(t *testing.T) {
 }
 
 func TestNewHashedPassword_ShouldReturnEmptyError_WhenHashIsEmpty(t *testing.T) {
-	hash := "a"
+	hash := ""
 	obj, err := NewHashedPassword(hash)
 	assert.Error(t, err)
 	assert.EqualError(t, ErrHashedPasswordEmpty, err.Error())
