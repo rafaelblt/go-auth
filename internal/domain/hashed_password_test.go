@@ -20,3 +20,13 @@ func TestNewHashedPassword_ShouldReturnEmptyError_WhenHashIsEmpty(t *testing.T) 
 	assert.EqualError(t, ErrHashedPasswordEmpty, err.Error())
 	assert.Empty(t, hash, obj.Value())
 }
+
+func TestHashedPasswordIsZero_ShouldReturnTrue_WhenIsZero(t *testing.T) {
+	zeroHash := HashedPassword{}
+	assert.True(t, zeroHash.IsZero())
+}
+
+func TestHashedPasswordIsZero_ShouldReturnFalse_WhenIsNotZero(t *testing.T) {
+	hash, _ := NewHashedPassword("hash")
+	assert.False(t, hash.IsZero())
+}

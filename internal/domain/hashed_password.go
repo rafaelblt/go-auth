@@ -15,6 +15,5 @@ func NewHashedPassword(hash string) (HashedPassword, error) {
 	return HashedPassword{value: hash}, nil
 }
 
-func (h HashedPassword) Value() string {
-	return h.value
-}
+func (h HashedPassword) Value() string { return h.value }
+func (h HashedPassword) IsZero() bool { return h.value == "" }
