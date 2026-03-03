@@ -1,19 +1,26 @@
 package domain
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+)
 
 type Username struct {
-	value string
+	stringVO
 }
 
-var ErrUsernameEmpty = NewDomainError("USERNAME_EMPTY", "the username is empty")
+var ErrUsernameEmpty = NewDomainError("USERNAME_EMPTY", "the username value cannot be empty")
 
 func NewUsername(value string) (Username, error) {
-	normalized := normalizeUsername(value)
-	if normalized == "" {
-		return Username{}, ErrUsernameEmpty
+	vo, err := newStringVO(value)
+	if err != nil {
+		if errors.Is(err, errStringVOEmpty) {
+			return Username{}, ErrUsernameEmpty
+		} else {
+			return Username{}, fmt.Errorf("unexpected stringVO error: %w", err)
+		}
 	}
-	return Username{value: normalized}, nil
+	return Username{vo}, nil
 }
 
 func ValidateUsername(value string) []DomainError {
@@ -29,9 +36,5 @@ func ValidateUsername(value string) []DomainError {
 }
 
 func normalizeUsername(value string) string {
-	return strings.TrimSpace(strings.ToLower(value))
-}
-
-func (u Username) String() string {
-	return u.value
+	return normalizeStringVO(value)
 }
