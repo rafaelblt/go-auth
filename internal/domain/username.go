@@ -9,7 +9,7 @@ type Username struct {
 	stringVO
 }
 
-var ErrUsernameEmpty = NewDomainError("USERNAME_EMPTY", "the username value cannot be empty")
+var ErrUsernameEmpty = errors.New("the username value cannot be empty")
 
 func NewUsername(value string) (Username, error) {
 	vo, err := newStringVO(value)
@@ -23,10 +23,10 @@ func NewUsername(value string) (Username, error) {
 	return Username{vo}, nil
 }
 
-func ValidateUsername(value string) []DomainError {
+func ValidateUsername(value string) []error {
 	normalized := normalizeUsername(value)
 
-	var errs []DomainError
+	var errs []error
 
 	if normalized == "" {
 		errs = append(errs, ErrUsernameEmpty)

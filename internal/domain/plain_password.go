@@ -1,12 +1,15 @@
 package domain
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type PlainPassword struct {
 	value string
 }
 
-var ErrPlainPasswordEmpty = NewDomainError("PLAIN_PASSWORD_EMPTY", "the plain password is empty")
+var ErrPlainPasswordEmpty = errors.New("the plain password is empty")
 
 func NewPlainPassword(value string) (PlainPassword, error) {
 	normalized := normalizePlainPassword(value)
@@ -16,10 +19,10 @@ func NewPlainPassword(value string) (PlainPassword, error) {
 	return PlainPassword{value: normalized}, nil
 }
 
-func ValidatePlainPassword(value string) []DomainError {
+func ValidatePlainPassword(value string) []error {
 	normalized := normalizePlainPassword(value)
 
-	var errs []DomainError
+	var errs []error
 
 	if normalized == "" {
 		errs = append(errs, ErrPlainPasswordEmpty)

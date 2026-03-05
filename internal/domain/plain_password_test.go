@@ -35,12 +35,12 @@ func TestValidatePlainPassword_ShouldReturnExpectedErrors(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		input    string
-		expected []DomainError
+		expected []error
 	}{
 		{
 			desc:     "password empty",
 			input:    "",
-			expected: []DomainError{ErrPlainPasswordEmpty},
+			expected: []error{ErrPlainPasswordEmpty},
 		},
 	}
 	for _, tC := range testCases {

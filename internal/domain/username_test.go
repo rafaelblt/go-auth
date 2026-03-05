@@ -35,12 +35,12 @@ func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		input    string
-		expected []DomainError
+		expected []error
 	}{
 		{
 			desc:     "username empty",
 			input:    "",
-			expected: []DomainError{ErrUsernameEmpty},
+			expected: []error{ErrUsernameEmpty},
 		},
 	}
 	for _, tC := range testCases {
