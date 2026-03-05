@@ -1,8 +1,9 @@
-package domain
+package domain_test
 
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +26,7 @@ var validEmails = []string{
 func TestNewEmail_ShouldReturnEmail_WhenInputIsValid(t *testing.T) {
 	for _, input := range validEmails {
 		t.Run(input, func(t *testing.T) {
-			email, err := NewEmail(input)
+			email, err := domain.NewEmail(input)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, email)
 			assert.Equal(t, input, email.String())
@@ -36,11 +37,11 @@ func TestNewEmail_ShouldReturnEmail_WhenInputIsValid(t *testing.T) {
 func TestNewEmail_ShouldReturnEmptyError_WhenInputIsEmpty(t *testing.T) {
 	input := ""
 
-	email, err := NewEmail(input)
+	email, err := domain.NewEmail(input)
 
 	assert.Empty(t, email)
 	assert.Error(t, err)
-	assert.EqualError(t, err, ErrEmailEmpty.Error())
+	assert.EqualError(t, err, domain.ErrEmailEmpty.Error())
 }
 
 func TestNewEmail_ShouldReturnInvalidFormatError_WhenInputIsInvalid(t *testing.T) {
@@ -58,10 +59,10 @@ func TestNewEmail_ShouldReturnInvalidFormatError_WhenInputIsInvalid(t *testing.T
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			email, err := NewEmail(tC.input)
+			email, err := domain.NewEmail(tC.input)
 			assert.Empty(t, email)
 			assert.Error(t, err)
-			assert.EqualError(t, err, ErrEmailInvalidFormat.Error())
+			assert.EqualError(t, err, domain.ErrEmailInvalidFormat.Error())
 		})
 	}
 }
@@ -70,22 +71,22 @@ func TestValidateEmail_ShouldReturnExpectedErrors(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		input    string
-		expected []DomainError
+		expected []error
 	}{
 		{
 			desc:     "email empty",
 			input:    "",
-			expected: []DomainError{ErrEmailEmpty},
+			expected: []error{domain.ErrEmailEmpty},
 		},
 		{
 			desc:     "email with invalid format",
 			input:    "invalid",
-			expected: []DomainError{ErrEmailInvalidFormat},
+			expected: []error{domain.ErrEmailInvalidFormat},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			errs := ValidateEmail(tC.input)
+			errs := domain.ValidateEmail(tC.input)
 			assert.NotEmpty(t, errs)
 			assert.Equal(t, tC.expected, errs)
 		})
@@ -95,7 +96,7 @@ func TestValidateEmail_ShouldReturnExpectedErrors(t *testing.T) {
 func TestValidateEmail_ShouldReturnEmpty_WhenInputIsValid(t *testing.T) {
 	for _, input := range validEmails {
 		t.Run(input, func(t *testing.T) {
-			errs := ValidateEmail(input)
+			errs := domain.ValidateEmail(input)
 			assert.Empty(t, errs)
 		})
 	}
