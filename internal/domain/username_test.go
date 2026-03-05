@@ -1,8 +1,9 @@
-package domain
+package domain_test
 
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,7 +14,7 @@ var validUsernames = []string{
 func TestNewUsername_ShouldReturnUsername_WhenInputIsValid(t *testing.T) {
 	for _, input := range validUsernames {
 		t.Run(input, func(t *testing.T) {
-			username, err := NewUsername(input)
+			username, err := domain.NewUsername(input)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, username)
 			assert.Equal(t, input, username.String())
@@ -24,11 +25,11 @@ func TestNewUsername_ShouldReturnUsername_WhenInputIsValid(t *testing.T) {
 func TestNewUsername_ShouldReturnEmptyError_WhenInputIsEmpty(t *testing.T) {
 	input := ""
 
-	username, err := NewUsername(input)
+	username, err := domain.NewUsername(input)
 
 	assert.Empty(t, username)
 	assert.Error(t, err)
-	assert.EqualError(t, err, ErrUsernameEmpty.Error())
+	assert.EqualError(t, err, domain.ErrUsernameEmpty.Error())
 }
 
 func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
@@ -40,12 +41,12 @@ func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
 		{
 			desc:     "username empty",
 			input:    "",
-			expected: []error{ErrUsernameEmpty},
+			expected: []error{domain.ErrUsernameEmpty},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			errs := ValidateUsername(tC.input)
+			errs := domain.ValidateUsername(tC.input)
 			assert.NotEmpty(t, errs)
 			assert.Equal(t, tC.expected, errs)
 		})
@@ -55,7 +56,7 @@ func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
 func TestValidateUsername_ShouldReturnEmpty_WhenInputIsValid(t *testing.T) {
 	for _, input := range validUsernames {
 		t.Run(input, func(t *testing.T) {
-			errs := ValidateUsername(input)
+			errs := domain.ValidateUsername(input)
 			assert.Empty(t, errs)
 		})
 	}
