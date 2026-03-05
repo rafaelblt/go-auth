@@ -12,6 +12,9 @@ type UserID struct {
 	EntityID
 }
 
+type CredentialID struct {
+	EntityID
+}
 
 func newEntityID() EntityID {
 	value := uuid.New()
@@ -19,5 +22,7 @@ func newEntityID() EntityID {
 }
 
 func (id EntityID) Value() uuid.UUID { return id.value }
+func (id EntityID) IsZero() bool { return id.value == uuid.Nil }
 
 func NewUserID() UserID { return UserID{newEntityID()} }
+func NewCredentialID() CredentialID { return CredentialID{newEntityID()} }
