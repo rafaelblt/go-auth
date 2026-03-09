@@ -9,12 +9,21 @@ type PlainPassword struct {
 	value string
 }
 
-var ErrPlainPasswordEmpty = errors.New("the plain password is empty")
+var ErrPlainPasswordTooShort = errors.New("the plain password is too short")
+var ErrPlainPasswordTooLong = errors.New("the plain password is too long")
+
+var (
+	PlainPasswordMaxLen = 32
+	PlainPasswordMinLen = 8
+)
 
 func NewPlainPassword(value string) (PlainPassword, error) {
 	normalized := normalizePlainPassword(value)
-	if normalized == "" {
-		return PlainPassword{}, ErrPlainPasswordEmpty
+	if len(normalized) < PlainPasswordMinLen {
+		return PlainPassword{}, ErrPlainPasswordTooShort
+	}
+	if len(normalized) > PlainPasswordMaxLen {
+		return PlainPassword{}, ErrPlainPasswordTooLong
 	}
 	return PlainPassword{value: normalized}, nil
 }
@@ -24,8 +33,11 @@ func ValidatePlainPassword(value string) []error {
 
 	var errs []error
 
-	if normalized == "" {
-		errs = append(errs, ErrPlainPasswordEmpty)
+	if len(normalized) < PlainPasswordMinLen {
+		errs = append(errs, ErrPlainPasswordTooShort)
+	}
+	if len(normalized) > PlainPasswordMaxLen {
+		errs = append(errs, ErrPlainPasswordTooLong)
 	}
 
 	return errs
@@ -36,5 +48,9 @@ func normalizePlainPassword(value string) string {
 }
 
 func (p PlainPassword) String() string {
+	return p.value
+}
+
+func (p PlainPassword) Value() string {
 	return p.value
 }

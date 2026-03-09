@@ -9,16 +9,26 @@ type Username struct {
 	stringVO
 }
 
-var ErrUsernameEmpty = errors.New("the username value cannot be empty")
+var ErrUsernameTooLong = errors.New("the username value is too long")
+var ErrUsernameTooShort = errors.New("the username value is too short")
+
+var UsernameMinLen = 3
+var UsernameMaxLen = 15
 
 func NewUsername(value string) (Username, error) {
 	vo, err := newStringVO(value)
 	if err != nil {
 		if errors.Is(err, errStringVOEmpty) {
-			return Username{}, ErrUsernameEmpty
+			return Username{}, ErrUsernameTooShort
 		} else {
 			return Username{}, fmt.Errorf("unexpected stringVO error: %w", err)
 		}
+	}
+	if len(vo.value) < UsernameMinLen {
+		return Username{}, ErrUsernameTooShort
+	}
+	if len(vo.value) > UsernameMaxLen {
+		return Username{}, ErrUsernameTooLong
 	}
 	return Username{vo}, nil
 }
@@ -28,8 +38,11 @@ func ValidateUsername(value string) []error {
 
 	var errs []error
 
-	if normalized == "" {
-		errs = append(errs, ErrUsernameEmpty)
+	if len(normalized) < UsernameMinLen {
+		errs = append(errs, ErrUsernameTooShort)
+	}
+	if len(normalized) > UsernameMaxLen {
+		errs = append(errs, ErrUsernameTooLong)
 	}
 
 	return errs

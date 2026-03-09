@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
@@ -22,14 +23,35 @@ func TestNewPlainPassword_ShouldReturnPlainPassword_WhenInputIsValid(t *testing.
 	}
 }
 
-func TestNewPlainPassword_ShouldReturnEmptyError_WhenInputIsEmpty(t *testing.T) {
-	input := ""
-
-	username, err := domain.NewPlainPassword(input)
-
-	assert.Empty(t, username)
-	assert.Error(t, err)
-	assert.EqualError(t, err, domain.ErrPlainPasswordEmpty.Error())
+func TestNewPlainPassword_ShouldReturnError_WhenInputIsInvalid(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		input    string
+		expected error
+	}{
+		{
+			desc:     "password empty",
+			input:    "",
+			expected: domain.ErrPlainPasswordTooShort,
+		},
+		{
+			desc:     "password too short",
+			input:    "123",
+			expected: domain.ErrPlainPasswordTooShort,
+		},
+		{
+			desc:     "password too long",
+			input:    strings.Repeat("a", domain.PlainPasswordMaxLen+1),
+			expected: domain.ErrPlainPasswordTooLong,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			username, err := domain.NewPlainPassword(tC.input)
+			assert.Zero(t, username)
+			assert.ErrorIs(t, err, tC.expected)
+		})
+	}
 }
 
 func TestValidatePlainPassword_ShouldReturnExpectedErrors(t *testing.T) {
@@ -41,7 +63,17 @@ func TestValidatePlainPassword_ShouldReturnExpectedErrors(t *testing.T) {
 		{
 			desc:     "password empty",
 			input:    "",
-			expected: []error{domain.ErrPlainPasswordEmpty},
+			expected: []error{domain.ErrPlainPasswordTooShort},
+		},
+		{
+			desc:     "password too short",
+			input:    "123",
+			expected: []error{domain.ErrPlainPasswordTooShort},
+		},
+		{
+			desc:     "password too long",
+			input:    strings.Repeat("a", domain.PlainPasswordMaxLen+1),
+			expected: []error{domain.ErrPlainPasswordTooLong},
 		},
 	}
 	for _, tC := range testCases {

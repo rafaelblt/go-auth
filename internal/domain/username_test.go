@@ -1,10 +1,12 @@
 package domain_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var validUsernames = []string{
@@ -15,21 +17,42 @@ func TestNewUsername_ShouldReturnUsername_WhenInputIsValid(t *testing.T) {
 	for _, input := range validUsernames {
 		t.Run(input, func(t *testing.T) {
 			username, err := domain.NewUsername(input)
-			assert.NoError(t, err)
-			assert.NotEmpty(t, username)
+			require.NoError(t, err)
+			require.NotZero(t, username)
 			assert.Equal(t, input, username.String())
 		})
 	}
 }
 
-func TestNewUsername_ShouldReturnEmptyError_WhenInputIsEmpty(t *testing.T) {
-	input := ""
-
-	username, err := domain.NewUsername(input)
-
-	assert.Empty(t, username)
-	assert.Error(t, err)
-	assert.EqualError(t, err, domain.ErrUsernameEmpty.Error())
+func TestNewUsername_ShouldReturnError_WhenInputIsInvalid(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		input    string
+		expected error
+	}{
+		{
+			desc:     "username empty",
+			input:    "",
+			expected: domain.ErrUsernameTooShort,
+		},
+		{
+			desc:     "username too short",
+			input:    "x",
+			expected: domain.ErrUsernameTooShort,
+		},
+		{
+			desc:     "username too long",
+			input:    strings.Repeat("a", domain.UsernameMaxLen+1),
+			expected: domain.ErrUsernameTooLong,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			username, err := domain.NewUsername(tC.input)
+			assert.Zero(t, username)
+			assert.ErrorIs(t, err, tC.expected)
+		})
+	}
 }
 
 func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
@@ -41,7 +64,17 @@ func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
 		{
 			desc:     "username empty",
 			input:    "",
-			expected: []error{domain.ErrUsernameEmpty},
+			expected: []error{domain.ErrUsernameTooShort},
+		},
+		{
+			desc:     "username too short",
+			input:    "",
+			expected: []error{domain.ErrUsernameTooShort},
+		},
+		{
+			desc:     "username too long",
+			input:    strings.Repeat("a", domain.UsernameMaxLen+1),
+			expected: []error{domain.ErrUsernameTooLong},
 		},
 	}
 	for _, tC := range testCases {
