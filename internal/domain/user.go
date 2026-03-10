@@ -72,3 +72,15 @@ func (u User) UpdatedAt() time.Time { return u.updatedAt }
 func (u User) IsZero() bool {
 	return u.id.IsZero() || u.username.IsZero()
 }
+
+func (u *User) ChangeUsername(newUsername Username, updatedAt time.Time) error {
+	if newUsername.IsZero() {
+		return errors.New("new username cannot be zero")
+	}
+	if updatedAt.Before(u.createdAt) {
+		return errors.New("updated at cannot be before created at")
+	}
+	u.username = newUsername
+	u.updatedAt = updatedAt
+	return nil
+}
