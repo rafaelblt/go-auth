@@ -69,3 +69,6 @@ func (u User) Username() Username   { return u.username }
 func (u User) Status() UserStatus   { return u.status }
 func (u User) CreatedAt() time.Time { return u.createdAt }
 func (u User) UpdatedAt() time.Time { return u.updatedAt }
+func (u User) IsZero() bool {
+	return u.id.IsZero() || u.username.IsZero()
+}
