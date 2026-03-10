@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -8,8 +9,8 @@ type Email struct {
 	value string
 }
 
-var ErrEmailEmpty = NewDomainError("EMAIL_EMPTY", "the email is empty")
-var ErrEmailInvalidFormat = NewDomainError("EMAIL_INVALID_FORMAT", "the email is invalid")
+var ErrEmailEmpty = errors.New("the email is empty")
+var ErrEmailInvalidFormat = errors.New("the email format is invalid")
 
 func NewEmail(email string) (Email, error) {
 	normalized := normalizeEmail(email)
@@ -25,10 +26,10 @@ func NewEmail(email string) (Email, error) {
 	return Email{}, ErrEmailInvalidFormat
 }
 
-func ValidateEmail(email string) []DomainError {
+func ValidateEmail(email string) []error {
 	normalized := normalizeEmail(email)
 
-	var errs []DomainError
+	var errs []error
 
 	if normalized == "" {
 		errs = append(errs, ErrEmailEmpty)
