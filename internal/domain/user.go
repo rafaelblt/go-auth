@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"time"
 )
 
@@ -10,6 +11,14 @@ type User struct {
 	status    UserStatus
 	createdAt time.Time
 	updatedAt time.Time
+}
+
+type UserRestoreParams struct {
+	ID        UserID
+	Username  Username
+	Status    UserStatus
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func NewUserWithPassword(
@@ -29,7 +38,7 @@ func NewUserWithPassword(
 	if err != nil {
 		return nil, nil, err
 	}
-	user :=  &User{
+	user := &User{
 		id:        userID,
 		username:  username,
 		status:    UserStatusActive,
@@ -37,6 +46,22 @@ func NewUserWithPassword(
 		updatedAt: createdAt,
 	}
 	return user, credentials, nil
+}
+
+func RestoreUser(params UserRestoreParams) (*User, error) {
+	if params.ID.IsZero() {
+		return nil, errors.New("user id cannot be zero")
+	}
+	if params.Username.IsZero() {
+		return nil, errors.New("username cannot be zero")
+	}
+	return &User{
+		id:        params.ID,
+		username:  params.Username,
+		status:    params.Status,
+		createdAt: params.CreatedAt,
+		updatedAt: params.UpdatedAt,
+	}, nil
 }
 
 func (u User) ID() UserID           { return u.id }
