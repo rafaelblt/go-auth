@@ -5,21 +5,41 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewHashedPassword_ShouldReturnObject_WhenHashIsValid(t *testing.T) {
-	hash := "masd9of8j)!@Pkjfsda[fl[!@+_)ief[sdapfç]asd="
-	obj, err := domain.NewHashedPassword(hash)
-	assert.NoError(t, err)
-	assert.Equal(t, hash, obj.Value())
-}
-
-func TestNewHashedPassword_ShouldReturnEmptyError_WhenHashIsEmpty(t *testing.T) {
-	hash := ""
-	obj, err := domain.NewHashedPassword(hash)
-	assert.Error(t, err)
-	assert.EqualError(t, domain.ErrHashedPasswordEmpty, err.Error())
-	assert.Empty(t, hash, obj.Value())
+func TestNewHashedPassword(t *testing.T) {
+	testCases := []struct {
+		desc        string
+		hash        string
+		isValid     bool
+		expectedErr error
+	}{
+		{
+			desc:    "valid hash",
+			hash:    "masd9of8j)!@Pkjfsda[fl[!@+_)ief[sdapfç]asd=",
+			isValid: true,
+		},
+		{
+			desc:        "empty hash value",
+			hash:        "",
+			isValid:     false,
+			expectedErr: domain.ErrHashedPasswordEmpty,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			hashedpwd, err := domain.NewHashedPassword(tC.hash)
+			if tC.isValid {
+				require.NoError(t, err)
+				assert.Equal(t, tC.hash, hashedpwd.Value())
+			} else {
+				require.Error(t, err)
+				assert.Zero(t, hashedpwd)
+				assert.ErrorIs(t, err, tC.expectedErr)
+			}
+		})
+	}
 }
 
 func TestHashedPasswordIsZero_ShouldReturnTrue_WhenIsZero(t *testing.T) {
