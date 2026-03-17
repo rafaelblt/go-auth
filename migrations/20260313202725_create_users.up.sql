@@ -1,0 +1,7 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    username VARCHAR(15) UNIQUE NOT NULL,
+    status VARCHAR(10) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
