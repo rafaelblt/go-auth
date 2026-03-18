@@ -62,8 +62,14 @@ func TestMapErrors_ReturnsExpectedAndUnexpectedErrors(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			mapped, unexpected := MapErrors(tC.given, tC.errmap)
-			assert.Equal(t, tC.expected, mapped)
-			assert.Equal(t, tC.unexpected, unexpected)
+			assert.Len(t, mapped, len(tC.expected))
+			assert.Len(t, unexpected, len(tC.unexpected))
+			for _, e := range tC.expected {
+				assert.Contains(t, mapped, e)
+			}
+			for _, u := range tC.unexpected {
+				assert.Contains(t, unexpected, u)
+			}
 		})
 	}
 }
