@@ -1,0 +1,150 @@
+package domain_test
+
+import (
+	"testing"
+	"time"
+
+	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewAuthCredential(t *testing.T) {
+	userID := domain.NewUserID()
+	secret, err := domain.NewCredentialSecret("secret")
+	require.NoError(t, err)
+	testCases := []struct {
+		desc      string
+		params    domain.AuthCredentialsParams
+		expectErr bool
+	}{
+		{
+			desc:      "all params zero",
+			params:    domain.AuthCredentialsParams{},
+			expectErr: true,
+		},
+		{
+			desc: "user id zero",
+			params: domain.AuthCredentialsParams{
+				UserID:    domain.UserID{},
+				Kind:      domain.CredentialKindPassword,
+				Provider:  domain.CredentialProviderLocal,
+				Secret:    secret,
+				CreatedAt: time.Now().UTC(),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "kind zero",
+			params: domain.AuthCredentialsParams{
+				UserID:    userID,
+				Kind:      "",
+				Provider:  domain.CredentialProviderLocal,
+				Secret:    secret,
+				CreatedAt: time.Now().UTC(),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "provider zero",
+			params: domain.AuthCredentialsParams{
+				UserID:    userID,
+				Kind:      domain.CredentialKindPassword,
+				Provider:  domain.CredentialProvider{},
+				Secret:    secret,
+				CreatedAt: time.Now().UTC(),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "secret zero",
+			params: domain.AuthCredentialsParams{
+				UserID:    userID,
+				Kind:      domain.CredentialKindPassword,
+				Provider:  domain.CredentialProviderLocal,
+				Secret:    domain.CredentialSecret{},
+				CreatedAt: time.Now().UTC(),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "valid case",
+			params: domain.AuthCredentialsParams{
+				UserID:    userID,
+				Kind:      domain.CredentialKindPassword,
+				Provider:  domain.CredentialProviderLocal,
+				Secret:    secret,
+				CreatedAt: time.Now().UTC(),
+			},
+			expectErr: false,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			credential, err := domain.NewAuthCredential(tC.params)
+			if tC.expectErr {
+				assert.Error(t, err)
+				assert.Zero(t, credential)
+			} else {
+				require.NoError(t, err)
+				require.NotZero(t, credential)
+				assert.NotZero(t, credential.ID())
+				assert.Equal(t, credential.UserID(), tC.params.UserID)
+				assert.Equal(t, credential.Kind(), tC.params.Kind)
+				assert.Equal(t, credential.Provider(), tC.params.Provider)
+				assert.Equal(t, credential.Secret(), tC.params.Secret)
+				assert.Equal(t, credential.CreatedAt(), tC.params.CreatedAt)
+				assert.Equal(t, credential.UpdatedAt(), tC.params.CreatedAt)
+			}
+		})
+	}
+}
+
+func TestNewCredentialProvider(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		value     string
+		expectErr bool
+	}{
+		{desc: "empty value", value: "", expectErr: true},
+		{desc: "reserved provider", value: "local", expectErr: true},
+		{desc: "valid value", value: "github", expectErr: false},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			provider, err := domain.NewCredentialProvider(tC.value)
+			if tC.expectErr {
+				assert.Error(t, err)
+				assert.Zero(t, provider)
+			} else {
+				require.NoError(t, err)
+				require.NotZero(t, provider)
+				assert.Equal(t, provider.String(), tC.value)
+			}
+		})
+	}
+}
+
+func TestNewCredentialSecret(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		value     string
+		expectErr bool
+	}{
+		{desc: "empty value", value: "", expectErr: true},
+		{desc: "valid value", value: "secret", expectErr: false},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			secret, err := domain.NewCredentialSecret(tC.value)
+			if tC.expectErr {
+				assert.Error(t, err)
+				assert.Zero(t, secret)
+			} else {
+				require.NoError(t, err)
+				require.NotZero(t, secret)
+				assert.Equal(t, secret.Value(), tC.value)
+			}
+		})
+	}
+}
