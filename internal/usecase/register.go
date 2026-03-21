@@ -3,14 +3,15 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 )
 
 type Register struct {
 	userExists UserExistsChecker
-	userSaver  UserSaver
-	credSaver  UserCredentialsSaver
+	userWriter UserWriter
+	credWriter AuthCredentialWriter
 	hasher     PasswordHasher
 	clock      Clock
 }
@@ -26,8 +27,8 @@ type RegisterOutput struct {
 
 type RegisterConfig struct {
 	UserExistsChecker    UserExistsChecker
-	UserSaver            UserSaver
-	UserCredentialsSaver UserCredentialsSaver
+	UserWriter           UserWriter
+	AuthCredentialWriter AuthCredentialWriter
 	PasswordHasher       PasswordHasher
 	Clock                Clock
 }
@@ -44,16 +45,16 @@ var registerValidationMap = ErrorsMap{
 	domain.ErrPlainPasswordTooShort: ErrRegisterPasswordTooShort,
 	domain.ErrPlainPasswordTooLong:  ErrRegisterPasswordTooLong,
 }
- 
+
 func NewRegister(config RegisterConfig) (Register, error) {
 	if config.UserExistsChecker == nil {
 		return Register{}, errors.New("user exists checker cannot be nil")
 	}
-	if config.UserSaver == nil {
-		return Register{}, errors.New("user saver cannot be nil")
+	if config.UserWriter == nil {
+		return Register{}, errors.New("user writer cannot be nil")
 	}
-	if config.UserCredentialsSaver == nil {
-		return Register{}, errors.New("user credentials saver cannot be nil")
+	if config.AuthCredentialWriter == nil {
+		return Register{}, errors.New("auth credential saver cannot be nil")
 	}
 	if config.PasswordHasher == nil {
 		return Register{}, errors.New("password hasher cannot be nil")
@@ -61,48 +62,60 @@ func NewRegister(config RegisterConfig) (Register, error) {
 	if config.Clock == nil {
 		return Register{}, errors.New("clock cannot be nil")
 	}
-	return Register{
+	uc := Register{
 		userExists: config.UserExistsChecker,
-		userSaver:  config.UserSaver,
-		credSaver:  config.UserCredentialsSaver,
+		userWriter: config.UserWriter,
+		credWriter: config.AuthCredentialWriter,
 		hasher:     config.PasswordHasher,
 		clock:      config.Clock,
-	}, nil
+	}
+	return uc, nil
 }
 
 func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOutput, error) {
-	username, password, err := uc.validateFields(input.Username, input.Password)
+	err := uc.validateInput(input)
 	if err != nil {
 		return RegisterOutput{}, err
 	}
-	exists, err := uc.userExists.ExistsByUsername(ctx, username)
+
+	username := uc.convertUsername(input.Username)
+	password := uc.convertPassword(input.Password)
+
+	err = uc.checkUsernameExists(ctx, username)
 	if err != nil {
 		return RegisterOutput{}, err
 	}
-	if exists {
-		return RegisterOutput{}, ErrRegisterUsernameTaken
+
+	hashed, err := uc.hasher.Hash(password)
+	if err != nil {
+		return RegisterOutput{}, fmt.Errorf("password hasher failed: %w", err)
 	}
-	hashedPwd, err := uc.hasher.Hash(password)
+
+	now := uc.clock.UtcNow()
+
+	user, err := uc.createUser(ctx, domain.NewUserParams{
+		Username:  username,
+		CreatedAt: now,
+	})
 	if err != nil {
 		return RegisterOutput{}, err
 	}
-	user, credentials, err := domain.NewUserWithPassword(
-		username, hashedPwd, uc.clock.UtcNow(),
-	)
-	err = uc.userSaver.Save(ctx, user)
+
+	_, err = uc.createCredential(ctx, domain.AuthCredentialsParams{
+		UserID:    user.ID(),
+		Kind:      domain.CredentialKindPassword,
+		Provider:  domain.CredentialProviderLocal,
+		Secret:    hashed,
+		CreatedAt: now,
+	})
 	if err != nil {
 		return RegisterOutput{}, err
 	}
-	err = uc.credSaver.Save(ctx, credentials)
-	if err != nil {
-		return RegisterOutput{}, err
-	}
+
 	return RegisterOutput{User: user}, nil
 }
 
-func (uc Register) validateFields(
-	username string, password string,
-) (domain.Username, domain.PlainPassword, error) {
+func (uc Register) validateFields(username string, password string) (domain.Username, domain.PlainPassword, error) {
 	usernameErrs := domain.ValidateUsername(username)
 	passwordErrs := domain.ValidatePlainPassword(password)
 
@@ -129,4 +142,75 @@ func (uc Register) validateFields(
 	}
 
 	return domain.Username{}, domain.PlainPassword{}, err
+}
+
+func (uc Register) validateInput(input RegisterInput) error {
+	usernameErrs := domain.ValidateUsername(input.Username)
+	passwordErrs := domain.ValidatePlainPassword(input.Password)
+
+	allErrs := append(usernameErrs, passwordErrs...)
+	mappeds, unexpecteds := MapErrors(allErrs, registerValidationMap)
+
+	var err error = nil
+	if len(unexpecteds) > 0 {
+		err = errors.Join(unexpecteds...)
+	} else {
+		err = errors.Join(mappeds...)
+	}
+
+	return err
+}
+
+func (uc Register) convertUsername(username string) domain.Username {
+	converted, err := domain.NewUsername(username)
+	if err != nil {
+		panic(fmt.Sprintf("username here should be valid, but it contains an error: %v", err))
+	}
+	return converted
+}
+
+func (uc Register) convertPassword(password string) domain.PlainPassword {
+	converted, err := domain.NewPlainPassword(password)
+	if err != nil {
+		panic(fmt.Sprintf("plain password here should be valid, but it contains an error: %v", err))
+	}
+	return converted
+}
+
+func (uc Register) checkUsernameExists(ctx context.Context, username domain.Username) error {
+	exists, err := uc.userExists.ExistsByUsername(ctx, username)
+	if err != nil {
+		return fmt.Errorf("user exists checker failed: %w", err)
+	}
+	if exists {
+		return ErrRegisterUsernameTaken
+	}
+	return nil
+}
+
+func (uc Register) createUser(ctx context.Context, params domain.NewUserParams) (*domain.User, error) {
+	user, err := domain.NewUser(domain.NewUserParams{
+		Username:  params.Username,
+		CreatedAt: params.CreatedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("user creation failed: %w", err)
+	}
+	err = uc.userWriter.Save(ctx, user)
+	if err != nil {
+		return nil, fmt.Errorf("user writer save failed: %w", err)
+	}
+	return user, nil
+}
+
+func (uc Register) createCredential(ctx context.Context, params domain.AuthCredentialsParams) (*domain.AuthCredential, error) {
+	cred, err := domain.NewAuthCredential(params)
+	if err != nil {
+		return nil, fmt.Errorf("credential creation failed: %w", err)
+	}
+	err = uc.credWriter.Save(ctx, cred)
+	if err != nil {
+		return nil, fmt.Errorf("credential writer save failed: %w", err)
+	}
+	return cred, nil
 }

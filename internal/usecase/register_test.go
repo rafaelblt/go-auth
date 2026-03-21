@@ -18,8 +18,8 @@ func Ptr[T any](value T) *T { return &value }
 type RegisterTestHelper struct {
 	t                        *testing.T
 	FakeUserExistsChecker    *FakeUserExistsChecker
-	FakeUserSaver            *FakeUserSaver
-	FakeUserCredentialsSaver *FakeUserCredentialsSaver
+	FakeUserWriter           *FakeUserWriter
+	FakeAuthCredentialWriter *FakeAuthCredentialWriter
 	FakePasswordHasher       *FakePasswordHasher
 	FakeClock                *FakeClock
 }
@@ -28,8 +28,8 @@ func NewRegisterTestHelper(t *testing.T) RegisterTestHelper {
 	return RegisterTestHelper{
 		t:                        t,
 		FakeUserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-		FakeUserSaver:            Ptr(NewFakeUserSaver()),
-		FakeUserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+		FakeUserWriter:           Ptr(NewFakeUserWriter()),
+		FakeAuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 		FakePasswordHasher:       Ptr(NewFakePasswordHasher()),
 		FakeClock:                Ptr(NewFakeClock(time.Now().UTC())),
 	}
@@ -38,8 +38,8 @@ func (helper RegisterTestHelper) UseCase() usecase.Register {
 	helper.t.Helper()
 	uc, err := usecase.NewRegister(usecase.RegisterConfig{
 		UserExistsChecker:    helper.FakeUserExistsChecker,
-		UserSaver:            helper.FakeUserSaver,
-		UserCredentialsSaver: helper.FakeUserCredentialsSaver,
+		UserWriter:           helper.FakeUserWriter,
+		AuthCredentialWriter: helper.FakeAuthCredentialWriter,
 		PasswordHasher:       helper.FakePasswordHasher,
 		Clock:                helper.FakeClock,
 	})
@@ -76,8 +76,8 @@ func TestNewRegister(t *testing.T) {
 			desc: "valid case",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-				UserSaver:            Ptr(NewFakeUserSaver()),
-				UserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+				UserWriter:           Ptr(NewFakeUserWriter()),
+				AuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 				PasswordHasher:       Ptr(NewFakePasswordHasher()),
 				Clock:                Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -87,30 +87,30 @@ func TestNewRegister(t *testing.T) {
 			desc: "user exists checker nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    nil,
-				UserSaver:            Ptr(NewFakeUserSaver()),
-				UserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+				UserWriter:           Ptr(NewFakeUserWriter()),
+				AuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 				PasswordHasher:       Ptr(NewFakePasswordHasher()),
 				Clock:                Ptr(NewFakeClock(time.Now().UTC())),
 			},
 			expectErr: true,
 		},
 		{
-			desc: "user saver nil",
+			desc: "user writer nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-				UserSaver:            nil,
-				UserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+				UserWriter:           nil,
+				AuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 				PasswordHasher:       Ptr(NewFakePasswordHasher()),
 				Clock:                Ptr(NewFakeClock(time.Now().UTC())),
 			},
 			expectErr: true,
 		},
 		{
-			desc: "user credentials saver nil",
+			desc: "auth credential writer nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-				UserSaver:            Ptr(NewFakeUserSaver()),
-				UserCredentialsSaver: nil,
+				UserWriter:           Ptr(NewFakeUserWriter()),
+				AuthCredentialWriter: nil,
 				PasswordHasher:       Ptr(NewFakePasswordHasher()),
 				Clock:                Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -120,8 +120,8 @@ func TestNewRegister(t *testing.T) {
 			desc: "password hasher nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-				UserSaver:            Ptr(NewFakeUserSaver()),
-				UserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+				UserWriter:           Ptr(NewFakeUserWriter()),
+				AuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 				PasswordHasher:       nil,
 				Clock:                Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -131,8 +131,8 @@ func TestNewRegister(t *testing.T) {
 			desc: "clock nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker:    Ptr(NewFakeUserExistsChecker()),
-				UserSaver:            Ptr(NewFakeUserSaver()),
-				UserCredentialsSaver: Ptr(NewFakeUserCredentialsSaver()),
+				UserWriter:           Ptr(NewFakeUserWriter()),
+				AuthCredentialWriter: Ptr(NewFakeAuthCredentialWriter()),
 				PasswordHasher:       Ptr(NewFakePasswordHasher()),
 				Clock:                nil,
 			},
@@ -228,10 +228,8 @@ func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
 
 	username := helper.ValidUsername()
-
 	input := helper.ValidInput()
 	input.Username = username.String()
-
 	helper.FakeUserExistsChecker.Usernames.Add(username)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
@@ -258,22 +256,27 @@ func TestRegister_SavesNewUser(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	require.Len(t, helper.FakeUserSaver.SavedUsers, 1)
-	userSaved := helper.FakeUserSaver.SavedUsers[0]
+	require.Len(t, helper.FakeUserWriter.SavedUsers, 1)
+	userSaved := helper.FakeUserWriter.SavedUsers[0]
 	assert.Equal(t, input.Username, userSaved.Username().String())
 }
 
-func TestRegister_SavesNewUserCredentialsAndHashPassword(t *testing.T) {
+func TestRegister_SavesNewAuthCredentialAndHashPassword(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	input := helper.ValidInput()
+
 	password := helper.ValidPlainPassword()
-	expectedHash, err := helper.FakePasswordHasher.Hash(password)
+	expectedSecret, err := helper.FakePasswordHasher.Hash(password)
 	require.NoError(t, err)
+
+	input := usecase.RegisterInput{
+		Username: helper.ValidUsername().String(),
+		Password: password.String(),
+	}
 
 	_, err = helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	require.Len(t, helper.FakeUserCredentialsSaver.SavedCredentials, 1)
-	credentials := helper.FakeUserCredentialsSaver.SavedCredentials[0]
-	assert.Equal(t, expectedHash, credentials.Password().Hashed())
+	require.Len(t, helper.FakeAuthCredentialWriter.SavedCredentials, 1)
+	credential := helper.FakeAuthCredentialWriter.SavedCredentials[0]
+	assert.Equal(t, expectedSecret, credential.Secret())
 }

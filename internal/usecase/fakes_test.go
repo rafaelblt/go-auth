@@ -15,12 +15,12 @@ type FakePasswordHasher struct {
 func NewFakePasswordHasher() FakePasswordHasher {
 	return FakePasswordHasher{ReceivedPasswords: shared.NewSet[domain.PlainPassword]()}
 }
-func (hasher FakePasswordHasher) Hash(plain domain.PlainPassword) (domain.HashedPassword, error) {
+func (hasher FakePasswordHasher) Hash(plain domain.PlainPassword) (domain.CredentialSecret, error) {
 	hasher.ReceivedPasswords.Add(plain)
-	return domain.NewHashedPassword(fmt.Sprintf("hash <%s>", plain.Value()))
+	return domain.NewCredentialSecret(fmt.Sprintf("hash <%s>", plain.Value()))
 }
 func (hasher FakePasswordHasher) Verify(
-	plain domain.PlainPassword, hash domain.HashedPassword,
+	plain domain.PlainPassword, hash domain.CredentialSecret,
 ) (bool, error) {
 	expectedHash, _ := hasher.Hash(plain)
 	return hash.Value() == expectedHash.Value(), nil
@@ -55,18 +55,18 @@ func (checker FakeUserExistsChecker) ExistsByUsername(ctx context.Context, usern
 	return checker.Usernames.Contains(username), nil
 }
 
-type FakeUserSaver struct {
+type FakeUserWriter struct {
 	SavedUsers []*domain.User
 }
-func NewFakeUserSaver() FakeUserSaver {
-	return FakeUserSaver{SavedUsers: []*domain.User{}}
+func NewFakeUserWriter() FakeUserWriter {
+	return FakeUserWriter{SavedUsers: []*domain.User{}}
 }
-func (saver *FakeUserSaver) Save(ctx context.Context, user *domain.User) error {
-	saver.SavedUsers = append(saver.SavedUsers, user)
+func (writer *FakeUserWriter) Save(ctx context.Context, user *domain.User) error {
+	writer.SavedUsers = append(writer.SavedUsers, user)
 	return nil
 }
-func (saver FakeUserSaver) UsernameIsSaved(username domain.Username) bool {
-	for _, usr := range saver.SavedUsers {
+func (writer FakeUserWriter) UsernameIsSaved(username domain.Username) bool {
+	for _, usr := range writer.SavedUsers {
 		if usr.Username() == username {
 			return true
 		}
@@ -74,16 +74,16 @@ func (saver FakeUserSaver) UsernameIsSaved(username domain.Username) bool {
 	return false
 }
 
-type FakeUserCredentialsSaver struct {
-	SavedCredentials []*domain.UserCredentials
+type FakeAuthCredentialWriter struct {
+	SavedCredentials []*domain.AuthCredential
 }
-func NewFakeUserCredentialsSaver() FakeUserCredentialsSaver {
-	return FakeUserCredentialsSaver{SavedCredentials: []*domain.UserCredentials{}}
+func NewFakeAuthCredentialWriter() FakeAuthCredentialWriter {
+	return FakeAuthCredentialWriter{SavedCredentials: []*domain.AuthCredential{}}
 }
-func (saver *FakeUserCredentialsSaver) Save(
-	ctx context.Context, credentials *domain.UserCredentials,
+func (writer *FakeAuthCredentialWriter) Save(
+	ctx context.Context, credential *domain.AuthCredential,
 ) error {
-	saver.SavedCredentials = append(saver.SavedCredentials, credentials)
+	writer.SavedCredentials = append(writer.SavedCredentials, credential)
 	return nil
 }
 

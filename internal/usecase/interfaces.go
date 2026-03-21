@@ -11,21 +11,21 @@ type Clock interface {
 	UtcNow() time.Time
 }
 
-type UserFinder interface {
+type UserReader interface {
 	FindByID(context.Context, domain.UserID) (*domain.User, error)
 }
 type UserExistsChecker interface {
 	ExistsByUsername(context.Context, domain.Username) (bool, error)
 }
-type UserSaver interface {
+type UserWriter interface {
 	Save(context.Context, *domain.User) error
 }
 
-type UserCredentialsSaver interface {
-	Save(context.Context, *domain.UserCredentials) error
+type AuthCredentialWriter interface {
+	Save(context.Context, *domain.AuthCredential) error
 }
 
 type PasswordHasher interface {
-	Hash(domain.PlainPassword) (domain.HashedPassword, error)
-	Verify(domain.PlainPassword, domain.HashedPassword) (bool, error)
+	Hash(domain.PlainPassword) (domain.CredentialSecret, error)
+	Verify(domain.PlainPassword, domain.CredentialSecret) (bool, error)
 }
