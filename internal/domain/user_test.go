@@ -10,63 +10,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewUserWithPassword(t *testing.T) {
+func TestNewUser(t *testing.T) {
 	validUsername, err := domain.NewUsername("username")
-	require.NoError(t, err)
-	validHashedPwd, err := domain.NewHashedPassword("hash")
 	require.NoError(t, err)
 	testCases := []struct {
 		desc      string
-		username  domain.Username
-		hashedPwd domain.HashedPassword
-		createdAt time.Time
+		params    domain.NewUserParams
 		expectErr bool
 	}{
 		{
-			desc:      "valid case",
-			username:  validUsername,
-			hashedPwd: validHashedPwd,
-			createdAt: time.Now().UTC(),
+			desc: "valid case",
+			params: domain.NewUserParams{
+				Username:  validUsername,
+				CreatedAt: time.Now().UTC(),
+			},
 			expectErr: false,
 		},
 		{
-			desc:      "username zero",
-			username:  domain.Username{},
-			hashedPwd: validHashedPwd,
-			createdAt: time.Now().UTC(),
-			expectErr: true,
-		},
-		{
-			desc:      "hashed password zero",
-			username:  validUsername,
-			hashedPwd: domain.HashedPassword{},
-			createdAt: time.Now().UTC(),
+			desc: "username zero",
+			params: domain.NewUserParams{
+				Username:  domain.Username{},
+				CreatedAt: time.Now().UTC(),
+			},
 			expectErr: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			user, credentials, err := domain.NewUserWithPassword(
-				tC.username, tC.hashedPwd, tC.createdAt,
-			)
+			user, err := domain.NewUser(tC.params)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Nil(t, user)
-				assert.Nil(t, credentials)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, user)
-				require.NotNil(t, credentials)
-				// user
 				assert.NotZero(t, user.ID())
-				assert.Equal(t, tC.username, user.Username())
+				assert.Equal(t, tC.params.Username, user.Username())
 				assert.Equal(t, domain.UserStatusActive, user.Status())
-				assert.Equal(t, tC.createdAt, user.CreatedAt())
-				assert.Equal(t, tC.createdAt, user.UpdatedAt())
-				// credentials
-				assert.Equal(t, user.ID(), credentials.UserID())
-				assert.Equal(t, tC.hashedPwd, credentials.Password().Hashed())
-				assert.Equal(t, tC.createdAt, credentials.Password().CreatedAt())
+				assert.Equal(t, tC.params.CreatedAt, user.CreatedAt())
+				assert.Equal(t, tC.params.CreatedAt, user.UpdatedAt())
 			}
 		})
 	}

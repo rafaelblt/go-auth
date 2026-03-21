@@ -13,6 +13,11 @@ type User struct {
 	updatedAt time.Time
 }
 
+type NewUserParams struct {
+	Username  Username
+	CreatedAt time.Time
+}
+
 type UserRestoreParams struct {
 	ID        UserID
 	Username  Username
@@ -21,31 +26,19 @@ type UserRestoreParams struct {
 	UpdatedAt time.Time
 }
 
-func NewUserWithPassword(
-	username Username,
-	hashedPassword HashedPassword,
-	createdAt time.Time,
-) (*User, *UserCredentials, error) {
-	if username.IsZero() {
-		return nil, nil, ErrUsernameZero
-	}
-	password, err := NewPasswordCredential(hashedPassword, createdAt)
-	if err != nil {
-		return nil, nil, err
-	}
-	userID := NewUserID()
-	credentials, err := NewUserCredentialsWithPassword(userID, password)
-	if err != nil {
-		return nil, nil, err
+func NewUser(params NewUserParams) (*User, error) {
+	id := NewUserID()
+	if params.Username.IsZero() {
+		return nil, errors.New("user username cannot be zero")
 	}
 	user := &User{
-		id:        userID,
-		username:  username,
+		id:        id,
+		username:  params.Username,
 		status:    UserStatusActive,
-		createdAt: createdAt,
-		updatedAt: createdAt,
+		createdAt: params.CreatedAt,
+		updatedAt: params.CreatedAt,
 	}
-	return user, credentials, nil
+	return user, nil
 }
 
 func RestoreUser(params UserRestoreParams) (*User, error) {
@@ -69,9 +62,7 @@ func (u User) Username() Username   { return u.username }
 func (u User) Status() UserStatus   { return u.status }
 func (u User) CreatedAt() time.Time { return u.createdAt }
 func (u User) UpdatedAt() time.Time { return u.updatedAt }
-func (u User) IsZero() bool {
-	return u.id.IsZero() || u.username.IsZero()
-}
+func (u User) IsZero() bool         { return u.id.IsZero() }
 
 func (u *User) ChangeUsername(newUsername Username, updatedAt time.Time) error {
 	if newUsername.IsZero() {
