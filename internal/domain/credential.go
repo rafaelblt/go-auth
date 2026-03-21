@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type AuthCredential struct {
+type Credential struct {
 	id        CredentialID
 	userID    UserID
 	kind      CredentialKind
@@ -26,7 +26,7 @@ type CredentialProvider struct {
 type CredentialSecret struct {
 	value string
 }
-type AuthCredentialsParams struct {
+type NewCredentialParams struct {
 	UserID    UserID
 	Kind      CredentialKind
 	Provider  CredentialProvider
@@ -39,20 +39,20 @@ const (
 )
 var CredentialProviderLocal = CredentialProvider{value: "local"}
 
-func NewAuthCredential(params AuthCredentialsParams) (*AuthCredential, error) {
+func NewAuthCredential(params NewCredentialParams) (*Credential, error) {
 	if params.UserID.IsZero() {
-		return nil, errors.New("auth credential user id cannot be zero")
+		return nil, errors.New("credential user id cannot be zero")
 	}
 	if !params.Kind.IsValid() {
-		return nil, fmt.Errorf("auth credential kind '%v' is not valid", params.Kind)
+		return nil, fmt.Errorf("credential kind '%v' is not valid", params.Kind)
 	}
 	if params.Provider.IsZero() {
-		return nil, errors.New("auth credential provider cannot be zero")
+		return nil, errors.New("credential provider cannot be zero")
 	}
 	if params.Secret.IsZero() {
-		return nil, errors.New("auth credential secret cannot be zero")
+		return nil, errors.New("credential secret cannot be zero")
 	}
-	cred := &AuthCredential{
+	cred := &Credential{
 		id:        NewCredentialID(),
 		userID:    params.UserID,
 		kind:      params.Kind,
@@ -83,13 +83,13 @@ func NewCredentialSecret(value string) (CredentialSecret, error) {
 	return CredentialSecret{normalized}, nil
 }
 
-func (ac AuthCredential) ID() CredentialID             { return ac.id }
-func (ac AuthCredential) UserID() UserID               { return ac.userID }
-func (ac AuthCredential) Kind() CredentialKind         { return ac.kind }
-func (ac AuthCredential) Provider() CredentialProvider { return ac.provider }
-func (ac AuthCredential) Secret() CredentialSecret     { return ac.secret }
-func (ac AuthCredential) CreatedAt() time.Time         { return ac.createdAt }
-func (ac AuthCredential) UpdatedAt() time.Time         { return ac.updatedAt }
+func (c Credential) ID() CredentialID             { return c.id }
+func (c Credential) UserID() UserID               { return c.userID }
+func (c Credential) Kind() CredentialKind         { return c.kind }
+func (c Credential) Provider() CredentialProvider { return c.provider }
+func (c Credential) Secret() CredentialSecret     { return c.secret }
+func (c Credential) CreatedAt() time.Time         { return c.createdAt }
+func (c Credential) UpdatedAt() time.Time         { return c.updatedAt }
 
 func (k CredentialKind) String() string { return string(k) }
 func (k CredentialKind) IsValid() bool {

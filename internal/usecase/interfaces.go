@@ -21,8 +21,8 @@ type UserWriter interface {
 	Save(context.Context, *domain.User) error
 }
 
-type AuthCredentialWriter interface {
-	Save(context.Context, *domain.AuthCredential) error
+type CredentialWriter interface {
+	Save(context.Context, *domain.Credential) error
 }
 
 type PasswordHasher interface {

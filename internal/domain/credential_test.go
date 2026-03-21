@@ -9,23 +9,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewAuthCredential(t *testing.T) {
+func TestNewCredential(t *testing.T) {
 	userID := domain.NewUserID()
 	secret, err := domain.NewCredentialSecret("secret")
 	require.NoError(t, err)
 	testCases := []struct {
 		desc      string
-		params    domain.AuthCredentialsParams
+		params    domain.NewCredentialParams
 		expectErr bool
 	}{
 		{
 			desc:      "all params zero",
-			params:    domain.AuthCredentialsParams{},
+			params:    domain.NewCredentialParams{},
 			expectErr: true,
 		},
 		{
 			desc: "user id zero",
-			params: domain.AuthCredentialsParams{
+			params: domain.NewCredentialParams{
 				UserID:    domain.UserID{},
 				Kind:      domain.CredentialKindPassword,
 				Provider:  domain.CredentialProviderLocal,
@@ -36,7 +36,7 @@ func TestNewAuthCredential(t *testing.T) {
 		},
 		{
 			desc: "kind zero",
-			params: domain.AuthCredentialsParams{
+			params: domain.NewCredentialParams{
 				UserID:    userID,
 				Kind:      "",
 				Provider:  domain.CredentialProviderLocal,
@@ -47,7 +47,7 @@ func TestNewAuthCredential(t *testing.T) {
 		},
 		{
 			desc: "provider zero",
-			params: domain.AuthCredentialsParams{
+			params: domain.NewCredentialParams{
 				UserID:    userID,
 				Kind:      domain.CredentialKindPassword,
 				Provider:  domain.CredentialProvider{},
@@ -58,7 +58,7 @@ func TestNewAuthCredential(t *testing.T) {
 		},
 		{
 			desc: "secret zero",
-			params: domain.AuthCredentialsParams{
+			params: domain.NewCredentialParams{
 				UserID:    userID,
 				Kind:      domain.CredentialKindPassword,
 				Provider:  domain.CredentialProviderLocal,
@@ -69,7 +69,7 @@ func TestNewAuthCredential(t *testing.T) {
 		},
 		{
 			desc: "valid case",
-			params: domain.AuthCredentialsParams{
+			params: domain.NewCredentialParams{
 				UserID:    userID,
 				Kind:      domain.CredentialKindPassword,
 				Provider:  domain.CredentialProviderLocal,

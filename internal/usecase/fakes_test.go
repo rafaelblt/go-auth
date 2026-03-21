@@ -74,14 +74,14 @@ func (writer FakeUserWriter) UsernameIsSaved(username domain.Username) bool {
 	return false
 }
 
-type FakeAuthCredentialWriter struct {
-	SavedCredentials []*domain.AuthCredential
+type FakeCredentialWriter struct {
+	SavedCredentials []*domain.Credential
 }
-func NewFakeAuthCredentialWriter() FakeAuthCredentialWriter {
-	return FakeAuthCredentialWriter{SavedCredentials: []*domain.AuthCredential{}}
+func NewFakeCredentialWriter() FakeCredentialWriter {
+	return FakeCredentialWriter{SavedCredentials: []*domain.Credential{}}
 }
-func (writer *FakeAuthCredentialWriter) Save(
-	ctx context.Context, credential *domain.AuthCredential,
+func (writer *FakeCredentialWriter) Save(
+	ctx context.Context, credential *domain.Credential,
 ) error {
 	writer.SavedCredentials = append(writer.SavedCredentials, credential)
 	return nil

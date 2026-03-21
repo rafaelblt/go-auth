@@ -11,7 +11,7 @@ import (
 type Register struct {
 	userExists UserExistsChecker
 	userWriter UserWriter
-	credWriter AuthCredentialWriter
+	credWriter CredentialWriter
 	hasher     PasswordHasher
 	clock      Clock
 }
@@ -26,11 +26,11 @@ type RegisterOutput struct {
 }
 
 type RegisterConfig struct {
-	UserExistsChecker    UserExistsChecker
-	UserWriter           UserWriter
-	AuthCredentialWriter AuthCredentialWriter
-	PasswordHasher       PasswordHasher
-	Clock                Clock
+	UserExistsChecker UserExistsChecker
+	UserWriter        UserWriter
+	CredentialWriter  CredentialWriter
+	PasswordHasher    PasswordHasher
+	Clock             Clock
 }
 
 var ErrRegisterUsernameTooShort = errors.New("the provided username is too short")
@@ -53,8 +53,8 @@ func NewRegister(config RegisterConfig) (Register, error) {
 	if config.UserWriter == nil {
 		return Register{}, errors.New("user writer cannot be nil")
 	}
-	if config.AuthCredentialWriter == nil {
-		return Register{}, errors.New("auth credential saver cannot be nil")
+	if config.CredentialWriter == nil {
+		return Register{}, errors.New("credential writer cannot be nil")
 	}
 	if config.PasswordHasher == nil {
 		return Register{}, errors.New("password hasher cannot be nil")
@@ -65,7 +65,7 @@ func NewRegister(config RegisterConfig) (Register, error) {
 	uc := Register{
 		userExists: config.UserExistsChecker,
 		userWriter: config.UserWriter,
-		credWriter: config.AuthCredentialWriter,
+		credWriter: config.CredentialWriter,
 		hasher:     config.PasswordHasher,
 		clock:      config.Clock,
 	}
@@ -101,7 +101,7 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 		return RegisterOutput{}, err
 	}
 
-	_, err = uc.createCredential(ctx, domain.AuthCredentialsParams{
+	_, err = uc.createCredential(ctx, domain.NewCredentialParams{
 		UserID:    user.ID(),
 		Kind:      domain.CredentialKindPassword,
 		Provider:  domain.CredentialProviderLocal,
@@ -203,7 +203,7 @@ func (uc Register) createUser(ctx context.Context, params domain.NewUserParams) 
 	return user, nil
 }
 
-func (uc Register) createCredential(ctx context.Context, params domain.AuthCredentialsParams) (*domain.AuthCredential, error) {
+func (uc Register) createCredential(ctx context.Context, params domain.NewCredentialParams) (*domain.Credential, error) {
 	cred, err := domain.NewAuthCredential(params)
 	if err != nil {
 		return nil, fmt.Errorf("credential creation failed: %w", err)
