@@ -4,7 +4,7 @@
 		{
 			"label": "Run All Tests",
 			"type": "shell",
-			"command": "go test ./...",
+			"command": "go test ./... --cover",
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "test"
