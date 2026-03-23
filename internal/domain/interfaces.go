@@ -9,7 +9,3 @@ type UserRepository interface {
 	ExistsByUsername(Username) (bool, error)
 }
 
-type PasswordHasher interface {
-	Hash(PlainPassword) (HashedPassword, error)
-	Verify(PlainPassword, HashedPassword) (bool, error)
-}
