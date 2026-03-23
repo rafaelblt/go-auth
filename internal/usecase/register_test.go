@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ func Ptr[T any](value T) *T { return &value }
 type RegisterTestHelper struct {
 	t                     *testing.T
 	FakeUserExistsChecker *FakeUserExistsChecker
+	FakeUnitOfWork        *FakeUnitOfWork
 	FakeUserWriter        *FakeUserWriter
 	FakeCredentialWriter  *FakeCredentialWriter
 	FakePasswordHasher    *FakePasswordHasher
@@ -25,7 +27,7 @@ type RegisterTestHelper struct {
 }
 
 func NewRegisterTestHelper(t *testing.T) RegisterTestHelper {
-	return RegisterTestHelper{
+	helper := RegisterTestHelper{
 		t:                     t,
 		FakeUserExistsChecker: Ptr(NewFakeUserExistsChecker()),
 		FakeUserWriter:        Ptr(NewFakeUserWriter()),
@@ -33,13 +35,18 @@ func NewRegisterTestHelper(t *testing.T) RegisterTestHelper {
 		FakePasswordHasher:    Ptr(NewFakePasswordHasher()),
 		FakeClock:             Ptr(NewFakeClock(time.Now().UTC())),
 	}
+	deps := usecase.UowDeps{
+		UserWriter:       helper.FakeUserWriter,
+		CredentialWriter: helper.FakeCredentialWriter,
+	}
+	helper.FakeUnitOfWork = Ptr(NewFakeUnitOfWork(deps))
+	return helper
 }
 func (helper RegisterTestHelper) UseCase() usecase.Register {
 	helper.t.Helper()
 	uc, err := usecase.NewRegister(usecase.RegisterConfig{
 		UserExistsChecker: helper.FakeUserExistsChecker,
-		UserWriter:        helper.FakeUserWriter,
-		CredentialWriter:  helper.FakeCredentialWriter,
+		UnitOfWork:        helper.FakeUnitOfWork,
 		PasswordHasher:    helper.FakePasswordHasher,
 		Clock:             helper.FakeClock,
 	})
@@ -76,8 +83,7 @@ func TestNewRegister(t *testing.T) {
 			desc: "valid case",
 			config: usecase.RegisterConfig{
 				UserExistsChecker: Ptr(NewFakeUserExistsChecker()),
-				UserWriter:        Ptr(NewFakeUserWriter()),
-				CredentialWriter:  Ptr(NewFakeCredentialWriter()),
+				UnitOfWork:        Ptr(NewFakeUnitOfWork(usecase.UowDeps{})),
 				PasswordHasher:    Ptr(NewFakePasswordHasher()),
 				Clock:             Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -87,30 +93,17 @@ func TestNewRegister(t *testing.T) {
 			desc: "user exists checker nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker: nil,
-				UserWriter:        Ptr(NewFakeUserWriter()),
-				CredentialWriter:  Ptr(NewFakeCredentialWriter()),
+				UnitOfWork:        Ptr(NewFakeUnitOfWork(usecase.UowDeps{})),
 				PasswordHasher:    Ptr(NewFakePasswordHasher()),
 				Clock:             Ptr(NewFakeClock(time.Now().UTC())),
 			},
 			expectErr: true,
 		},
 		{
-			desc: "user writer nil",
+			desc: "uow nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker: Ptr(NewFakeUserExistsChecker()),
-				UserWriter:        nil,
-				CredentialWriter:  Ptr(NewFakeCredentialWriter()),
-				PasswordHasher:    Ptr(NewFakePasswordHasher()),
-				Clock:             Ptr(NewFakeClock(time.Now().UTC())),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "auth credential writer nil",
-			config: usecase.RegisterConfig{
-				UserExistsChecker: Ptr(NewFakeUserExistsChecker()),
-				UserWriter:        Ptr(NewFakeUserWriter()),
-				CredentialWriter:  nil,
+				UnitOfWork:        nil,
 				PasswordHasher:    Ptr(NewFakePasswordHasher()),
 				Clock:             Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -120,8 +113,7 @@ func TestNewRegister(t *testing.T) {
 			desc: "password hasher nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker: Ptr(NewFakeUserExistsChecker()),
-				UserWriter:        Ptr(NewFakeUserWriter()),
-				CredentialWriter:  Ptr(NewFakeCredentialWriter()),
+				UnitOfWork:        Ptr(NewFakeUnitOfWork(usecase.UowDeps{})),
 				PasswordHasher:    nil,
 				Clock:             Ptr(NewFakeClock(time.Now().UTC())),
 			},
@@ -131,8 +123,7 @@ func TestNewRegister(t *testing.T) {
 			desc: "clock nil",
 			config: usecase.RegisterConfig{
 				UserExistsChecker: Ptr(NewFakeUserExistsChecker()),
-				UserWriter:        Ptr(NewFakeUserWriter()),
-				CredentialWriter:  Ptr(NewFakeCredentialWriter()),
+				UnitOfWork:        Ptr(NewFakeUnitOfWork(usecase.UowDeps{})),
 				PasswordHasher:    Ptr(NewFakePasswordHasher()),
 				Clock:             nil,
 			},
@@ -235,7 +226,7 @@ func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
 	assert.Zero(t, output)
-	assert.ErrorIs(t, err, usecase.ErrRegisterUsernameTaken)
+	assert.ErrorIs(t, err, usecase.ErrRegisterUsernameAlreadyExists)
 }
 
 func TestRegister_ShouldUseClock(t *testing.T) {
@@ -261,22 +252,59 @@ func TestRegister_SavesNewUser(t *testing.T) {
 	assert.Equal(t, input.Username, userSaved.Username().String())
 }
 
-func TestRegister_SavesNewCredentialAndHashPassword(t *testing.T) {
+func TestRegister_SavesNewCredential(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
 
 	password := helper.ValidPlainPassword()
-	expectedSecret, err := helper.FakePasswordHasher.Hash(password)
-	require.NoError(t, err)
-
 	input := usecase.RegisterInput{
 		Username: helper.ValidUsername().String(),
 		Password: password.String(),
 	}
 
-	_, err = helper.UseCase().Execute(context.Background(), input)
+	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	require.Len(t, helper.FakeCredentialWriter.SavedCredentials, 1)
-	credential := helper.FakeCredentialWriter.SavedCredentials[0]
-	assert.Equal(t, expectedSecret, credential.Secret())
+	savedCreds := helper.FakeCredentialWriter.SavedCredentials()
+	require.Len(t, savedCreds, 1)
+	verify, _ := helper.FakePasswordHasher.Verify(password, savedCreds[0].Secret())
+	assert.True(t, verify)
+}
+
+func TestRegister_ReturnsError_WhenUserWriterFails(t *testing.T) {
+	helper := NewRegisterTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUserWriter.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestRegister_ReturnsError_WhenCredentialWriterFails(t *testing.T) {
+	helper := NewRegisterTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeCredentialWriter.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestRegister_ReturnsError_WhenPasswordHasherFails(t *testing.T) {
+	helper := NewRegisterTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakePasswordHasher.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
 }
