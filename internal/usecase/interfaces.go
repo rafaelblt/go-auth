@@ -11,6 +11,19 @@ type Clock interface {
 	UtcNow() time.Time
 }
 
+type PasswordHasher interface {
+	Hash(domain.PlainPassword) (domain.CredentialSecret, error)
+	Verify(domain.PlainPassword, domain.CredentialSecret) (bool, error)
+}
+
+type UnitOfWork interface {
+	Do(ctx context.Context, fn func(deps UowDeps) error) error
+}
+type UowDeps struct {
+	UserWriter UserWriter
+	CredentialWriter CredentialWriter
+}
+
 type UserReader interface {
 	FindByID(context.Context, domain.UserID) (*domain.User, error)
 }
@@ -23,9 +36,4 @@ type UserWriter interface {
 
 type CredentialWriter interface {
 	Save(context.Context, *domain.Credential) error
-}
-
-type PasswordHasher interface {
-	Hash(domain.PlainPassword) (domain.CredentialSecret, error)
-	Verify(domain.PlainPassword, domain.CredentialSecret) (bool, error)
 }
