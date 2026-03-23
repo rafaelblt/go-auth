@@ -2,35 +2,28 @@ package domain
 
 import (
 	"errors"
-	"fmt"
+	"strings"
 )
 
 type Username struct {
-	stringVO
+	value string
 }
 
 var ErrUsernameTooLong = errors.New("the username value is too long")
 var ErrUsernameTooShort = errors.New("the username value is too short")
 
-var UsernameMinLen = 3
-var UsernameMaxLen = 15
+const UsernameMinLen = 3
+const UsernameMaxLen = 15
 
 func NewUsername(value string) (Username, error) {
-	vo, err := newStringVO(value)
-	if err != nil {
-		if errors.Is(err, errStringVOEmpty) {
-			return Username{}, ErrUsernameTooShort
-		} else {
-			return Username{}, fmt.Errorf("unexpected stringVO error: %w", err)
-		}
+	normalized := normalizeUsername(value)
+
+	errs := ValidateUsername(normalized)
+	if len(errs) > 0 {
+		return Username{}, errs[0]
 	}
-	if len(vo.value) < UsernameMinLen {
-		return Username{}, ErrUsernameTooShort
-	}
-	if len(vo.value) > UsernameMaxLen {
-		return Username{}, ErrUsernameTooLong
-	}
-	return Username{vo}, nil
+
+	return Username{normalized}, nil
 }
 
 func ValidateUsername(value string) []error {
@@ -49,5 +42,8 @@ func ValidateUsername(value string) []error {
 }
 
 func normalizeUsername(value string) string {
-	return normalizeStringVO(value)
+	return strings.TrimSpace(strings.ToLower(value))
 }
+
+func (u Username) IsZero() bool   { return u.value == "" }
+func (u Username) String() string { return u.value }

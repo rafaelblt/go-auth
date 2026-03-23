@@ -37,7 +37,7 @@ func TestNewUsername_ShouldReturnError_WhenInputIsInvalid(t *testing.T) {
 		},
 		{
 			desc:     "username too short",
-			input:    "x",
+			input:    strings.Repeat("a", domain.UsernameMinLen-1),
 			expected: domain.ErrUsernameTooShort,
 		},
 		{
@@ -68,7 +68,7 @@ func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
 		},
 		{
 			desc:     "username too short",
-			input:    "",
+			input:    strings.Repeat("a", domain.UsernameMinLen-1),
 			expected: []error{domain.ErrUsernameTooShort},
 		},
 		{
