@@ -247,9 +247,10 @@ func TestRegister_SavesNewUser(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	require.Len(t, helper.FakeUserWriter.SavedUsers, 1)
-	userSaved := helper.FakeUserWriter.SavedUsers[0]
-	assert.Equal(t, input.Username, userSaved.Username().String())
+	savedUsers := helper.FakeUserWriter.SavedUsers()
+	require.Len(t, savedUsers, 1)
+	user := savedUsers[0]
+	assert.Equal(t, input.Username, user.Username().String())
 }
 
 func TestRegister_SavesNewCredential(t *testing.T) {

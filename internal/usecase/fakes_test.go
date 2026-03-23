@@ -114,9 +114,8 @@ func (writer FakeUserWriter) UsernameIsSaved(username domain.Username) bool {
 	}
 	return false
 }
-func (writer *FakeUserWriter) SetError(err error) {
-	writer.err = err
-}
+func (w *FakeUserWriter) SavedUsers() []*domain.User { return w.saved }
+func (w *FakeUserWriter) SetError(err error) { w.err = err }
 
 // Credential Writer
 
