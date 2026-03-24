@@ -9,88 +9,81 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var validUsernames = []string{
-	"blatantss",
+var usernamesData = []struct {
+	desc        string
+	input       string
+	normalized  string
+	expectedErr []error
+}{
+	{
+		desc:        "valid case",
+		input:       "blatantss",
+		normalized:  "blatantss",
+		expectedErr: []error{},
+	},
+	{
+		desc:        "input with uppercase",
+		input:       "BlatantSS",
+		normalized:  "blatantss",
+		expectedErr: []error{},
+	},
+	{
+		desc:        "input with leading white space",
+		input:       "  spiderman",
+		normalized:  "spiderman",
+		expectedErr: []error{},
+	},
+	{
+		desc:        "input with trailing white space",
+		input:       "venom  ",
+		normalized:  "venom",
+		expectedErr: []error{},
+	},
+	{
+		desc:        "empty input",
+		input:       "",
+		normalized:  "",
+		expectedErr: []error{domain.ErrUsernameTooShort},
+	},
+	{
+		desc:        "input too short",
+		input:       strings.Repeat("a", domain.UsernameMinLen-1),
+		normalized:  "",
+		expectedErr: []error{domain.ErrUsernameTooShort},
+	},
+	{
+		desc:        "input too long",
+		input:       strings.Repeat("a", domain.UsernameMaxLen+1),
+		normalized:  "",
+		expectedErr: []error{domain.ErrUsernameTooLong},
+	},
 }
 
-func TestNewUsername_ShouldReturnUsername_WhenInputIsValid(t *testing.T) {
-	for _, input := range validUsernames {
-		t.Run(input, func(t *testing.T) {
-			username, err := domain.NewUsername(input)
-			require.NoError(t, err)
-			require.NotZero(t, username)
-			assert.Equal(t, input, username.String())
-		})
-	}
-}
-
-func TestNewUsername_ShouldReturnError_WhenInputIsInvalid(t *testing.T) {
-	testCases := []struct {
-		desc     string
-		input    string
-		expected error
-	}{
-		{
-			desc:     "username empty",
-			input:    "",
-			expected: domain.ErrUsernameTooShort,
-		},
-		{
-			desc:     "username too short",
-			input:    strings.Repeat("a", domain.UsernameMinLen-1),
-			expected: domain.ErrUsernameTooShort,
-		},
-		{
-			desc:     "username too long",
-			input:    strings.Repeat("a", domain.UsernameMaxLen+1),
-			expected: domain.ErrUsernameTooLong,
-		},
-	}
-	for _, tC := range testCases {
+func TestNewUsername(t *testing.T) {
+	for _, tC := range usernamesData {
 		t.Run(tC.desc, func(t *testing.T) {
 			username, err := domain.NewUsername(tC.input)
-			assert.Zero(t, username)
-			assert.ErrorIs(t, err, tC.expected)
+			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
+				require.NoError(t, err)
+				assert.Equal(t, tC.normalized, username.String())
+			} else {
+				require.Error(t, err)
+				assert.Empty(t, username)
+				assert.Contains(t, tC.expectedErr, err)
+			}
 		})
 	}
 }
 
 func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
-	testCases := []struct {
-		desc     string
-		input    string
-		expected []error
-	}{
-		{
-			desc:     "username empty",
-			input:    "",
-			expected: []error{domain.ErrUsernameTooShort},
-		},
-		{
-			desc:     "username too short",
-			input:    strings.Repeat("a", domain.UsernameMinLen-1),
-			expected: []error{domain.ErrUsernameTooShort},
-		},
-		{
-			desc:     "username too long",
-			input:    strings.Repeat("a", domain.UsernameMaxLen+1),
-			expected: []error{domain.ErrUsernameTooLong},
-		},
-	}
-	for _, tC := range testCases {
+	for _, tC := range usernamesData {
 		t.Run(tC.desc, func(t *testing.T) {
 			errs := domain.ValidateUsername(tC.input)
-			assert.NotEmpty(t, errs)
-			assert.Equal(t, tC.expected, errs)
-		})
-	}
-}
-
-func TestValidateUsername_ShouldReturnEmpty_WhenInputIsValid(t *testing.T) {
-	for _, input := range validUsernames {
-		t.Run(input, func(t *testing.T) {
-			errs := domain.ValidateUsername(input)
-			assert.Empty(t, errs)
+			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
+				assert.Empty(t, errs)
+			} else {
+				assert.Equal(t, tC.expectedErr, errs)
+			}
 		})
 	}
 }
