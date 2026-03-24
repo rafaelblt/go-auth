@@ -44,7 +44,7 @@ func ValidatePlainPassword(value string) []error {
 }
 
 func normalizePlainPassword(value string) string {
-	return strings.TrimSpace(strings.ToLower(value))
+	return strings.TrimSpace(value)
 }
 
 func (p PlainPassword) String() string {
