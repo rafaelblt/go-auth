@@ -259,7 +259,7 @@ func TestRegister_SavesNewCredential(t *testing.T) {
 	password := helper.ValidPlainPassword()
 	input := usecase.RegisterInput{
 		Username: helper.ValidUsername().String(),
-		Password: password.String(),
+		Password: password.Value(),
 	}
 
 	_, err := helper.UseCase().Execute(context.Background(), input)
