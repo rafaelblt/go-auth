@@ -9,10 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var validPlainPasswords = []string{
-	"12345678",
-}
-
 var passwordCases = []struct {
 	desc        string
 	input       string
