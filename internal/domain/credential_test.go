@@ -81,7 +81,7 @@ func TestNewCredential(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			credential, err := domain.NewAuthCredential(tC.params)
+			credential, err := domain.NewCredential(tC.params)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, credential)

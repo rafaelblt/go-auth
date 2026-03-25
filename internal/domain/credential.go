@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// Credential
+
 type Credential struct {
 	id        CredentialID
 	userID    UserID
@@ -17,15 +19,6 @@ type Credential struct {
 	updatedAt time.Time
 }
 
-type CredentialKind string
-
-type CredentialProvider struct {
-	value string
-}
-
-type CredentialSecret struct {
-	value string
-}
 type NewCredentialParams struct {
 	UserID    UserID
 	Kind      CredentialKind
@@ -34,12 +27,7 @@ type NewCredentialParams struct {
 	CreatedAt time.Time
 }
 
-const (
-	CredentialKindPassword CredentialKind = "password"
-)
-var CredentialProviderLocal = CredentialProvider{value: "local"}
-
-func NewAuthCredential(params NewCredentialParams) (*Credential, error) {
+func NewCredential(params NewCredentialParams) (*Credential, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("credential user id cannot be zero")
 	}
@@ -64,25 +52,6 @@ func NewAuthCredential(params NewCredentialParams) (*Credential, error) {
 	return cred, nil
 }
 
-func NewCredentialProvider(value string) (CredentialProvider, error) {
-	normalized := strings.TrimSpace(value)
-	if normalized == "" {
-		return CredentialProvider{}, errors.New("credential provider value cannot be empty")
-	}
-	if normalized == CredentialProviderLocal.value {
-		return CredentialProvider{}, errors.New("credential provider 'local' is reserved")
-	}
-	return CredentialProvider{normalized}, nil
-}
-
-func NewCredentialSecret(value string) (CredentialSecret, error) {
-	normalized := strings.TrimSpace(value)
-	if normalized == "" {
-		return CredentialSecret{}, errors.New("credential secret value cannot be empty")
-	}
-	return CredentialSecret{normalized}, nil
-}
-
 func (c Credential) ID() CredentialID             { return c.id }
 func (c Credential) UserID() UserID               { return c.userID }
 func (c Credential) Kind() CredentialKind         { return c.kind }
@@ -90,6 +59,16 @@ func (c Credential) Provider() CredentialProvider { return c.provider }
 func (c Credential) Secret() CredentialSecret     { return c.secret }
 func (c Credential) CreatedAt() time.Time         { return c.createdAt }
 func (c Credential) UpdatedAt() time.Time         { return c.updatedAt }
+
+func (c Credential) IsZero() bool { return c.id.IsZero() }
+
+// Credential Kind
+
+type CredentialKind string
+
+const (
+	CredentialKindPassword CredentialKind = "password"
+)
 
 func (k CredentialKind) String() string { return string(k) }
 func (k CredentialKind) IsValid() bool {
@@ -101,8 +80,41 @@ func (k CredentialKind) IsValid() bool {
 	}
 }
 
-func (cp CredentialProvider) IsZero() bool { return cp.value == "" }
+// Credential Provider
+
+type CredentialProvider struct {
+	value string
+}
+
+var CredentialProviderLocal = CredentialProvider{value: "local"}
+
+func NewCredentialProvider(value string) (CredentialProvider, error) {
+	normalized := strings.TrimSpace(value)
+	if normalized == "" {
+		return CredentialProvider{}, errors.New("credential provider value cannot be empty")
+	}
+	if normalized == CredentialProviderLocal.value {
+		return CredentialProvider{}, errors.New("credential provider 'local' is reserved")
+	}
+	return CredentialProvider{normalized}, nil
+}
+
+func (cp CredentialProvider) IsZero() bool   { return cp.value == "" }
 func (cp CredentialProvider) String() string { return cp.value }
 
-func (cs CredentialSecret) IsZero() bool { return cs.value == "" }
+// Credential Secret
+
+type CredentialSecret struct {
+	value string
+}
+
+func NewCredentialSecret(value string) (CredentialSecret, error) {
+	normalized := strings.TrimSpace(value)
+	if normalized == "" {
+		return CredentialSecret{}, errors.New("credential secret value cannot be empty")
+	}
+	return CredentialSecret{normalized}, nil
+}
+
+func (cs CredentialSecret) IsZero() bool  { return cs.value == "" }
 func (cs CredentialSecret) Value() string { return cs.value }
