@@ -3,11 +3,8 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 )
-
-// Credential
 
 type Credential struct {
 	id        CredentialID
@@ -105,20 +102,3 @@ func (c Credential) CreatedAt() time.Time         { return c.createdAt }
 func (c Credential) UpdatedAt() time.Time         { return c.updatedAt }
 
 func (c Credential) IsZero() bool { return c.id.IsZero() }
-
-// Credential Secret
-
-type CredentialSecret struct {
-	value string
-}
-
-func NewCredentialSecret(value string) (CredentialSecret, error) {
-	normalized := strings.TrimSpace(value)
-	if normalized == "" {
-		return CredentialSecret{}, errors.New("credential secret value cannot be empty")
-	}
-	return CredentialSecret{normalized}, nil
-}
-
-func (cs CredentialSecret) IsZero() bool  { return cs.value == "" }
-func (cs CredentialSecret) Value() string { return cs.value }
