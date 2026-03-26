@@ -52,6 +52,50 @@ func NewCredential(params NewCredentialParams) (*Credential, error) {
 	return cred, nil
 }
 
+type CredentialRestoreParams struct {
+	ID        CredentialID
+	UserID    UserID
+	Kind      CredentialKind
+	Provider  CredentialProvider
+	Secret    CredentialSecret
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func RestoreCredential(params CredentialRestoreParams) (*Credential, error) {
+	if params.ID.IsZero() {
+		return nil, errors.New("credential id cannot be zero")
+	}
+	if params.UserID.IsZero() {
+		return nil, errors.New("credential user id cannot be zero")
+	}
+	if !params.Kind.IsValid() {
+		return nil, fmt.Errorf("credential kind '%v' is not valid", params.Kind)
+	}
+	if params.Provider.IsZero() {
+		return nil, errors.New("credential provider cannot be zero")
+	}
+	if params.Secret.IsZero() {
+		return nil, errors.New("credential secret cannot be zero")
+	}
+	if params.CreatedAt.IsZero() {
+		return nil, errors.New("credential created at cannot be zero")
+	}
+	if params.UpdatedAt.IsZero() {
+		return nil, errors.New("credential updated at cannot be zero")
+	}
+	cred := &Credential{
+		id:        params.ID,
+		userID:    params.UserID,
+		kind:      params.Kind,
+		provider:  params.Provider,
+		secret:    params.Secret,
+		createdAt: params.CreatedAt,
+		updatedAt: params.UpdatedAt,
+	}
+	return cred, nil
+}
+
 func (c Credential) ID() CredentialID             { return c.id }
 func (c Credential) UserID() UserID               { return c.userID }
 func (c Credential) Kind() CredentialKind         { return c.kind }
