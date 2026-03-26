@@ -106,24 +106,6 @@ func (c Credential) UpdatedAt() time.Time         { return c.updatedAt }
 
 func (c Credential) IsZero() bool { return c.id.IsZero() }
 
-// Credential Kind
-
-type CredentialKind string
-
-const (
-	CredentialKindPassword CredentialKind = "password"
-)
-
-func (k CredentialKind) String() string { return string(k) }
-func (k CredentialKind) IsValid() bool {
-	switch k {
-	case CredentialKindPassword:
-		return true
-	default:
-		return false
-	}
-}
-
 // Credential Provider
 
 type CredentialProvider struct {
