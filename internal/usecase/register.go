@@ -198,7 +198,7 @@ func (uc Register) createUser(params domain.NewUserParams) (*domain.User, error)
 }
 
 func (uc Register) createCredential(params domain.NewCredentialParams) (*domain.Credential, error) {
-	cred, err := domain.NewAuthCredential(params)
+	cred, err := domain.NewCredential(params)
 	if err != nil {
 		return nil, fmt.Errorf("credential creation failed: %w", err)
 	}
