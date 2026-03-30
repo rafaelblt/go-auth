@@ -50,3 +50,50 @@ func TestMapUserDomainToModel(t *testing.T) {
 		})
 	}
 }
+
+func TestMapCredentialDomainToModel(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		cred      *domain.Credential
+		expectErr bool
+	}{
+		{
+			desc:      "password credential",
+			cred:      testutil.PasswordCredential(t),
+			expectErr: false,
+		},
+		{
+			desc:      "credential nil",
+			cred:      nil,
+			expectErr: true,
+		},
+		{
+			desc:      "credential zero",
+			cred:      &domain.Credential{},
+			expectErr: true,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			model, err := MapCredentialDomainToModel(tC.cred)
+			if tC.expectErr {
+				assert.Error(t, err)
+				assert.Zero(t, model)
+			} else {
+				require.NoError(t, err)
+				credIDBytes, err := tC.cred.ID().Value().MarshalBinary()
+				require.NoError(t, err)
+				userIDBytes, err := tC.cred.UserID().Value().MarshalBinary()
+				require.NoError(t, err)
+				// asserts
+				assert.Equal(t, credIDBytes, model.ID)
+				assert.Equal(t, userIDBytes, model.UserID)
+				assert.Equal(t, tC.cred.Kind().String(), model.Kind)
+				assert.Equal(t, tC.cred.Provider().String(), model.Provider)
+				assert.Equal(t, tC.cred.Secret().Value(), model.Secret)
+				assert.Equal(t, tC.cred.CreatedAt(), model.CreatedAt)
+				assert.Equal(t, tC.cred.UpdatedAt(), model.UpdatedAt)
+			}
+		})
+	}
+}
