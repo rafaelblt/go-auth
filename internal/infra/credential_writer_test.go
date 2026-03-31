@@ -29,7 +29,7 @@ func (helper CredentialWriterTestHelper) WriterAndDB() (infra.CredentialWriter, 
 	return writer, helper.pool
 }
 func (helper CredentialWriterTestHelper) PersistentUser() *domain.User {
-	user := testutil.DefaultUser(helper.t).Entity
+	user := testutil.DefaultUser(helper.t)
 
 	userWriter, err := infra.NewUserWriter(helper.pool)
 	require.NoError(helper.t, err)

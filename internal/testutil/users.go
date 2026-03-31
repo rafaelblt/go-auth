@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type TestUser struct {
-	Entity *domain.User
-}
-
 func mustUsername(t *testing.T, value string) domain.Username {
 	t.Helper()
 	username, err := domain.NewUsername(value)
@@ -19,7 +15,7 @@ func mustUsername(t *testing.T, value string) domain.Username {
 	return username
 }
 
-func DefaultUser(t *testing.T) TestUser {
+func DefaultUser(t *testing.T) *domain.User {
 	t.Helper()
 	entity, err := domain.RestoreUser(
 		domain.UserRestoreParams{
@@ -31,10 +27,10 @@ func DefaultUser(t *testing.T) TestUser {
 		},
 	)
 	require.NoError(t, err)
-	return TestUser{Entity: entity}
+	return entity
 }
 
-func OtherUser(t *testing.T) TestUser {
+func OtherUser(t *testing.T) *domain.User {
 	t.Helper()
 	entity, err := domain.RestoreUser(
 		domain.UserRestoreParams{
@@ -46,5 +42,5 @@ func OtherUser(t *testing.T) TestUser {
 		},
 	)
 	require.NoError(t, err)
-	return TestUser{Entity: entity}
+	return entity
 }

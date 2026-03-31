@@ -30,7 +30,7 @@ func Writer(t *testing.T) (infra.UserWriter, infra.PGDB) {
 func TestSave(t *testing.T) {
 	writer, db := Writer(t)
 	ctx := context.Background()
-	user := testutil.DefaultUser(t).Entity
+	user := testutil.DefaultUser(t)
 
 	err := writer.Save(ctx, user)
 

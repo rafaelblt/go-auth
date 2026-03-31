@@ -124,23 +124,23 @@ func TestChangeUsername(t *testing.T) {
 	}{
 		{
 			desc:      "valid update",
-			user:      testutil.DefaultUser(t).Entity,
-			username:  testutil.OtherUser(t).Entity.Username(),
+			user:      testutil.DefaultUser(t),
+			username:  testutil.OtherUser(t).Username(),
 			updatedAt: time.Now().UTC(),
 			expectErr: false,
 		},
 		{
 			desc:      "username zero",
-			user:      testutil.DefaultUser(t).Entity,
+			user:      testutil.DefaultUser(t),
 			username:  domain.Username{},
 			updatedAt: time.Now().UTC(),
 			expectErr: true,
 		},
 		{
 			desc:      "updated at before created at",
-			user:      testutil.DefaultUser(t).Entity,
-			username:  testutil.OtherUser(t).Entity.Username(),
-			updatedAt: testutil.DefaultUser(t).Entity.CreatedAt().Add(-1),
+			user:      testutil.DefaultUser(t),
+			username:  testutil.OtherUser(t).Username(),
+			updatedAt: testutil.DefaultUser(t).CreatedAt().Add(-1),
 			expectErr: true,
 		},
 	}
@@ -171,7 +171,7 @@ func TestIsZero(t *testing.T) {
 		},
 		{
 			desc:   "valid user",
-			user:   testutil.DefaultUser(t).Entity,
+			user:   testutil.DefaultUser(t),
 			isZero: false,
 		},
 	}

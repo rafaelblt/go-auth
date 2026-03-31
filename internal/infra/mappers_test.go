@@ -17,7 +17,7 @@ func TestMapUserDomainToModel(t *testing.T) {
 	}{
 		{
 			desc:      "default user",
-			user:      testutil.DefaultUser(t).Entity,
+			user:      testutil.DefaultUser(t),
 			expectErr: false,
 		},
 		{
