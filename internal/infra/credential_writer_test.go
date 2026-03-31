@@ -39,10 +39,10 @@ func (helper CredentialWriterTestHelper) PersistentUser(db infra.PGDB) *domain.U
 
 	user := testutil.DefaultUser(helper.t)
 
-	userWriter, err := infra.NewUserWriter(db)
+	userRepo, err := infra.NewUserRepo(db)
 	require.NoError(helper.t, err)
 
-	require.NoError(helper.t, userWriter.Save(context.Background(), user))
+	require.NoError(helper.t, userRepo.Save(context.Background(), user))
 
 	return user
 }

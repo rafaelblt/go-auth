@@ -7,23 +7,23 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain"
 )
 
-type UserWriter struct {
+type UserRepo struct {
 	db PGDB
 }
 
-func NewUserWriter(db PGDB) (UserWriter, error) {
+func NewUserRepo(db PGDB) (UserRepo, error) {
 	if db == nil {
-		return UserWriter{}, errors.New("PGDB cannot be nil")
+		return UserRepo{}, errors.New("PGDB cannot be nil")
 	}
-	return UserWriter{db: db}, nil
+	return UserRepo{db: db}, nil
 }
 
-func (writer UserWriter) Save(ctx context.Context, user *domain.User) error {
+func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
 	model, err := MapUserDomainToModel(user)
 	if err != nil {
 		return err
 	}
-	_, err = writer.db.Exec(ctx,
+	_, err = repo.db.Exec(ctx,
 		`INSERT INTO users (id, username, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)`,
 		model.ID, model.Username, model.Status, model.CreatedAt, model.UpdatedAt,

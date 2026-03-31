@@ -9,32 +9,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type UserWriterTestHelper struct {
+type UserRepoTestHelper struct {
 	t *testing.T
 }
 
-func NewUserWriterTestHelper(t *testing.T) UserWriterTestHelper {
-	return UserWriterTestHelper{t}
+func NewUserRepoTestHelper(t *testing.T) UserRepoTestHelper {
+	return UserRepoTestHelper{t}
 }
 
-func (helper UserWriterTestHelper) DB() infra.PGDB {
+func (helper UserRepoTestHelper) DB() infra.PGDB {
 	return testDB.NewTx(helper.t)
 }
 
-func (helper UserWriterTestHelper) Writer(db infra.PGDB) infra.UserWriter {
+func (helper UserRepoTestHelper) Repo(db infra.PGDB) infra.UserRepo {
 	helper.t.Helper()
-	writer, err := infra.NewUserWriter(db)
+	writer, err := infra.NewUserRepo(db)
 	require.NoError(helper.t, err)
 	return writer
 }
 
-func TestUserWriter_Save(t *testing.T) {
-	helper := NewUserWriterTestHelper(t)
+func TestUserRepo_Save(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
-	writer := helper.Writer(db)
+	repo := helper.Repo(db)
 	user := testutil.DefaultUser(t)
 
-	err := writer.Save(context.Background(), user)
+	err := repo.Save(context.Background(), user)
 
 	require.NoError(t, err)
 	var exists bool
