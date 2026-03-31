@@ -3,6 +3,7 @@ package infra
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 )
@@ -32,4 +33,17 @@ func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
 		return err
 	}
 	return nil
+}
+
+func (repo UserRepo) ExistsByUsername(ctx context.Context, username domain.Username) (bool, error) {
+	var exists bool
+
+	query := `SELECT EXISTS( SELECT 1 FROM users WHERE username=$1 )`
+	err := repo.db.QueryRow(ctx, query, username.String()).Scan(&exists)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check username existence: %w", err)
+	}
+
+	return exists, nil
 }
