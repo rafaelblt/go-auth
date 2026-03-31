@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -14,24 +13,33 @@ import (
 // HELPER
 
 type CredentialWriterTestHelper struct {
-	t    *testing.T
-	pool *pgxpool.Pool
+	t  *testing.T
 }
+
 func NewCredentialWriterTestHelper(t *testing.T) CredentialWriterTestHelper {
-	ctx := context.Background()
-	pool, err := infra.NewPool(ctx, testDB.ConnectionString())
-	require.NoError(t, err)
-	return CredentialWriterTestHelper{t, pool}
+	return CredentialWriterTestHelper{t}
 }
-func (helper CredentialWriterTestHelper) WriterAndDB() (infra.CredentialWriter, infra.PGDB) {
-	writer, err := infra.NewCredentialWriter(helper.pool)
+
+func (helper CredentialWriterTestHelper) DB() infra.PGDB {
+	return testDB.NewTx(helper.t)
+}
+
+func (helper CredentialWriterTestHelper) Writer(db infra.PGDB) infra.CredentialWriter {
+	helper.t.Helper()
+
+	writer, err := infra.NewCredentialWriter(db)
 	require.NoError(helper.t, err)
-	return writer, helper.pool
+
+	return writer
 }
-func (helper CredentialWriterTestHelper) PersistentUser() *domain.User {
+
+func (helper CredentialWriterTestHelper) PersistentUser(db infra.PGDB) *domain.User {
+	helper.t.Helper()
+	require.NotNil(helper.t, db)
+
 	user := testutil.DefaultUser(helper.t)
 
-	userWriter, err := infra.NewUserWriter(helper.pool)
+	userWriter, err := infra.NewUserWriter(db)
 	require.NoError(helper.t, err)
 
 	require.NoError(helper.t, userWriter.Save(context.Background(), user))
@@ -43,8 +51,10 @@ func (helper CredentialWriterTestHelper) PersistentUser() *domain.User {
 
 func TestCredentialWriter_Save(t *testing.T) {
 	helper := NewCredentialWriterTestHelper(t)
-	writer, db := helper.WriterAndDB()
-	persistentUser := helper.PersistentUser()
+	db := helper.DB()
+	writer := helper.Writer(db)
+	persistentUser := helper.PersistentUser(db)
+
 	credential := testutil.PasswordCredential(t,
 		testutil.WithUserID(persistentUser.ID()),
 	)

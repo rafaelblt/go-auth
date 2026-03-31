@@ -9,34 +9,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Writer(t *testing.T) (infra.UserWriter, infra.PGDB) {
-	ctx := context.Background()
-
-	pool, err := infra.NewPool(ctx, testDB.ConnectionString())
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	writer, err := infra.NewUserWriter(tx)
-	return writer, tx
+type UserWriterTestHelper struct {
+	t *testing.T
 }
 
-func TestSave(t *testing.T) {
-	writer, db := Writer(t)
-	ctx := context.Background()
+func NewUserWriterTestHelper(t *testing.T) UserWriterTestHelper {
+	return UserWriterTestHelper{t}
+}
+
+func (helper UserWriterTestHelper) DB() infra.PGDB {
+	return testDB.NewTx(helper.t)
+}
+
+func (helper UserWriterTestHelper) Writer(db infra.PGDB) infra.UserWriter {
+	helper.t.Helper()
+	writer, err := infra.NewUserWriter(db)
+	require.NoError(helper.t, err)
+	return writer
+}
+
+func TestUserWriter_Save(t *testing.T) {
+	helper := NewUserWriterTestHelper(t)
+	db := helper.DB()
+	writer := helper.Writer(db)
 	user := testutil.DefaultUser(t)
 
-	err := writer.Save(ctx, user)
+	err := writer.Save(context.Background(), user)
 
 	require.NoError(t, err)
 	var exists bool
-	err = db.QueryRow(ctx,
+	err = db.QueryRow(context.Background(),
 		`SELECT EXISTS(
 			SELECT 1 FROM users WHERE
 			id=$1 AND

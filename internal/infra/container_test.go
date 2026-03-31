@@ -12,7 +12,11 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/migrations"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -20,17 +24,27 @@ import (
 
 type TestDB struct {
 	container *postgres.PostgresContainer
-	dbURL     string
+	pool      *pgxpool.Pool
 }
 
-func (db TestDB) ConnectionString() string {
-	return db.dbURL
+func (db TestDB) NewTx(t *testing.T) pgx.Tx {
+	t.Helper()
+
+	tx, err := db.pool.Begin(context.Background())
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+        _ = tx.Rollback(context.Background())
+    })
+
+	return tx
 }
 
 var testDB TestDB
 
 func TestMain(m *testing.M) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+    defer cancel()
 
 	container, err := createContainer(ctx)
 	if err != nil {
@@ -44,7 +58,12 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	if err := container.Terminate(ctx); err != nil {
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer stopCancel()
+
+	testDB.pool.Close()
+
+	if err := container.Terminate(stopCtx); err != nil {
 		log.Printf("failed to terminate container: %v", err)
 	}
 
@@ -78,15 +97,21 @@ func createTestDB(ctx context.Context, container *postgres.PostgresContainer) (T
 		return TestDB{}, fmt.Errorf("migration failed: %w", err)
 	}
 
+	pool, err := infra.NewPool(context.Background(), dbURL)
+
 	db :=  TestDB{
 		container: container,
-		dbURL: dbURL,
+		pool: pool,
 	}
 	return db, err
 }
 
 func runMigrations(dbURL string) error {
 	driver, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		return err
+	}
+
 	mgrt, err := migrate.NewWithSourceInstance("iofs", driver, dbURL)
 	if err != nil {
 		return err
