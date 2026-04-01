@@ -47,6 +47,5 @@ func normalizePlainPassword(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func (p PlainPassword) Value() string {
-	return p.value
-}
+func (p PlainPassword) Value() string { return p.value }
+func (p PlainPassword) IsZero() bool { return p.value == "" }
