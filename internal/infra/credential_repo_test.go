@@ -12,28 +12,28 @@ import (
 
 // HELPER
 
-type CredentialWriterTestHelper struct {
+type CredentialRepoTestHelper struct {
 	t  *testing.T
 }
 
-func NewCredentialWriterTestHelper(t *testing.T) CredentialWriterTestHelper {
-	return CredentialWriterTestHelper{t}
+func NewCredentialRepoTestHelper(t *testing.T) CredentialRepoTestHelper {
+	return CredentialRepoTestHelper{t}
 }
 
-func (helper CredentialWriterTestHelper) DB() infra.PGDB {
+func (helper CredentialRepoTestHelper) DB() infra.PGDB {
 	return testDB.NewTx(helper.t)
 }
 
-func (helper CredentialWriterTestHelper) Writer(db infra.PGDB) infra.CredentialWriter {
+func (helper CredentialRepoTestHelper) Writer(db infra.PGDB) infra.CredentialRepo {
 	helper.t.Helper()
 
-	writer, err := infra.NewCredentialWriter(db)
+	writer, err := infra.NewCredentialRepo(db)
 	require.NoError(helper.t, err)
 
 	return writer
 }
 
-func (helper CredentialWriterTestHelper) PersistentUser(db infra.PGDB) *domain.User {
+func (helper CredentialRepoTestHelper) PersistentUser(db infra.PGDB) *domain.User {
 	helper.t.Helper()
 	require.NotNil(helper.t, db)
 
@@ -49,17 +49,17 @@ func (helper CredentialWriterTestHelper) PersistentUser(db infra.PGDB) *domain.U
 
 // TESTS
 
-func TestCredentialWriter_Save(t *testing.T) {
-	helper := NewCredentialWriterTestHelper(t)
+func TestCredentialRepo_Save(t *testing.T) {
+	helper := NewCredentialRepoTestHelper(t)
 	db := helper.DB()
-	writer := helper.Writer(db)
+	repo := helper.Writer(db)
 	persistentUser := helper.PersistentUser(db)
 
 	credential := testutil.PasswordCredential(t,
 		testutil.WithUserID(persistentUser.ID()),
 	)
 
-	err := writer.Save(context.Background(), credential)
+	err := repo.Save(context.Background(), credential)
 
 	require.NoError(t, err)
 	var exists bool

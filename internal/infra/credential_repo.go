@@ -7,23 +7,23 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain"
 )
 
-type CredentialWriter struct {
+type CredentialRepo struct {
 	db PGDB
 }
 
-func NewCredentialWriter(db PGDB) (CredentialWriter, error) {
+func NewCredentialRepo(db PGDB) (CredentialRepo, error) {
 	if db == nil {
-		return CredentialWriter{}, errors.New("PGDB cannot be nil")
+		return CredentialRepo{}, errors.New("PGDB cannot be nil")
 	}
-	return CredentialWriter{db: db}, nil
+	return CredentialRepo{db: db}, nil
 }
 
-func (writer CredentialWriter) Save(ctx context.Context, cred *domain.Credential) error {
+func (repo CredentialRepo) Save(ctx context.Context, cred *domain.Credential) error {
 	model, err := MapCredentialDomainToModel(cred)
 	if err != nil {
 		return err
 	}
-	_, err = writer.db.Exec(ctx,
+	_, err = repo.db.Exec(ctx,
 		`INSERT INTO credentials
 			(id, user_id, kind, provider, secret, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
