@@ -152,7 +152,7 @@ func TestRegister_ReturnsOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotZero(t, output)
-	assert.Equal(t, input.Username, output.User.Username().String())
+	assert.Equal(t, input.Username, output.User.Username())
 }
 
 func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {

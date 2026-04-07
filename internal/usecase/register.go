@@ -21,7 +21,7 @@ type RegisterInput struct {
 }
 
 type RegisterOutput struct {
-	User *domain.User
+	User UserDTO
 }
 
 type RegisterConfig struct {
@@ -110,7 +110,12 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 		return RegisterOutput{}, err
 	}
 
-	return RegisterOutput{User: user}, nil
+	dto, err := MapUserToDTO(user)
+	if err != nil {
+		return RegisterOutput{}, fmt.Errorf("user dto mapping failed: %w", err)
+	}
+
+	return RegisterOutput{User: dto}, nil
 }
 
 func (uc Register) validateFields(username string, password string) (domain.Username, domain.PlainPassword, error) {
