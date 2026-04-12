@@ -99,7 +99,7 @@ func createTestDB(ctx context.Context, container *postgres.PostgresContainer) (T
 
 	pool, err := infra.NewPool(context.Background(), dbURL)
 
-	db :=  TestDB{
+	db := TestDB{
 		container: container,
 		pool: pool,
 	}
