@@ -31,7 +31,7 @@ func TestMapUserToDTO(t *testing.T) {
 			dto, err := MapUserToDTO(tC.user)
 			if tC.expectErr {
 				assert.Error(t, err)
-				assert.Nil(t, dto)
+				assert.Zero(t, dto)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, dto)
