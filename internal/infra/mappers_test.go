@@ -1,9 +1,10 @@
-package infra
+package infra_test
 
 import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func TestMapUserDomainToModel(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			model, err := MapUserDomainToModel(tC.user)
+			model, err := infra.MapUserDomainToModel(tC.user)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, model)
@@ -75,7 +76,7 @@ func TestMapCredentialDomainToModel(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			model, err := MapCredentialDomainToModel(tC.cred)
+			model, err := infra.MapCredentialDomainToModel(tC.cred)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, model)

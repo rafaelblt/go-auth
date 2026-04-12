@@ -1,10 +1,11 @@
-package usecase
+package usecase_test
 
 import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +29,7 @@ func TestMapUserToDTO(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			dto, err := MapUserToDTO(tC.user)
+			dto, err := usecase.MapUserToDTO(tC.user)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, dto)
