@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -23,6 +24,10 @@ type Database struct {
 }
 
 func NewDatabase(ctx context.Context) (*Database, error) {
+	if err := checkDockerAvailable(ctx); err != nil {
+		return nil, err
+	}
+
 	testcontainer, err := createContainer(ctx)
 	if err != nil {
 		return nil, err
@@ -101,4 +106,18 @@ func (db *Database) Close(ctx context.Context) error {
 	db.pool.Close()
 
 	return nil
+}
+
+func checkDockerAvailable(ctx context.Context) error {
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return fmt.Errorf("Docker not found: %w", err)
+    }
+    defer cli.Close()
+
+    if _, err := cli.Ping(ctx); err != nil {
+        return fmt.Errorf("Docker is unavailable (is it running?): %w", err)
+    }
+
+    return nil
 }
