@@ -9,18 +9,47 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase"
 )
 
-type UnitOfWork struct {
-	tx   pgx.Tx
-	deps usecase.UowDeps
+type TxBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func NewUnitOfWork(tx pgx.Tx) (*UnitOfWork, error) {
+type UnitOfWork struct {
+	beginner TxBeginner
+}
+
+func NewUnitOfWork(beginner TxBeginner) (*UnitOfWork, error) {
+	if beginner == nil {
+		return nil, errors.New("tx beginner cannot be nil")
+	}
+	uow := &UnitOfWork{beginner}
+	return uow, nil
+}
+
+type workFn = func(deps usecase.UowDeps) error
+
+func (uow *UnitOfWork) Do(ctx context.Context, fn workFn) error {
+	tx, err := uow.beginner.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("tx begin failed: %w", err)
+	}
+
+	defer tx.Rollback(ctx)
+
 	deps, err := buildUowDeps(tx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	uow := &UnitOfWork{tx, deps}
-	return uow, nil
+
+	if err = fn(deps); err != nil {
+		return err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("tx commit failed: %w", err)
+	}
+
+	return nil
 }
 
 func buildUowDeps(tx pgx.Tx) (usecase.UowDeps, error) {
@@ -40,21 +69,4 @@ func buildUowDeps(tx pgx.Tx) (usecase.UowDeps, error) {
 		CredentialWriter: credRepo,
 	}
 	return deps, nil
-}
-
-type execFn = func(deps usecase.UowDeps) error
-func (uow *UnitOfWork) Do(ctx context.Context, fn execFn) error {
-	defer uow.tx.Rollback(ctx)
-
-	err := fn(uow.deps)
-	if err != nil {
-		return err
-	}
-
-	err = uow.tx.Commit(ctx)
-	if err != nil {
-		return fmt.Errorf("uow commit failed: %w", err)
-	}
-
-	return nil
 }

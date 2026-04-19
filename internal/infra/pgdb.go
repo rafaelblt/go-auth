@@ -11,3 +11,7 @@ type PGDB interface {
 	Exec(ctx context.Context, sql string, args ...any) (cmdTag pgconn.CommandTag, err error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
+
+type Querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}

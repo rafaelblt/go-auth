@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
@@ -12,38 +11,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewUnitOfWork_WithTxNil(t *testing.T) {
+func TestNewUnitOfWork_WithTxBeginnerNil(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(nil)
 	assert.Error(t, err)
 	assert.Nil(t, uow)
 }
 
-func TestNewUnitOfWork_WithValidTx(t *testing.T) {
-	tx := testDB.NewTx(t)
+func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
+	beginner := testDB.TxForTest(t)
 
-	uow, err := infra.NewUnitOfWork(tx)
+	uow, err := infra.NewUnitOfWork(beginner)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, uow)
 }
 
-func TestUnitOfWork_Do_ClosesTransaction(t *testing.T) {
-	ctx := context.Background()
-
-	tx := testDB.NewTx(t)
-	uow, err := infra.NewUnitOfWork(tx)
-	require.NoError(t, err)
-	
-	err = uow.Do(ctx, func(deps usecase.UowDeps) error { return nil })
-
-	assert.NoError(t, err)
-	assert.ErrorIs(t, tx.Rollback(ctx), pgx.ErrTxClosed, "the tx has not been closed")
-}
-
 func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	ctx := context.Background()
+	tx := testDB.TxForTest(t)
 
-	uow, err := infra.NewUnitOfWork(testDB.NewTx(t))
+	uow, err := infra.NewUnitOfWork(tx)
 	require.NoError(t, err)
 
 	user := testutil.DefaultUser(t)
@@ -55,14 +42,15 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	assert.NoError(t, err)
 	var exists bool
 	query := `SELECT EXISTS( SELECT 1 FROM users WHERE id=$1 )`
-	assert.NoError(t, testDB.NewTx(t).QueryRow(ctx, query, user.ID().Value()).Scan(&exists))
+	assert.NoError(t, tx.QueryRow(ctx, query, user.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }
 
 func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	ctx := context.Background()
+	tx := testDB.TxForTest(t)
 
-	uow, err := infra.NewUnitOfWork(testDB.NewTx(t))
+	uow, err := infra.NewUnitOfWork(tx)
 	require.NoError(t, err)
 
 	user := testutil.DefaultUser(t)
@@ -74,9 +62,8 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-
 	var exists bool
 	query := `SELECT EXISTS( SELECT 1 FROM credentials WHERE id=$1 )`
-	assert.NoError(t, testDB.NewTx(t).QueryRow(ctx, query, credential.ID().Value()).Scan(&exists))
+	assert.NoError(t, tx.QueryRow(ctx, query, credential.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }
