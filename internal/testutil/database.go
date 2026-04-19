@@ -3,16 +3,14 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/migrations"
-	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -93,25 +91,10 @@ func runMigrations(dbURL string) error {
 	return nil
 }
 
-func (db *Database) NewTx(t *testing.T) pgx.Tx {
-	t.Helper()
+func (db *Database) ConnectionString() string { return db.conn }
+func (db *Database) Pool() *pgxpool.Pool      { return db.pool }
 
-	tx, err := db.pool.Begin(context.Background())
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = tx.Rollback(context.Background())
-	})
-
-	return tx
-}
-
-
-func (db *Database) ConnectionString() string {
-	return db.conn
-}
-
-func (db *Database) Finish(ctx context.Context) error {
+func (db *Database) Close(ctx context.Context) error {
 	if err := db.container.Terminate(ctx); err != nil {
 		return fmt.Errorf("test container terminate failed: %w", err)
 	}
