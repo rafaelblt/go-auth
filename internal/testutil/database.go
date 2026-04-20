@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/migrations"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -55,6 +57,17 @@ func NewDatabase(ctx context.Context) (*Database, error) {
 	}
 
 	return &db, nil
+}
+
+func NewDatabaseForTest(t *testing.T, ctx context.Context) (*Database) {
+	db, err := NewDatabase(ctx)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		db.Close(ctx)
+	})
+
+	return db
 }
 
 func createContainer(ctx context.Context) (*postgres.PostgresContainer, error) {
