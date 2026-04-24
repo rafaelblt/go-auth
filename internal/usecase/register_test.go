@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -210,7 +209,10 @@ func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {
 			helper := NewRegisterTestHelper(t)
 			output, err := helper.UseCase().Execute(context.Background(), tC.input)
 			assert.Zero(t, output)
-			testutil.RequireErrors(t, err, tC.expected...)
+			var verr usecase.ValidationError
+			if assert.ErrorAs(t, err, &verr) {
+				assert.Equal(t, tC.expected, verr.Errors())
+			}
 		})
 	}
 }

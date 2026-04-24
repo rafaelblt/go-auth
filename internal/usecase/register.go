@@ -118,35 +118,6 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 	return RegisterOutput{User: dto}, nil
 }
 
-func (uc Register) validateFields(username string, password string) (domain.Username, domain.PlainPassword, error) {
-	usernameErrs := domain.ValidateUsername(username)
-	passwordErrs := domain.ValidatePlainPassword(password)
-
-	if len(usernameErrs) == 0 && len(passwordErrs) == 0 {
-		usr, err := domain.NewUsername(username)
-		if err != nil {
-			panic("new username with errors after success validation")
-		}
-		pwd, err := domain.NewPlainPassword(password)
-		if err != nil {
-			panic("new plain password with errors after success validation")
-		}
-		return usr, pwd, nil
-	}
-
-	allErrs := append(usernameErrs, passwordErrs...)
-	mappeds, unexpecteds := MapErrors(allErrs, registerValidationMap)
-
-	var err error
-	if len(unexpecteds) > 0 {
-		err = errors.Join(unexpecteds...)
-	} else {
-		err = errors.Join(mappeds...)
-	}
-
-	return domain.Username{}, domain.PlainPassword{}, err
-}
-
 func (uc Register) validateInput(input RegisterInput) error {
 	usernameErrs := domain.ValidateUsername(input.Username)
 	passwordErrs := domain.ValidatePlainPassword(input.Password)
@@ -154,14 +125,13 @@ func (uc Register) validateInput(input RegisterInput) error {
 	allErrs := append(usernameErrs, passwordErrs...)
 	mappeds, unexpecteds := MapErrors(allErrs, registerValidationMap)
 
-	var err error = nil
 	if len(unexpecteds) > 0 {
-		err = errors.Join(unexpecteds...)
-	} else {
-		err = errors.Join(mappeds...)
+		return fmt.Errorf("unexpected validation errors from domain: %w", errors.Join(unexpecteds...))
 	}
-
-	return err
+	if len(mappeds) > 0 {
+		return newValidationError(mappeds...)
+	}
+	return nil
 }
 
 func (uc Register) convertUsername(username string) domain.Username {
