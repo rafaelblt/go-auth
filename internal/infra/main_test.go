@@ -11,18 +11,23 @@ import (
 )
 
 var testDB *testutil.IsolatedDB
+var dbProvider *testutil.DatabaseProvider
 
 func TestMain(m *testing.M) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	db, err := testutil.NewIsolatedDB(ctx)
+	testDB, err := testutil.NewIsolatedDB(ctx)
 	if err != nil {
 		log.Fatalf("could not create isolated db: %v", err)
 	}
-	defer db.Close(context.Background())
+	defer testDB.Close(context.Background())
 
-	testDB = db
+	dbProvider, err = testutil.NewDatabaseProvider(ctx)
+	if err != nil {
+		log.Fatalf("could not create database provider: %v", err)
+	}
+	defer dbProvider.Close(context.Background())
 
 	code := m.Run()
 

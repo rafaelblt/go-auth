@@ -5,13 +5,12 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewDependencyContainer(t *testing.T) {
-	db := testutil.NewDatabaseForTest(t, context.Background())
+	pool := dbProvider.NewPool(t)
 	testCases := []struct {
 		desc      string
 		cfg       infra.DependenciesConfig
@@ -24,9 +23,7 @@ func TestNewDependencyContainer(t *testing.T) {
 		},
 		{
 			desc:      "valid config",
-			cfg:       infra.DependenciesConfig{
-				DatabaseConnection: db.ConnectionString(),
-			},
+			cfg:       infra.DependenciesConfig{DatabasePool: pool},
 			expectErr: false,
 		},
 	}
@@ -48,16 +45,16 @@ func TestNewDependencyContainer(t *testing.T) {
 
 func TestDependencyContainer_BuildRegister(t *testing.T) {
 	ctx := context.Background()
-	db := testutil.NewDatabaseForTest(t, ctx)
+	pool := dbProvider.NewPool(t)
 
 	container, err := infra.NewDependencyContainer(ctx, infra.DependenciesConfig{
-		DatabaseConnection: db.ConnectionString(),
+		DatabasePool: pool,
 	})
 	require.NoError(t, err)
 	defer container.Close()
 
 	register, err := container.BuildRegister()
 
-	require.NoError(t, err)
-	require.NotZero(t, register)
+	assert.NoError(t, err)
+	assert.NotZero(t, register)
 }

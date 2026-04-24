@@ -2,6 +2,7 @@ package infra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,18 +15,17 @@ type DependencyContainer struct {
 }
 
 type DependenciesConfig struct {
-	DatabaseConnection string
+	DatabasePool *pgxpool.Pool
 }
 
 func NewDependencyContainer(
 	ctx context.Context, cfg DependenciesConfig,
 ) (*DependencyContainer, error) {
-	pool, err := NewPool(ctx, cfg.DatabaseConnection)
-	if err != nil {
-		return nil, fmt.Errorf("pool creation failed: %w", err)
+	if cfg.DatabasePool == nil {
+		return nil, errors.New("database pool of dependencies config cannot be nil")
 	}
 	container := DependencyContainer{
-		pool:  pool,
+		pool:  cfg.DatabasePool,
 		clock: NewSystemClock(),
 	}
 	return &container, nil
