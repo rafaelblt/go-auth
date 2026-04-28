@@ -21,7 +21,7 @@ func NewCredentialRepoTestHelper(t *testing.T) CredentialRepoTestHelper {
 }
 
 func (helper CredentialRepoTestHelper) DB() infra.PGDB {
-	return testDB.TxForTest(helper.t)
+	return dbProvider.NewPool(helper.t)
 }
 
 func (helper CredentialRepoTestHelper) Writer(db infra.PGDB) infra.CredentialRepo {

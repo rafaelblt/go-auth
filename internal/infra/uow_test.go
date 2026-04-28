@@ -18,7 +18,7 @@ func TestNewUnitOfWork_WithTxBeginnerNil(t *testing.T) {
 }
 
 func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
-	beginner := testDB.TxForTest(t)
+	beginner := dbProvider.NewPool(t)
 
 	uow, err := infra.NewUnitOfWork(beginner)
 
@@ -28,9 +28,9 @@ func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
 
 func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	ctx := context.Background()
-	tx := testDB.TxForTest(t)
+	pool := dbProvider.NewPool(t)
 
-	uow, err := infra.NewUnitOfWork(tx)
+	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
 	user := testutil.DefaultUser(t)
@@ -42,15 +42,15 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	assert.NoError(t, err)
 	var exists bool
 	query := `SELECT EXISTS( SELECT 1 FROM users WHERE id=$1 )`
-	assert.NoError(t, tx.QueryRow(ctx, query, user.ID().Value()).Scan(&exists))
+	assert.NoError(t, pool.QueryRow(ctx, query, user.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }
 
 func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	ctx := context.Background()
-	tx := testDB.TxForTest(t)
+	pool := dbProvider.NewPool(t)
 
-	uow, err := infra.NewUnitOfWork(tx)
+	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
 	user := testutil.DefaultUser(t)
@@ -64,6 +64,6 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	assert.NoError(t, err)
 	var exists bool
 	query := `SELECT EXISTS( SELECT 1 FROM credentials WHERE id=$1 )`
-	assert.NoError(t, tx.QueryRow(ctx, query, credential.ID().Value()).Scan(&exists))
+	assert.NoError(t, pool.QueryRow(ctx, query, credential.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }

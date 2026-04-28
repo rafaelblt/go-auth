@@ -19,7 +19,7 @@ func NewUserRepoTestHelper(t *testing.T) UserRepoTestHelper {
 }
 
 func (helper UserRepoTestHelper) DB() infra.PGDB {
-	return testDB.TxForTest(helper.t)
+	return dbProvider.NewPool(helper.t)
 }
 
 func (helper UserRepoTestHelper) Repo(db infra.PGDB) infra.UserRepo {
