@@ -22,7 +22,7 @@ func NewUserRepo(db PGDB) (UserRepo, error) {
 func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
 	model, err := MapUserDomainToModel(user)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to map user domain to model: %w", err)
 	}
 	_, err = repo.db.Exec(ctx,
 		`INSERT INTO users (id, username, status, created_at, updated_at)
@@ -30,7 +30,7 @@ func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
 		model.ID, model.Username, model.Status, model.CreatedAt, model.UpdatedAt,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("new user insert failed: %w", err)
 	}
 	return nil
 }
