@@ -30,11 +30,7 @@ func (p *DatabaseProvider) NewPool(t *testing.T) *pgxpool.Pool {
 }
 
 func (p *DatabaseProvider) reset(ctx context.Context) error {
-    _, err := p.db.Pool().Exec(ctx, `
-        TRUNCATE TABLE users, credentials
-        RESTART IDENTITY CASCADE
-    `)
-    return err
+    return p.db.Reset(ctx)
 }
 
 func (p *DatabaseProvider) Close(ctx context.Context) error {

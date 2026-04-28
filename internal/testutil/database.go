@@ -112,6 +112,14 @@ func runMigrations(dbURL string) error {
 func (db *Database) ConnectionString() string { return db.conn }
 func (db *Database) Pool() *pgxpool.Pool      { return db.pool }
 
+func (db *Database) Reset(ctx context.Context) error {
+    _, err := db.Pool().Exec(ctx, `
+        TRUNCATE TABLE users, credentials
+        RESTART IDENTITY CASCADE
+    `)
+    return err
+}
+
 func (db *Database) Close(ctx context.Context) error {
 	if err := db.container.Terminate(ctx); err != nil {
 		return fmt.Errorf("test container terminate failed: %w", err)
