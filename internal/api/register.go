@@ -52,6 +52,10 @@ func NewRegisterHandler(uc usecase.Register) RegisterHandler {
 	return RegisterHandler{uc}
 }
 
+func (handler RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	handler.Handle(w, r)
+}
+
 func (handler RegisterHandler) Handle(writer http.ResponseWriter, request *http.Request) {
 	// TODO: json content type middleware
 	writer.Header().Set("Content-Type", "application/json")
