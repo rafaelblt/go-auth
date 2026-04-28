@@ -37,7 +37,6 @@ func TestNewDependencyContainer(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, container)
-				container.Close()
 			}
 		})
 	}
@@ -51,7 +50,6 @@ func TestDependencyContainer_BuildRegister(t *testing.T) {
 		DatabasePool: pool,
 	})
 	require.NoError(t, err)
-	defer container.Close()
 
 	register, err := container.BuildRegister()
 
