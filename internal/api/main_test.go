@@ -3,30 +3,37 @@ package api
 import (
 	"context"
 	"log"
+	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/testutil"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/rafaelblt/go-auth/internal/testutil"
 )
 
-var dbProvider *testutil.DatabaseProvider
+var testServer *httptest.Server
+var testDB *testutil.Database
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	dbp, err := testutil.NewDatabaseProvider(ctx)
+	db, err := testutil.NewDatabase(ctx)
 	if err != nil {
-		log.Fatalf("db provider creation failed: %v", err)
+		log.Fatalf("db creation failed: %v", err)
 	}
 
-	dbProvider = dbp
+	router, err := NewRouter(ctx, db.ConnectionString())
+	if err != nil {
+		log.Fatalf("router creation failed: %v", err)
+	}
+
+	testServer = httptest.NewServer(router)
+	testDB = db
 
 	code := m.Run()
 
-	if err := dbProvider.Close(ctx); err != nil {
-		log.Fatalf("db provider close failed: %v", err)
-	}
+	testServer.Close()
+	testDB.Close(ctx)
 
 	os.Exit(code)
 }
