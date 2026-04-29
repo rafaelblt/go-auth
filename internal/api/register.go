@@ -40,11 +40,11 @@ var (
 	}
 	errRegisterPasswordTooLong = FieldErrorData{
 		Code:    "PASSWORD_TOO_LONG",
-		Message: "The provided username is too long.",
+		Message: "The provided password is too long.",
 	}
 	errRegisterPasswordTooShort = FieldErrorData{
 		Code:    "PASSWORD_TOO_SHORT",
-		Message: "The provided username is too short.",
+		Message: "The provided password is too short.",
 	}
 )
 
