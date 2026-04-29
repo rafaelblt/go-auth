@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
@@ -57,8 +58,7 @@ func (handler RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 func (handler RegisterHandler) Handle(writer http.ResponseWriter, request *http.Request) {
-	// TODO: json content type middleware
-	writer.Header().Set("Content-Type", "application/json")
+	Log(request.Context(), slog.LevelInfo, "register request received")
 
 	input, err := handler.decodeRequestToInput(request)
 	if err != nil {
