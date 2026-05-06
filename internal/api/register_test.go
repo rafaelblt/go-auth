@@ -132,11 +132,40 @@ func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
 	user := testutil.DefaultUser(t)
 	helper.SaveUser(t, user)
-	
+
 	body := helper.NewBody(user.Username().String(), "12345678")
-	response :=	helper.SendRequest(body)
+	response := helper.SendRequest(body)
 
 	decoded := DecodeResponse[ErrorResponse](t, response)
 	assert.Equal(t, http.StatusConflict, response.StatusCode)
-	assert.Equal(t, errRegisterUsernameAlreadyExists, decoded.Error)
+	assert.Equal(t, registerUsernameAlreadyExistsError, decoded)
+}
+
+func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
+	testCases := []struct {
+		desc string
+		body string
+	}{
+		{
+			desc: "with only start bracket",
+			body: "{",
+		},
+		{
+			desc: "with only end bracket",
+			body: "}",
+		},
+		{
+			desc: "with random chars",
+			body: "21j89kf dsag-ĺ1#fdsh",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			helper := NewRegisterTestHelper(t)
+			response := helper.SendRequest(tC.body)
+			decoded := DecodeResponse[ErrorResponse](t, response)
+			assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+			assert.Equal(t, invalidJSONBodyErrorResponse, decoded)
+		})
+	}
 }

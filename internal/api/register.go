@@ -1,10 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
@@ -26,11 +26,12 @@ type RegisterHandler struct {
 	uc usecase.Register
 }
 
+var registerUsernameAlreadyExistsError = ErrorResponse{ErrorData{
+	Code:    "USERNAME_ALREADY_EXISTS",
+	Message: "The provided username already exists.",
+}}
+
 var (
-	errRegisterUsernameAlreadyExists = ErrorData{
-		Code:    "USERNAME_ALREADY_EXISTS",
-		Message: "The provided username already exists.",
-	}
 	errRegisterUsernameTooLong = FieldErrorData{
 		Code:    "USERNAME_TOO_LONG",
 		Message: "The provided username is too long.",
@@ -58,60 +59,60 @@ func (handler RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 func (handler RegisterHandler) Handle(writer http.ResponseWriter, request *http.Request) {
-	Log(request.Context(), slog.LevelInfo, "register request received")
+	ctx := request.Context()
+	logger := loggerFrom(ctx)
+
+	logger.Info("request received")
 
 	input, err := handler.decodeRequestToInput(request)
 	if err != nil {
-		writeInternalServerError(writer)
+		invalidJSONBodyError(ctx, writer, err)
 		return
 	}
 
-	output, err := handler.uc.Execute(request.Context(), input)
+	output, err := handler.uc.Execute(ctx, input)
 	if err != nil {
-		handler.writeError(writer, err)
+		handler.handleUseCaseError(ctx, writer, err)
 		return
 	}
 
-	handler.writeSuccessResponse(writer, output)
+	handler.success(ctx, writer, output)
 }
 
 func (h RegisterHandler) decodeRequestToInput(r *http.Request) (usecase.RegisterInput, error) {
 	var body RegisterBody
-	input := usecase.RegisterInput{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return input, err
+		return usecase.RegisterInput{},
+			fmt.Errorf("register body decode failed: %w", err)
 	}
+	input := usecase.RegisterInput{}
 	input.Username = body.Username
 	input.Password = body.Password
 	return input, nil
 }
 
-func (h RegisterHandler) writeError(writer http.ResponseWriter, err error) {
+func (h RegisterHandler) handleUseCaseError(ctx context.Context, w http.ResponseWriter, err error) {
 	if errors.Is(err, usecase.ErrRegisterUsernameAlreadyExists) {
-		response := ErrorResponse{Error: errRegisterUsernameAlreadyExists}
-		writer.WriteHeader(http.StatusConflict)
-		json.NewEncoder(writer).Encode(response)
+		response := registerUsernameAlreadyExistsError
+		w.WriteHeader(http.StatusConflict)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			internalError(ctx, w, "failed to encode username already exists response", err)
+		}
 		return
 	}
 
-	var validationErr usecase.ValidationError
-	if errors.As(err, &validationErr) {
-		h.writeValidationError(writer, validationErr)
+	var verr usecase.ValidationError
+	if errors.As(err, &verr) {
+		response, err := h.mapValidationError(verr)
+		if err != nil {
+			internalError(ctx, w, "validation error mapping failed", err)
+		} else {
+			validationError(ctx, w, response)
+		}
 		return
 	}
 
-	// TODO: log: unexpected error from register use case
-	writeInternalServerError(writer)
-}
-
-func (h RegisterHandler) writeValidationError(w http.ResponseWriter, verr usecase.ValidationError) {
-	response, err := h.mapValidationError(verr)
-	if err != nil {
-		/// TODO: log: unexpected validation error from register use case
-		writeInternalServerError(w)
-		return
-	}
-	writeValidationError(w, response)
+	internalError(ctx, w, "unexpected error from use case", err)
 }
 
 func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (ValidationErrorResponse, error) {
@@ -119,7 +120,7 @@ func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (Valid
 	usernameErrs := []FieldErrorData{}
 	passwordErrs := []FieldErrorData{}
 
-	for _, err := range verr.Errors().Values() {
+	for _, err := range verr.Errors() {
 		if errors.Is(err, usecase.ErrRegisterUsernameTooLong) {
 			usernameErrs = append(usernameErrs, errRegisterUsernameTooLong)
 		} else if errors.Is(err, usecase.ErrRegisterUsernameTooShort) {
@@ -130,7 +131,7 @@ func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (Valid
 			passwordErrs = append(passwordErrs, errRegisterPasswordTooShort)
 		} else {
 			return ValidationErrorResponse{},
-				fmt.Errorf("unexpected validation error from register: %w", err)
+				fmt.Errorf("unexpected validation error from use case: %w", err)
 		}
 	}
 
@@ -143,15 +144,16 @@ func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (Valid
 	return response, nil
 }
 
-func (h RegisterHandler) writeSuccessResponse(writer http.ResponseWriter, output usecase.RegisterOutput) {
+func (h RegisterHandler) success(ctx context.Context, w http.ResponseWriter, output usecase.RegisterOutput) {
 	response := RegisterResponse{}
 	resource, err := MapUserDTOToResource(output.User)
 	if err != nil {
-		// TODO: log: user dto mapping failed
-		writeInternalServerError(writer)
+		internalError(ctx, w, "user dto to resource mapping failed", err)
 		return
 	}
 	response.User = resource
-	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(response)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		internalError(ctx, w, "failed to encode register success response", err)
+	}
 }

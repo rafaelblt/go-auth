@@ -5,8 +5,11 @@ import (
 	"log/slog"
 )
 
-func Log(ctx context.Context, level slog.Level, msg string, args ...any) {
-	traceID, _ := ctx.Value("trace_id").(string)
-    args = append([]any{"trace_id", traceID}, args...)
-    slog.Log(ctx, level, msg, args...)
+const loggerKey = "logger"
+
+func loggerFrom(ctx context.Context) *slog.Logger {
+    if l, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
+        return l
+    }
+    return slog.Default()
 }

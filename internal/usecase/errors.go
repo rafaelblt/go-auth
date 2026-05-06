@@ -17,8 +17,8 @@ func (ve ValidationError) Error() string {
 	return "Validation Errors" // TODO: improve the error message
 }
 
-func (ve ValidationError) Errors() shared.Set[error] {
-	return ve.errs
+func (ve ValidationError) Errors() []error {
+	return ve.errs.Values()
 }
 
 func (ve ValidationError) Contains(target error) bool {

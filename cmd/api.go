@@ -10,11 +10,11 @@ import (
 )
 
 func chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
-    // Aplica de trás pra frente pra manter a ordem correta
-    for i := len(middlewares) - 1; i >= 0; i-- {
-        h = middlewares[i](h)
-    }
-    return h
+	// Aplica de trás pra frente pra manter a ordem correta
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
 }
 
 func main() {
@@ -26,9 +26,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("router creation failed: %v", err)
 	}
-	handler := chain(router,
-		api.Trace,
-		api.JSONContentType,
-	)
+	handler := chain(router, api.Middlewares...)
 	http.ListenAndServe(":8080", handler)
 }
