@@ -2,6 +2,14 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Run API",
+			"type": "shell",
+			"command": "go run ./cmd",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
 			"label": "Run All Tests",
 			"type": "shell",
 			"command": "go test ./... --cover",
