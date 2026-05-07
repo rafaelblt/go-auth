@@ -113,6 +113,9 @@ func (h RegisterHandler) usernameAlreadyExists(ctx context.Context, w http.Respo
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		internalError(ctx, w, "failed to encode username already exists response", err)
 	}
+
+	logger := loggerFrom(ctx)
+	logger.Info("registration failed: username already exists")
 }
 
 func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (ValidationErrorResponse, error) {
@@ -156,4 +159,7 @@ func (h RegisterHandler) success(ctx context.Context, w http.ResponseWriter, out
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		internalError(ctx, w, "failed to encode register success response", err)
 	}
+
+	logger := loggerFrom(ctx)
+	logger.Info("registration completed successfully", "user_id", output.User.ID)
 }
