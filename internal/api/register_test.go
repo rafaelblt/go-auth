@@ -84,7 +84,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 				"12345678",
 			),
 			expected: map[string]ValidationErrors{
-				"username": {errRegisterUsernameTooShort},
+				"username": {registerUsernameTooShortError},
 			},
 		},
 		{
@@ -94,7 +94,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 				"12345678",
 			),
 			expected: map[string]ValidationErrors{
-				"username": {errRegisterUsernameTooLong},
+				"username": {registerUsernameTooLongError},
 			},
 		},
 		{
@@ -104,7 +104,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 				strings.Repeat("a", domain.PlainPasswordMinLen-1),
 			),
 			expected: map[string]ValidationErrors{
-				"password": {errRegisterPasswordTooShort},
+				"password": {registerPasswordTooShortError},
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 				strings.Repeat("a", domain.PlainPasswordMaxLen+1),
 			),
 			expected: map[string]ValidationErrors{
-				"password": {errRegisterPasswordTooLong},
+				"password": {registerPasswordTooLongError},
 			},
 		},
 	}

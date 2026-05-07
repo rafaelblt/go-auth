@@ -32,19 +32,19 @@ var registerUsernameAlreadyExistsError = ErrorResponse{ErrorData{
 }}
 
 var (
-	errRegisterUsernameTooLong = FieldErrorData{
+	registerUsernameTooLongError = FieldErrorData{
 		Code:    "USERNAME_TOO_LONG",
 		Message: "The provided username is too long.",
 	}
-	errRegisterUsernameTooShort = FieldErrorData{
+	registerUsernameTooShortError = FieldErrorData{
 		Code:    "USERNAME_TOO_SHORT",
 		Message: "The provided username is too short.",
 	}
-	errRegisterPasswordTooLong = FieldErrorData{
+	registerPasswordTooLongError = FieldErrorData{
 		Code:    "PASSWORD_TOO_LONG",
 		Message: "The provided password is too long.",
 	}
-	errRegisterPasswordTooShort = FieldErrorData{
+	registerPasswordTooShortError = FieldErrorData{
 		Code:    "PASSWORD_TOO_SHORT",
 		Message: "The provided password is too short.",
 	}
@@ -61,7 +61,6 @@ func (handler RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 func (handler RegisterHandler) Handle(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := loggerFrom(ctx)
-
 	logger.Info("request received")
 
 	input, err := handler.decodeRequestToInput(request)
@@ -122,13 +121,13 @@ func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (Valid
 
 	for _, err := range verr.Errors() {
 		if errors.Is(err, usecase.ErrRegisterUsernameTooLong) {
-			usernameErrs = append(usernameErrs, errRegisterUsernameTooLong)
+			usernameErrs = append(usernameErrs, registerUsernameTooLongError)
 		} else if errors.Is(err, usecase.ErrRegisterUsernameTooShort) {
-			usernameErrs = append(usernameErrs, errRegisterUsernameTooShort)
+			usernameErrs = append(usernameErrs, registerUsernameTooShortError)
 		} else if errors.Is(err, usecase.ErrRegisterPasswordTooLong) {
-			passwordErrs = append(passwordErrs, errRegisterPasswordTooLong)
+			passwordErrs = append(passwordErrs, registerPasswordTooLongError)
 		} else if errors.Is(err, usecase.ErrRegisterPasswordTooShort) {
-			passwordErrs = append(passwordErrs, errRegisterPasswordTooShort)
+			passwordErrs = append(passwordErrs, registerPasswordTooShortError)
 		} else {
 			return ValidationErrorResponse{},
 				fmt.Errorf("unexpected validation error from use case: %w", err)
