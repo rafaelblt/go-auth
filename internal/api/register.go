@@ -54,8 +54,8 @@ func NewRegisterHandler(uc usecase.Register) RegisterHandler {
 	return RegisterHandler{uc}
 }
 
-func (handler RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler.Handle(w, r)
+func (h RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.Handle(w, r)
 }
 
 func (handler RegisterHandler) Handle(writer http.ResponseWriter, request *http.Request) {
@@ -92,11 +92,7 @@ func (h RegisterHandler) decodeRequestToInput(r *http.Request) (usecase.Register
 
 func (h RegisterHandler) handleUseCaseError(ctx context.Context, w http.ResponseWriter, err error) {
 	if errors.Is(err, usecase.ErrRegisterUsernameAlreadyExists) {
-		response := registerUsernameAlreadyExistsError
-		w.WriteHeader(http.StatusConflict)
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			internalError(ctx, w, "failed to encode username already exists response", err)
-		}
+		h.usernameAlreadyExists(ctx, w)
 		return
 	}
 
@@ -112,6 +108,14 @@ func (h RegisterHandler) handleUseCaseError(ctx context.Context, w http.Response
 	}
 
 	internalError(ctx, w, "unexpected error from use case", err)
+}
+
+func (h RegisterHandler) usernameAlreadyExists(ctx context.Context, w http.ResponseWriter)  {
+	w.WriteHeader(http.StatusConflict)
+	response := registerUsernameAlreadyExistsError
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		internalError(ctx, w, "failed to encode username already exists response", err)
+	}
 }
 
 func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (ValidationErrorResponse, error) {
@@ -144,14 +148,14 @@ func (h RegisterHandler) mapValidationError(verr usecase.ValidationError) (Valid
 }
 
 func (h RegisterHandler) success(ctx context.Context, w http.ResponseWriter, output usecase.RegisterOutput) {
-	response := RegisterResponse{}
 	resource, err := MapUserDTOToResource(output.User)
 	if err != nil {
-		internalError(ctx, w, "user dto to resource mapping failed", err)
+		internalError(ctx, w, "failed to map user dto to resource", err)
 		return
 	}
-	response.User = resource
+
 	w.WriteHeader(http.StatusOK)
+	response := RegisterResponse{User: resource}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		internalError(ctx, w, "failed to encode register success response", err)
 	}
