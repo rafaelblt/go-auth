@@ -73,11 +73,6 @@ func validationError(ctx context.Context, w http.ResponseWriter, resp Validation
 	}
 }
 
-func badRequestError(ctx context.Context, w http.ResponseWriter, msg string) {
-	logger := loggerFrom(ctx)
-	logger.Info("bad")
-}
-
 func invalidJSONBodyError(ctx context.Context, w http.ResponseWriter, err error) {
 	logger := loggerFrom(ctx)
 	logger.Info("invalid json body", "error", err)
