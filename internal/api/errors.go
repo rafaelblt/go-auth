@@ -27,7 +27,7 @@ type ValidationErrorResponse struct {
 	Errors map[string]ValidationErrors `json:"errors"`
 }
 
-var InternalServerErrorResponse = ErrorResponse{
+var internalServerErrorResponse = ErrorResponse{
 	Error: ErrorData{
 		Code:    "INTERNAL_SERVER_ERROR",
 		Message: "An internal error occurred.",
@@ -46,7 +46,7 @@ func internalError(ctx context.Context, w http.ResponseWriter, msg string, err e
 	logger.Error(msg, "error", err)
 	w.WriteHeader(http.StatusInternalServerError)
 
-	resp := InternalServerErrorResponse
+	resp := internalServerErrorResponse
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		logger.Error("failed to encode internal server error response", "error", err)
 	}
