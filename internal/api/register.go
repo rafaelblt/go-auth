@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 )
-
-var Dependencies *infra.DependencyContainer
 
 type RegisterBody struct {
 	Username string `json:"username"`
