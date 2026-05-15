@@ -8,32 +8,20 @@ import (
 	"github.com/google/uuid"
 )
 
-var Middlewares = []func(http.Handler) http.Handler {
-	JSONContentType,
-	Logging,
-}
+type middleware = func(http.Handler, http.ResponseWriter, *http.Request)
 
-func JSONContentType(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
-}
+func logging(next http.Handler, w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.NewString()
+	traceID := uuid.NewString()
 
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := uuid.NewString()
-		traceID := uuid.NewString()
+	logger := slog.With(
+		slog.String("request_id", requestID),
+		slog.String("trace_id", traceID),
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+		slog.String("ip", r.RemoteAddr),
+	)
 
-		logger := slog.With(
-			slog.String("request_id", requestID),
-			slog.String("trace_id", traceID),
-			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
-			slog.String("ip", r.RemoteAddr),
-		)
-
-		ctx := context.WithValue(r.Context(), loggerKey, logger)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	ctx := context.WithValue(r.Context(), loggerKey, logger)
+	next.ServeHTTP(w, r.WithContext(ctx))
 }

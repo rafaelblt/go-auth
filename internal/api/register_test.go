@@ -47,7 +47,7 @@ func (helper RegisterTestHelper) SaveUser(t *testing.T, user *domain.User) {
 	require.NoError(t, repo.Save(context.Background(), user))
 }
 
-func DecodeResponse[T any](t *testing.T, response *http.Response) T {
+func DecodeResponseBody[T any](t *testing.T, response *http.Response) T {
 	defer response.Body.Close()
 
 	var decoded T
@@ -62,7 +62,7 @@ func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 
 	response := helper.SendRequest(body)
 
-	decoded := DecodeResponse[RegisterResponse](t, response)
+	decoded := DecodeResponseBody[registerResponseBody](t, response)
 	assert.NotZero(t, decoded.User.ID)
 	assert.Equal(t, "maria", decoded.User.Username)
 	assert.Equal(t, "active", decoded.User.Status)
@@ -121,7 +121,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			response := helper.SendRequest(tC.body)
-			decoded := DecodeResponse[ValidationErrorResponse](t, response)
+			decoded := DecodeResponseBody[validationErrorBody](t, response)
 			assert.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
 			assert.Equal(t, tC.expected, decoded.Errors)
 		})
@@ -136,7 +136,7 @@ func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	body := helper.NewBody(user.Username().String(), "12345678")
 	response := helper.SendRequest(body)
 
-	decoded := DecodeResponse[ErrorResponse](t, response)
+	decoded := DecodeResponseBody[errorBody](t, response)
 	assert.Equal(t, http.StatusConflict, response.StatusCode)
 	assert.Equal(t, registerUsernameAlreadyExistsError, decoded)
 }
@@ -163,9 +163,9 @@ func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			helper := NewRegisterTestHelper(t)
 			response := helper.SendRequest(tC.body)
-			decoded := DecodeResponse[ErrorResponse](t, response)
+			decoded := DecodeResponseBody[errorBody](t, response)
 			assert.Equal(t, http.StatusBadRequest, response.StatusCode)
-			assert.Equal(t, invalidJSONBodyErrorResponse, decoded)
+			assert.Equal(t, invalidJSONBodyErrorBody, decoded)
 		})
 	}
 }

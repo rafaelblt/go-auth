@@ -22,12 +22,12 @@ func TestMain(m *testing.M) {
 		log.Fatalf("db creation failed: %v", err)
 	}
 
-	router, err := NewRouter(ctx, db.ConnectionString())
+	api, err := NewAPI(ctx, APIConfig{DBConnection: db.ConnectionString()})
 	if err != nil {
-		log.Fatalf("router creation failed: %v", err)
+		log.Fatalf("api creation failed: %v", err)
 	}
 
-	testServer = httptest.NewServer(router)
+	testServer = httptest.NewServer(api)
 	testDB = db
 
 	code := m.Run()

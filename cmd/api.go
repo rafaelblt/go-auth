@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/rafaelblt/go-auth/internal/api"
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -18,14 +19,26 @@ func chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.
 }
 
 func main() {
+	logger := slog.Default()
+
+	logger.Info("starting app...")
+
+	logger.Info("starting test database...")
 	db, err := testutil.NewDatabase(context.Background())
 	if err != nil {
-		log.Fatalf("db creation failed: %v", err)
+		logger.Error("failed to create test database", "error", err)
+		os.Exit(1)
 	}
-	router, err := api.NewRouter(context.Background(), db.ConnectionString())
+	logger.Info("test database created successfully")
+
+	logger.Info("creating api...")
+	handler, err := api.NewAPI(context.Background(), api.APIConfig{DBConnection: db.ConnectionString()})
 	if err != nil {
-		log.Fatalf("router creation failed: %v", err)
+		logger.Error("failed to create api", "error", err)
+		os.Exit(1)
 	}
-	handler := chain(router, api.Middlewares...)
+	logger.Info("api ready")
+
+	logger.Info("listening...")
 	http.ListenAndServe(":8080", handler)
 }
