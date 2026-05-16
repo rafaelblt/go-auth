@@ -28,7 +28,7 @@ func TestMapUserDTOToResource(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			resource, err := MapUserDTOToResource(tC.dto)
+			resource, err := mapUserDTOToResource(tC.dto)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, resource)
