@@ -19,11 +19,9 @@ var (
 
 func NewPlainPassword(value string) (PlainPassword, error) {
 	normalized := normalizePlainPassword(value)
-	if len(normalized) < PlainPasswordMinLen {
-		return PlainPassword{}, ErrPlainPasswordTooShort
-	}
-	if len(normalized) > PlainPasswordMaxLen {
-		return PlainPassword{}, ErrPlainPasswordTooLong
+	errs := ValidatePlainPassword(normalized)
+	if len(errs) > 0 {
+		return PlainPassword{}, &ValidationError{errs}
 	}
 	return PlainPassword{value: normalized}, nil
 }

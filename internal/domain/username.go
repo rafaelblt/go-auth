@@ -20,7 +20,7 @@ func NewUsername(value string) (Username, error) {
 
 	errs := ValidateUsername(normalized)
 	if len(errs) > 0 {
-		return Username{}, errs[0]
+		return Username{}, &ValidationError{errs}
 	}
 
 	return Username{normalized}, nil

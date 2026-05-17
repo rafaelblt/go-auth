@@ -52,27 +52,15 @@ func TestNewPlainPassword(t *testing.T) {
 	for _, tC := range passwordCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			password, err := domain.NewPlainPassword(tC.input)
-			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
+			if len(tC.expectedErr) == 0 {
 				require.NoError(t, err)
 				assert.Equal(t, tC.normalized, password.Value())
 			} else {
 				require.Error(t, err)
-				assert.Contains(t, tC.expectedErr, err)
-				assert.Empty(t, password)
-			}
-		})
-	}
-}
-
-func TestValidatePlainPassword(t *testing.T) {
-	for _, tC := range passwordCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			errs := domain.ValidatePlainPassword(tC.input)
-			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
-				assert.Empty(t, errs)
-			} else {
-				require.NotEmpty(t, errs)
-				assert.Equal(t, tC.expectedErr, errs)
+				assert.True(t, password.IsZero())
+				var verr *domain.ValidationError
+				require.ErrorAs(t, err, &verr)
+				assert.Equal(t, tC.expectedErr, verr.Unwrap())
 			}
 		})
 	}

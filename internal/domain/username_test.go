@@ -63,26 +63,15 @@ func TestNewUsername(t *testing.T) {
 	for _, tC := range usernamesData {
 		t.Run(tC.desc, func(t *testing.T) {
 			username, err := domain.NewUsername(tC.input)
-			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
+			if len(tC.expectedErr) == 0 {
 				require.NoError(t, err)
 				assert.Equal(t, tC.normalized, username.String())
 			} else {
 				require.Error(t, err)
-				assert.Empty(t, username)
-				assert.Contains(t, tC.expectedErr, err)
-			}
-		})
-	}
-}
-
-func TestValidateUsername_ShouldReturnExpectedErrors(t *testing.T) {
-	for _, tC := range usernamesData {
-		t.Run(tC.desc, func(t *testing.T) {
-			errs := domain.ValidateUsername(tC.input)
-			if tC.expectedErr == nil || len(tC.expectedErr) == 0 {
-				assert.Empty(t, errs)
-			} else {
-				assert.Equal(t, tC.expectedErr, errs)
+				assert.True(t, username.IsZero())
+				var verr *domain.ValidationError
+				require.ErrorAs(t, err, &verr)
+				assert.Equal(t, tC.expectedErr, verr.Unwrap())
 			}
 		})
 	}
