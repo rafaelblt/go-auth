@@ -114,7 +114,7 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 		return RegisterOutput{}, err
 	}
 
-	dto, err := MapUserToDTO(user)
+	dto := MapUserToDTO(user)
 	if err != nil {
 		return RegisterOutput{}, fmt.Errorf("user dto mapping failed: %w", err)
 	}

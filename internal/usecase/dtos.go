@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"errors"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
@@ -22,12 +21,12 @@ func (dto UserDTO) CreatedAt() time.Time { return dto.createdAt }
 func (dto UserDTO) UpdatedAt() time.Time { return dto.updatedAt }
 func (dto UserDTO) IsZero() bool         { return dto.id == "" }
 
-func MapUserToDTO(user *domain.User) (UserDTO, error) {
+func MapUserToDTO(user *domain.User) UserDTO {
 	if user == nil {
-		return UserDTO{}, errors.New("the user cannot be nil to map to dto")
+		panic("cannot map a nil user to dto")
 	}
 	if user.IsZero() {
-		return UserDTO{}, errors.New("the user cannot be zero to map to dto")
+		panic("cannot map a zero user to dto")
 	}
 	dto := UserDTO{
 		id:        user.ID().Value().String(),
@@ -36,5 +35,5 @@ func MapUserToDTO(user *domain.User) (UserDTO, error) {
 		createdAt: user.CreatedAt(),
 		updatedAt: user.UpdatedAt(),
 	}
-	return dto, nil
+	return dto
 }

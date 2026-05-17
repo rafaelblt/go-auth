@@ -7,35 +7,38 @@ import (
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMapUserToDTO(t *testing.T) {
 	testCases := []struct {
-		desc      string
-		user      *domain.User
-		expectErr bool
+		desc  string
+		user  *domain.User
+		panic bool
 	}{
 		{
-			desc:      "default user",
-			user:      testutil.DefaultUser(t),
-			expectErr: false,
+			desc:  "default user",
+			user:  testutil.DefaultUser(t),
+			panic: false,
 		},
 		{
-			desc:      "user zero",
-			user:      &domain.User{},
-			expectErr: true,
+			desc:  "user zero",
+			user:  &domain.User{},
+			panic: true,
+		},
+		{
+			desc:  "user nil",
+			user:  nil,
+			panic: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			dto, err := usecase.MapUserToDTO(tC.user)
-			if tC.expectErr {
-				assert.Error(t, err)
-				assert.Zero(t, dto)
+			if tC.panic {
+				assert.Panics(t, func() {
+					usecase.MapUserToDTO(tC.user)
+				})
 			} else {
-				require.NoError(t, err)
-				require.NotNil(t, dto)
+				dto := usecase.MapUserToDTO(tC.user)
 				assert.Equal(t, tC.user.ID().Value().String(), dto.ID())
 				assert.Equal(t, tC.user.Username().String(), dto.Username())
 				assert.Equal(t, tC.user.Status().String(), dto.Status())

@@ -7,13 +7,11 @@ import (
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func mapUserToDTO(t *testing.T, user *domain.User) usecase.UserDTO {
 	t.Helper()
-	dto, err := usecase.MapUserToDTO(user)
-	require.NoError(t, err)
+	dto := usecase.MapUserToDTO(user)
 	return dto
 }
 
