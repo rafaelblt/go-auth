@@ -86,7 +86,7 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 
 	hashed, err := uc.hasher.Hash(password)
 	if err != nil {
-		return RegisterOutput{}, fmt.Errorf("password hasher failed: %w", err)
+		return RegisterOutput{}, fmt.Errorf("password hashing failed: %w", err)
 	}
 
 	now := uc.clock.UtcNow()
@@ -98,6 +98,7 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 	if err != nil {
 		return RegisterOutput{}, err
 	}
+
 	cred, err := uc.createCredential(domain.NewCredentialParams{
 		UserID:    user.ID(),
 		Kind:      domain.CredentialKindPassword,
