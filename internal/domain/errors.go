@@ -1,6 +1,25 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
+
+type ValidationError struct {
+	errs []error
+}
+
+func (ve *ValidationError) Error() string {
+	msgs := make([]string, len(ve.errs))
+    for i, err := range ve.errs {
+        msgs[i] = err.Error()
+    }
+    return strings.Join(msgs, "; ")
+}
+
+func (ve *ValidationError) Unwrap() []error {
+    return ve.errs
+}
 
 var ErrUserIDZero = errors.New("the user id is zero")
 var ErrUsernameZero = errors.New("the username is zero")
