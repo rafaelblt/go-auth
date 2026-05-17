@@ -67,13 +67,17 @@ func NewRegister(config RegisterConfig) (Register, error) {
 }
 
 func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOutput, error) {
-	err := uc.validateInput(input)
-	if err != nil {
+	validation := NewValidationAccumulator()
+
+	username, err := domain.NewUsername(input.Username)
+	validation.Add("Username", err)
+	password, err := domain.NewPlainPassword(input.Password)
+	validation.Add("Password", err)
+
+	result := validation.Result()
+	if result != nil {
 		return RegisterOutput{}, err
 	}
-
-	username := uc.convertUsername(input.Username)
-	password := uc.convertPassword(input.Password)
 
 	err = uc.checkUsernameExists(ctx, username)
 	if err != nil {
@@ -116,38 +120,6 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 	}
 
 	return RegisterOutput{User: dto}, nil
-}
-
-func (uc Register) validateInput(input RegisterInput) error {
-	usernameErrs := domain.ValidateUsername(input.Username)
-	passwordErrs := domain.ValidatePlainPassword(input.Password)
-
-	allErrs := append(usernameErrs, passwordErrs...)
-	mappeds, unexpecteds := MapErrors(allErrs, registerValidationMap)
-
-	if len(unexpecteds) > 0 {
-		return fmt.Errorf("unexpected validation errors from domain: %w", errors.Join(unexpecteds...))
-	}
-	if len(mappeds) > 0 {
-		return newValidationError(mappeds...)
-	}
-	return nil
-}
-
-func (uc Register) convertUsername(username string) domain.Username {
-	converted, err := domain.NewUsername(username)
-	if err != nil {
-		panic(fmt.Sprintf("username here should be valid, but it contains an error: %v", err))
-	}
-	return converted
-}
-
-func (uc Register) convertPassword(password string) domain.PlainPassword {
-	converted, err := domain.NewPlainPassword(password)
-	if err != nil {
-		panic(fmt.Sprintf("plain password here should be valid, but it contains an error: %v", err))
-	}
-	return converted
 }
 
 func (uc Register) checkUsernameExists(ctx context.Context, username domain.Username) error {
