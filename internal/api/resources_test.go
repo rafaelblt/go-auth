@@ -33,11 +33,11 @@ func TestMapUserDTOToResource(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotZero(t, resource)
-				assert.Equal(t, tC.dto.ID(), resource.ID)
-				assert.Equal(t, tC.dto.Username(), resource.Username)
-				assert.Equal(t, tC.dto.Status(), resource.Status)
-				assert.Equal(t, tC.dto.CreatedAt(), resource.CreatedAt)
-				assert.Equal(t, tC.dto.UpdatedAt(), resource.UpdatedAt)
+				assert.Equal(t, tC.dto.ID, resource.ID)
+				assert.Equal(t, tC.dto.Username, resource.Username)
+				assert.Equal(t, tC.dto.Status, resource.Status)
+				assert.Equal(t, tC.dto.CreatedAt, resource.CreatedAt)
+				assert.Equal(t, tC.dto.UpdatedAt, resource.UpdatedAt)
 			}
 		})
 	}

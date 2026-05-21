@@ -20,10 +20,10 @@ func mapUserDTOToResource(dto usecase.UserDTO) (userResource, error) {
 	if dto.IsZero() {
 		return resource, errors.New("the user dto cannot be zero to map to user resource")
 	}
-	resource.ID = dto.ID()
-	resource.Username = dto.Username()
-	resource.Status = dto.Status()
-	resource.CreatedAt = dto.CreatedAt()
-	resource.UpdatedAt = dto.UpdatedAt()
+	resource.ID = dto.ID
+	resource.Username = dto.Username
+	resource.Status = dto.Status
+	resource.CreatedAt = dto.CreatedAt
+	resource.UpdatedAt = dto.UpdatedAt
 	return resource, nil
 }
