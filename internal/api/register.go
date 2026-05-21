@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type registerRequestBody struct {
@@ -20,7 +22,7 @@ type registerResponseBody struct {
 }
 
 type registerHandler struct {
-	uc     usecase.Register
+	uc     register.Register
 	logger *slog.Logger
 }
 
@@ -49,7 +51,7 @@ var (
 	}
 )
 
-func newRegisterHandler(uc usecase.Register) registerHandler {
+func newRegisterHandler(uc register.Register) registerHandler {
 	return registerHandler{uc, slog.Default()}
 }
 
@@ -68,7 +70,7 @@ func (handler registerHandler) Handle(request *http.Request) response {
 	}
 
 	logger.Info("executing register use case")
-	output, err := handler.uc.Execute(ctx, usecase.RegisterInput{
+	output, err := handler.uc.Execute(ctx, register.Input{
 		Username: reqBody.Username,
 		Password: reqBody.Password,
 	})
@@ -95,12 +97,12 @@ func (handler registerHandler) Handle(request *http.Request) response {
 }
 
 func (h registerHandler) handleUseCaseError(err error) response {
-	if errors.Is(err, usecase.ErrRegisterUsernameAlreadyExists) {
+	if errors.Is(err, register.ErrUsernameAlreadyExists) {
 		h.logger.Info("registration failed: username already exists")
 		return h.usernameAlreadyExists()
 	}
 
-	var verr usecase.ValidationError
+	var verr *usecase.ValidationError
 	if errors.As(err, &verr) {
 		response, err := h.mapValidationError(verr)
 		if err != nil {
@@ -123,23 +125,23 @@ func (h registerHandler) usernameAlreadyExists() response {
 	}
 }
 
-func (h registerHandler) mapValidationError(verr usecase.ValidationError) (validationErrorBody, error) {
+func (h registerHandler) mapValidationError(verr *usecase.ValidationError) (validationErrorBody, error) {
 	body := validationErrorBody{Errors: map[string]ValidationErrors{}}
 	usernameErrs := []fieldErrorData{}
 	passwordErrs := []fieldErrorData{}
 
-	for _, err := range verr.Errors() {
-		if errors.Is(err, usecase.ErrRegisterUsernameTooLong) {
+	for _, fieldErr := range verr.Errors() {
+		if errors.Is(fieldErr.Err(), domain.ErrUsernameTooLong) {
 			usernameErrs = append(usernameErrs, registerUsernameTooLongError)
-		} else if errors.Is(err, usecase.ErrRegisterUsernameTooShort) {
+		} else if errors.Is(fieldErr.Err(), domain.ErrUsernameTooShort) {
 			usernameErrs = append(usernameErrs, registerUsernameTooShortError)
-		} else if errors.Is(err, usecase.ErrRegisterPasswordTooLong) {
+		} else if errors.Is(fieldErr.Err(), domain.ErrPlainPasswordTooLong) {
 			passwordErrs = append(passwordErrs, registerPasswordTooLongError)
-		} else if errors.Is(err, usecase.ErrRegisterPasswordTooShort) {
+		} else if errors.Is(fieldErr.Err(), domain.ErrPlainPasswordTooShort) {
 			passwordErrs = append(passwordErrs, registerPasswordTooShortError)
 		} else {
 			return validationErrorBody{},
-				fmt.Errorf("unexpected validation error from use case: %w", err)
+				fmt.Errorf("unexpected validation error from use case: %w", fieldErr.Err())
 		}
 	}
 

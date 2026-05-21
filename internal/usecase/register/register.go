@@ -1,4 +1,4 @@
-package usecase
+package register
 
 import (
 	"context"
@@ -6,87 +6,61 @@ import (
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/usecase"
 )
 
 type Register struct {
-	userExists UserExistsChecker
-	uow        UnitOfWork
-	hasher     PasswordHasher
-	clock      Clock
+	userExists usecase.UserExistsChecker
+	uow        usecase.UnitOfWork
+	hasher     usecase.PasswordHasher
+	clock      usecase.Clock
 }
 
-type RegisterInput struct {
-	Username string
-	Password string
-}
+var ErrUsernameAlreadyExists = errors.New("the provided username is already registered")
 
-type RegisterOutput struct {
-	User UserDTO
-}
-
-type RegisterConfig struct {
-	UserExistsChecker UserExistsChecker
-	UnitOfWork        UnitOfWork
-	PasswordHasher    PasswordHasher
-	Clock             Clock
-}
-
-var ErrRegisterUsernameTooShort = errors.New("the provided username is too short")
-var ErrRegisterUsernameTooLong = errors.New("the provided username is too long")
-var ErrRegisterPasswordTooShort = errors.New("the provided password is too short")
-var ErrRegisterPasswordTooLong = errors.New("the provided password is too long")
-var ErrRegisterUsernameAlreadyExists = errors.New("the provided username is already registered")
-
-var registerValidationMap = ErrorsMap{
-	domain.ErrUsernameTooShort:      ErrRegisterUsernameTooShort,
-	domain.ErrUsernameTooLong:       ErrRegisterUsernameTooLong,
-	domain.ErrPlainPasswordTooShort: ErrRegisterPasswordTooShort,
-	domain.ErrPlainPasswordTooLong:  ErrRegisterPasswordTooLong,
-}
-
-func NewRegister(config RegisterConfig) (Register, error) {
-	if config.UserExistsChecker == nil {
+func New(cfg Config) (Register, error) {
+	if cfg.UserExistsChecker == nil {
 		return Register{}, errors.New("user exists checker cannot be nil")
 	}
-	if config.UnitOfWork == nil {
+	if cfg.UnitOfWork == nil {
 		return Register{}, errors.New("unit of work cannot be nil")
 	}
-	if config.PasswordHasher == nil {
+	if cfg.PasswordHasher == nil {
 		return Register{}, errors.New("password hasher cannot be nil")
 	}
-	if config.Clock == nil {
+	if cfg.Clock == nil {
 		return Register{}, errors.New("clock cannot be nil")
 	}
 	uc := Register{
-		userExists: config.UserExistsChecker,
-		uow:        config.UnitOfWork,
-		hasher:     config.PasswordHasher,
-		clock:      config.Clock,
+		userExists: cfg.UserExistsChecker,
+		uow:        cfg.UnitOfWork,
+		hasher:     cfg.PasswordHasher,
+		clock:      cfg.Clock,
 	}
 	return uc, nil
 }
 
-func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOutput, error) {
-	validation := NewValidationAccumulator()
+func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
+	validation := usecase.NewValidationAccumulator()
 
 	username, err := domain.NewUsername(input.Username)
-	validation.Add("Username", err)
+	validation.Add(UsernameField, err)
 	password, err := domain.NewPlainPassword(input.Password)
-	validation.Add("Password", err)
+	validation.Add(PasswordField, err)
 
-	result := validation.Result()
-	if result != nil {
-		return RegisterOutput{}, err
+	err = validation.Err()
+	if err != nil {
+		return Output{}, err
 	}
 
 	err = uc.checkUsernameExists(ctx, username)
 	if err != nil {
-		return RegisterOutput{}, err
+		return Output{}, err
 	}
 
 	hashed, err := uc.hasher.Hash(password)
 	if err != nil {
-		return RegisterOutput{}, fmt.Errorf("password hashing failed: %w", err)
+		return Output{}, fmt.Errorf("password hashing failed: %w", err)
 	}
 
 	now := uc.clock.UtcNow()
@@ -96,7 +70,7 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 		CreatedAt: now,
 	})
 	if err != nil {
-		return RegisterOutput{}, err
+		return Output{}, err
 	}
 
 	cred, err := uc.createCredential(domain.NewCredentialParams{
@@ -107,20 +81,16 @@ func (uc Register) Execute(ctx context.Context, input RegisterInput) (RegisterOu
 		CreatedAt: now,
 	})
 	if err != nil {
-		return RegisterOutput{}, err
+		return Output{}, err
 	}
 
 	err = uc.save(ctx, user, cred)
 	if err != nil {
-		return RegisterOutput{}, err
+		return Output{}, err
 	}
 
-	dto := MapUserToDTO(user)
-	if err != nil {
-		return RegisterOutput{}, fmt.Errorf("user dto mapping failed: %w", err)
-	}
-
-	return RegisterOutput{User: dto}, nil
+	dto := usecase.MapUserToDTO(user)
+	return Output{User: dto}, nil
 }
 
 func (uc Register) checkUsernameExists(ctx context.Context, username domain.Username) error {
@@ -129,7 +99,7 @@ func (uc Register) checkUsernameExists(ctx context.Context, username domain.User
 		return fmt.Errorf("user exists checker failed: %w", err)
 	}
 	if exists {
-		return ErrRegisterUsernameAlreadyExists
+		return ErrUsernameAlreadyExists
 	}
 	return nil
 }
@@ -154,11 +124,11 @@ func (uc Register) createCredential(params domain.NewCredentialParams) (*domain.
 }
 
 func (uc Register) save(ctx context.Context, user *domain.User, cred *domain.Credential) error {
-	return uc.uow.Do(ctx, func(deps UowDeps) error {
+	return uc.uow.Do(ctx, func(deps usecase.UowDeps) error {
 		err := deps.UserWriter.Save(ctx, user)
 		if err != nil {
 			if errors.Is(err, domain.ErrUsernameAlreadyExists) {
-				return ErrRegisterUsernameAlreadyExists
+				return ErrUsernameAlreadyExists
 			} else {
 				return fmt.Errorf("user writer save failed: %w", err)
 			}

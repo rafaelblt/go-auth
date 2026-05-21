@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type DependencyContainer struct {
@@ -31,21 +32,21 @@ func NewDependencyContainer(
 	return &container, nil
 }
 
-func (ctr *DependencyContainer) BuildRegister() (usecase.Register, error) {
+func (ctr *DependencyContainer) BuildRegister() (register.Register, error) {
 	userExistsChecker, err := NewUserRepo(ctr.pool)
 	if err != nil {
-		return usecase.Register{},
+		return register.Register{},
 			fmt.Errorf("user repo as user exists checker creation failed: %w", err)
 	}
 	uow, err := ctr.buildUow()
 	if err != nil {
-		return usecase.Register{}, err
+		return register.Register{}, err
 	}
 	hasher, err := ctr.buildPwdHasher()
 	if err != nil {
-		return usecase.Register{}, err
+		return register.Register{}, err
 	}
-	uc, err := usecase.NewRegister(usecase.RegisterConfig{
+	uc, err := register.New(register.Config{
 		UserExistsChecker: userExistsChecker,
 		UnitOfWork:        uow,
 		PasswordHasher:    hasher,
