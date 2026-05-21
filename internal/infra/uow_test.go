@@ -33,7 +33,7 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 
 	err = uow.Do(ctx, func(deps usecase.UowDeps) error {
 		return deps.UserWriter.Save(ctx, user)
@@ -53,8 +53,7 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 	credential := domaintest.PasswordCredential(t, domaintest.WithUserID(user.ID()))
 
 	err = uow.Do(ctx, func(deps usecase.UowDeps) error {

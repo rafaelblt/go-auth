@@ -22,7 +22,7 @@ func TestMapUserDTOToResource(t *testing.T) {
 		expectErr bool
 	}{
 		{desc: "user dto zero", dto: usecase.UserDTO{}, expectErr: true},
-		{desc: "default user", dto: mapUserToDTO(t, domaintest.DefaultUser(t))},
+		{desc: "default user", dto: mapUserToDTO(t, domaintest.NewUser(t, nil))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

@@ -130,7 +130,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 	helper.SaveUser(t, user)
 
 	body := helper.NewBody(user.Username().String(), "12345678")

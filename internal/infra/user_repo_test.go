@@ -33,7 +33,7 @@ func TestUserRepo_Save(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 
 	err := repo.Save(context.Background(), user)
 
@@ -61,7 +61,7 @@ func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 	require.NoError(t, repo.Save(context.Background(), user))
 
 	exists, err := repo.ExistsByUsername(context.Background(), user.Username())
@@ -74,7 +74,7 @@ func TestUserRepo_ExistsByUsername_WhenUsernameNotExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := domaintest.DefaultUser(t)
+	user := domaintest.NewUser(t, nil)
 
 	exists, err := repo.ExistsByUsername(context.Background(), user.Username())
 

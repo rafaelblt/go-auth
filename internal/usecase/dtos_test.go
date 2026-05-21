@@ -17,7 +17,7 @@ func TestMapUserToDTO(t *testing.T) {
 	}{
 		{
 			desc:  "default user",
-			user:  domaintest.DefaultUser(t),
+			user:  domaintest.NewUser(t, nil),
 			panic: false,
 		},
 		{

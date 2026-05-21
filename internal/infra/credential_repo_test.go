@@ -37,7 +37,7 @@ func (helper CredentialRepoTestHelper) PersistentUser(db infra.PGDB) *domain.Use
 	helper.t.Helper()
 	require.NotNil(helper.t, db)
 
-	user := domaintest.DefaultUser(helper.t)
+	user := domaintest.NewUser(helper.t, nil)
 
 	userRepo, err := infra.NewUserRepo(db)
 	require.NoError(helper.t, err)

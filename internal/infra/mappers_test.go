@@ -18,7 +18,7 @@ func TestMapUserDomainToModel(t *testing.T) {
 	}{
 		{
 			desc:      "default user",
-			user:      domaintest.DefaultUser(t),
+			user:      domaintest.NewUser(t, nil),
 			expectErr: false,
 		},
 		{

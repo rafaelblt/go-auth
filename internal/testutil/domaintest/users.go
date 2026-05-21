@@ -8,39 +8,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mustUsername(t *testing.T, value string) domain.Username {
+func NewUser(t *testing.T, override func(*domain.UserRestoreParams)) *domain.User {
+	t.Helper()
+
+    params := domain.UserRestoreParams{
+        ID:        domain.NewUserID(),
+        Username:  MustUsername(t, "Default User"),
+        Status:    domain.UserStatusActive,
+        CreatedAt: time.Date(2007, 8, 9, 20, 45, 0, 0, time.UTC),
+        UpdatedAt: time.Date(2026, 5, 21, 16, 0, 7, 0, time.UTC),
+    }
+
+    if override != nil {
+        override(&params)
+    }
+
+    entity, err := domain.RestoreUser(params)
+    require.NoError(t, err)
+    return entity
+}
+
+func MustUsername(t *testing.T, value string) domain.Username {
 	t.Helper()
 	username, err := domain.NewUsername(value)
 	require.NoError(t, err)
 	return username
-}
-
-func DefaultUser(t *testing.T) *domain.User {
-	t.Helper()
-	entity, err := domain.RestoreUser(
-		domain.UserRestoreParams{
-			ID: domain.NewUserID(),
-			Username: mustUsername(t, "default_user"),
-			Status: domain.UserStatusActive,
-			CreatedAt: time.Date(2026, 3, 10, 16, 0, 0, 0, time.UTC),
-			UpdatedAt: time.Date(2026, 3, 10, 16, 0, 0, 0, time.UTC),
-		},
-	)
-	require.NoError(t, err)
-	return entity
-}
-
-func OtherUser(t *testing.T) *domain.User {
-	t.Helper()
-	entity, err := domain.RestoreUser(
-		domain.UserRestoreParams{
-			ID: domain.NewUserID(),
-			Username: mustUsername(t, "other_user"),
-			Status: domain.UserStatusActive,
-			CreatedAt: time.Date(2000, 2, 20, 0, 0, 0, 0, time.UTC),
-			UpdatedAt: time.Date(2000, 2, 20, 0, 0, 0, 0, time.UTC),
-		},
-	)
-	require.NoError(t, err)
-	return entity
 }
