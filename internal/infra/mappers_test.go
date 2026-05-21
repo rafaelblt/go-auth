@@ -5,7 +5,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestMapUserDomainToModel(t *testing.T) {
 	}{
 		{
 			desc:      "default user",
-			user:      testutil.DefaultUser(t),
+			user:      domaintest.DefaultUser(t),
 			expectErr: false,
 		},
 		{
@@ -60,7 +60,7 @@ func TestMapCredentialDomainToModel(t *testing.T) {
 	}{
 		{
 			desc:      "password credential",
-			cred:      testutil.PasswordCredential(t),
+			cred:      domaintest.PasswordCredential(t),
 			expectErr: false,
 		},
 		{

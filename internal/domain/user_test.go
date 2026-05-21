@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -124,23 +124,23 @@ func TestChangeUsername(t *testing.T) {
 	}{
 		{
 			desc:      "valid update",
-			user:      testutil.DefaultUser(t),
-			username:  testutil.OtherUser(t).Username(),
+			user:      domaintest.DefaultUser(t),
+			username:  domaintest.OtherUser(t).Username(),
 			updatedAt: time.Now().UTC(),
 			expectErr: false,
 		},
 		{
 			desc:      "username zero",
-			user:      testutil.DefaultUser(t),
+			user:      domaintest.DefaultUser(t),
 			username:  domain.Username{},
 			updatedAt: time.Now().UTC(),
 			expectErr: true,
 		},
 		{
 			desc:      "updated at before created at",
-			user:      testutil.DefaultUser(t),
-			username:  testutil.OtherUser(t).Username(),
-			updatedAt: testutil.DefaultUser(t).CreatedAt().Add(-1),
+			user:      domaintest.DefaultUser(t),
+			username:  domaintest.OtherUser(t).Username(),
+			updatedAt: domaintest.DefaultUser(t).CreatedAt().Add(-1),
 			expectErr: true,
 		},
 	}
@@ -171,7 +171,7 @@ func TestIsZero(t *testing.T) {
 		},
 		{
 			desc:   "valid user",
-			user:   testutil.DefaultUser(t),
+			user:   domaintest.DefaultUser(t),
 			isZero: false,
 		},
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +37,7 @@ func (helper CredentialRepoTestHelper) PersistentUser(db infra.PGDB) *domain.Use
 	helper.t.Helper()
 	require.NotNil(helper.t, db)
 
-	user := testutil.DefaultUser(helper.t)
+	user := domaintest.DefaultUser(helper.t)
 
 	userRepo, err := infra.NewUserRepo(db)
 	require.NoError(helper.t, err)
@@ -55,8 +55,8 @@ func TestCredentialRepo_Save(t *testing.T) {
 	repo := helper.Writer(db)
 	persistentUser := helper.PersistentUser(db)
 
-	credential := testutil.PasswordCredential(t,
-		testutil.WithUserID(persistentUser.ID()),
+	credential := domaintest.PasswordCredential(t,
+		domaintest.WithUserID(persistentUser.ID()),
 	)
 
 	err := repo.Save(context.Background(), credential)

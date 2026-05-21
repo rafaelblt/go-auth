@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestUserRepo_Save(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := testutil.DefaultUser(t)
+	user := domaintest.DefaultUser(t)
 
 	err := repo.Save(context.Background(), user)
 
@@ -61,7 +61,7 @@ func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := testutil.DefaultUser(t)
+	user := domaintest.DefaultUser(t)
 	require.NoError(t, repo.Save(context.Background(), user))
 
 	exists, err := repo.ExistsByUsername(context.Background(), user.Username())
@@ -74,7 +74,7 @@ func TestUserRepo_ExistsByUsername_WhenUsernameNotExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	db := helper.DB()
 	repo := helper.Repo(db)
-	user := testutil.DefaultUser(t)
+	user := domaintest.DefaultUser(t)
 
 	exists, err := repo.ExistsByUsername(context.Background(), user.Username())
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,7 +130,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	user := testutil.DefaultUser(t)
+	user := domaintest.DefaultUser(t)
 	helper.SaveUser(t, user)
 
 	body := helper.NewBody(user.Username().String(), "12345678")

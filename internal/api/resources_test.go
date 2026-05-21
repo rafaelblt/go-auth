@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +22,7 @@ func TestMapUserDTOToResource(t *testing.T) {
 		expectErr bool
 	}{
 		{desc: "user dto zero", dto: usecase.UserDTO{}, expectErr: true},
-		{desc: "default user", dto: mapUserToDTO(t, testutil.DefaultUser(t))},
+		{desc: "default user", dto: mapUserToDTO(t, domaintest.DefaultUser(t))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

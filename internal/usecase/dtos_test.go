@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +17,7 @@ func TestMapUserToDTO(t *testing.T) {
 	}{
 		{
 			desc:  "default user",
-			user:  testutil.DefaultUser(t),
+			user:  domaintest.DefaultUser(t),
 			panic: false,
 		},
 		{

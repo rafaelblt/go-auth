@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +33,7 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-	user := testutil.DefaultUser(t)
+	user := domaintest.DefaultUser(t)
 
 	err = uow.Do(ctx, func(deps usecase.UowDeps) error {
 		return deps.UserWriter.Save(ctx, user)
@@ -53,8 +53,9 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-	user := testutil.DefaultUser(t)
-	credential := testutil.PasswordCredential(t, testutil.WithUserID(user.ID()))
+
+	user := domaintest.DefaultUser(t)
+	credential := domaintest.PasswordCredential(t, domaintest.WithUserID(user.ID()))
 
 	err = uow.Do(ctx, func(deps usecase.UowDeps) error {
 		require.NoError(t, deps.UserWriter.Save(ctx, user))
