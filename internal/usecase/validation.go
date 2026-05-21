@@ -15,10 +15,10 @@ type ValidationError struct {
 
 func (ve *ValidationError) Error() string {
 	msgs := make([]string, ve.errs.Len())
-    for i, err := range ve.errs.Values() {
-        msgs[i] = err.Error()
-    }
-    return strings.Join(msgs, "; ")
+	for i, err := range ve.errs.Values() {
+		msgs[i] = fmt.Sprintf("%s: %s", err.Field(), err.Err())
+	}
+	return strings.Join(msgs, "; ")
 }
 
 func (ve *ValidationError) Errors() []FieldError {
@@ -34,8 +34,16 @@ type FieldError struct {
 	err   error
 }
 
-func (fe FieldError) Error() string {
-    return fmt.Sprintf("[%s]: %s", fe.field, fe.err)
+func NewFieldError(field string, err error) FieldError {
+	return FieldError{field, err}
+}
+
+func (fe FieldError) Field() string {
+	return fe.field
+}
+
+func (fe FieldError) Err() error {
+	return fe.err
 }
 
 type ValidationAccumulator struct {
@@ -44,10 +52,10 @@ type ValidationAccumulator struct {
 }
 
 func NewValidationAccumulator() *ValidationAccumulator {
-    return &ValidationAccumulator{
-        verr: &ValidationError{errs: shared.NewSet[FieldError]()},
-        fatal: nil,
-    }
+	return &ValidationAccumulator{
+		verr:  &ValidationError{errs: shared.NewSet[FieldError]()},
+		fatal: nil,
+	}
 }
 
 func (acc *ValidationAccumulator) Add(field string, err error) {
@@ -56,15 +64,15 @@ func (acc *ValidationAccumulator) Add(field string, err error) {
 	}
 	var verr *domain.ValidationError
 	if errors.As(err, &verr) {
-        for _, e := range verr.Unwrap() {
-            acc.verr.errs.Add(FieldError{field, e})
-        }
+		for _, e := range verr.Unwrap() {
+			acc.verr.errs.Add(FieldError{field, e})
+		}
 		return
 	}
 	acc.fatal = fmt.Errorf("unexpected non-validation error: %w", err)
 }
 
-func (acc *ValidationAccumulator) Result() error {
+func (acc *ValidationAccumulator) Err() error {
 	if acc.fatal != nil {
 		return acc.fatal
 	}
@@ -73,4 +81,3 @@ func (acc *ValidationAccumulator) Result() error {
 	}
 	return nil
 }
-
