@@ -20,7 +20,7 @@ type UnitOfWork interface {
 	Do(ctx context.Context, fn func(deps UowDeps) error) error
 }
 type UowDeps struct {
-	UserWriter UserWriter
+	UserWriter       UserWriter
 	CredentialWriter CredentialWriter
 }
 
@@ -36,4 +36,30 @@ type UserWriter interface {
 
 type CredentialWriter interface {
 	Save(context.Context, *domain.Credential) error
+}
+
+type AccessTokenService interface {
+	AccessTokenIssuer
+	AccessTokenValidator
+}
+
+type AccessTokenIssuer interface {
+	Issue(AccessTokenPayload) (AccessToken, error)
+}
+
+type AccessTokenValidator interface {
+	Validate(raw string) (AccessTokenClaims, error)
+}
+
+type AccessTokenPayload struct {
+	UserID domain.UserID
+}
+
+type AccessToken struct {
+	Raw       string
+	ExpiresAt time.Time
+}
+
+type AccessTokenClaims struct {
+	UserID domain.UserID
 }
