@@ -245,11 +245,12 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithNoClaims(t *testing
 
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentSecret(t *testing.T) {
 	service := accessTokenService()
-	service.secret = []byte("bla-bla-bla-bla-67-3.14")
 
 	payload := usecase.AccessTokenPayload{UserID: domain.NewUserID()}
 	token, err := service.Issue(payload)
 	require.NoError(t, err)
+
+	service.secret = []byte("bla-bla-bla-bla-67-3.14")
 
 	claims, err := service.Validate(token.Raw)
 
