@@ -28,6 +28,17 @@ func newEntityIDFrom(id uuid.UUID) (EntityID, error) {
 	}
 	return EntityID{id}, nil
 }
+func parseEntityID(value string) (EntityID, error) {
+	parsed, err := uuid.Parse(value)
+	if err != nil {
+		return EntityID{}, err
+	}
+	id, err := newEntityIDFrom(parsed)
+	if err != nil {
+		return EntityID{}, err
+	}
+	return id, nil
+}
 
 func (id EntityID) Value() uuid.UUID { return id.value }
 func (id EntityID) IsZero() bool { return id.value == uuid.Nil }
@@ -41,4 +52,12 @@ func NewUserIDFrom(id uuid.UUID) (UserID, error) {
 		return UserID{}, err
 	}
 	return UserID{converted}, nil
+}
+
+func ParseUserID(value string) (UserID, error) {
+	id, err := parseEntityID(value)
+	if err != nil {
+		return UserID{}, err
+	}
+	return UserID{id}, nil
 }
