@@ -1,17 +1,12 @@
 package domain
 
-type CredentialKind string
+type CredentialKind struct {
+	value string
+}
 
-const (
-	CredentialKindPassword CredentialKind = "password"
+var (
+	CredentialKindPassword = CredentialKind{"password"}
 )
 
-func (k CredentialKind) String() string { return string(k) }
-func (k CredentialKind) IsValid() bool {
-	switch k {
-	case CredentialKindPassword:
-		return true
-	default:
-		return false
-	}
-}
+func (k CredentialKind) String() string { return k.value }
+func (k CredentialKind) IsZero() bool   { return k.value == "" }

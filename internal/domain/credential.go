@@ -2,7 +2,6 @@ package domain
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -28,8 +27,8 @@ func NewCredential(params NewCredentialParams) (*Credential, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("credential user id cannot be zero")
 	}
-	if !params.Kind.IsValid() {
-		return nil, fmt.Errorf("credential kind '%v' is not valid", params.Kind)
+	if params.Kind.IsZero() {
+		return nil, errors.New("credential kind cannot be zero")
 	}
 	if params.Provider.IsZero() {
 		return nil, errors.New("credential provider cannot be zero")
@@ -66,8 +65,8 @@ func RestoreCredential(params CredentialRestoreParams) (*Credential, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("credential user id cannot be zero")
 	}
-	if !params.Kind.IsValid() {
-		return nil, fmt.Errorf("credential kind '%v' is not valid", params.Kind)
+	if params.Kind.IsZero() {
+		return nil, errors.New("credential kind cannot be zero")
 	}
 	if params.Provider.IsZero() {
 		return nil, errors.New("credential provider cannot be zero")

@@ -38,7 +38,7 @@ func TestNewCredential(t *testing.T) {
 			desc: "kind zero",
 			params: domain.NewCredentialParams{
 				UserID:    userID,
-				Kind:      "",
+				Kind:      domain.CredentialKind{},
 				Provider:  domain.CredentialProviderLocal,
 				Secret:    secret,
 				CreatedAt: time.Now().UTC(),
@@ -140,11 +140,11 @@ func TestRestoreCredential(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			desc: "kind invalid",
+			desc: "kind zero",
 			params: domain.CredentialRestoreParams{
 				ID:        domain.NewCredentialID(),
 				UserID:    domain.NewUserID(),
-				Kind:      "",
+				Kind:      domain.CredentialKind{},
 				Provider:  domain.CredentialProviderLocal,
 				Secret:    secret,
 				CreatedAt: time.Now().UTC(),
