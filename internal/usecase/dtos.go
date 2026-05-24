@@ -32,3 +32,16 @@ func MapUserToDTO(user *domain.User) UserDTO {
 	}
 	return dto
 }
+
+type AccessTokenDTO struct {
+	Value     string
+}
+
+func (dto AccessTokenDTO) IsZero() bool { return dto.Value == "" }
+
+type RefreshTokenDTO struct {
+	Value     string
+	ExpiresAt time.Time
+}
+
+func (dto RefreshTokenDTO) IsZero() bool { return dto.Value == "" }
