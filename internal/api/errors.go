@@ -53,7 +53,7 @@ func validationError(body validationErrorBody) response {
 
 func internalServerError() response {
 	return response{
-		StatusCode: http.StatusBadRequest,
+		StatusCode: http.StatusInternalServerError,
 		Body:       internalServerErrorBody,
 	}
 }
