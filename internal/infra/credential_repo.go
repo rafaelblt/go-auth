@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 )
 
 type CredentialRepo struct {
@@ -18,8 +18,8 @@ func NewCredentialRepo(db PGDB) (CredentialRepo, error) {
 	return CredentialRepo{db: db}, nil
 }
 
-func (repo CredentialRepo) Save(ctx context.Context, cred *domain.Credential) error {
-	model, err := MapCredentialDomainToModel(cred)
+func (repo CredentialRepo) Save(ctx context.Context, cred *credential.Credential) error {
+	model, err := MapCredentialToModel(cred)
 	if err != nil {
 		return err
 	}

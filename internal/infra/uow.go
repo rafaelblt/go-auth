@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/port"
 )
 
 type TxBeginner interface {
@@ -25,7 +25,7 @@ func NewUnitOfWork(beginner TxBeginner) (*UnitOfWork, error) {
 	return uow, nil
 }
 
-type workFn = func(deps usecase.UowDeps) error
+type workFn = func(deps port.UowDeps) error
 
 func (uow *UnitOfWork) Do(ctx context.Context, fn workFn) error {
 	tx, err := uow.beginner.Begin(ctx)
@@ -52,19 +52,19 @@ func (uow *UnitOfWork) Do(ctx context.Context, fn workFn) error {
 	return nil
 }
 
-func buildUowDeps(tx pgx.Tx) (usecase.UowDeps, error) {
+func buildUowDeps(tx pgx.Tx) (port.UowDeps, error) {
 	if tx == nil {
-		return usecase.UowDeps{}, errors.New("cannot build uow deps with nil tx")
+		return port.UowDeps{}, errors.New("cannot build uow deps with nil tx")
 	}
 	userRepo, err := NewUserRepo(tx)
 	if err != nil {
-		return usecase.UowDeps{}, fmt.Errorf("user repo build failed: %w", err)
+		return port.UowDeps{}, fmt.Errorf("user repo build failed: %w", err)
 	}
 	credRepo, err := NewCredentialRepo(tx)
 	if err != nil {
-		return usecase.UowDeps{}, fmt.Errorf("credential repo build failed: %w", err)
+		return port.UowDeps{}, fmt.Errorf("credential repo build failed: %w", err)
 	}
-	deps := usecase.UowDeps{
+	deps := port.UowDeps{
 		UserWriter:       userRepo,
 		CredentialWriter: credRepo,
 	}

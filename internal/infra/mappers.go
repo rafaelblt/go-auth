@@ -4,31 +4,32 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
-func MapUserDomainToModel(user *domain.User) (UserModel, error) {
-	if user == nil {
+func MapUserToModel(usr *user.User) (UserModel, error) {
+	if usr == nil {
 		return UserModel{}, errors.New("user cannot be nil to map to model")
 	}
-	if user.IsZero() {
+	if usr.IsZero() {
 		return UserModel{}, errors.New("user cannot be zero to map to model")
 	}
-	idBytes, err := user.ID().Value().MarshalBinary()
+	idBytes, err := usr.ID().Value().MarshalBinary()
 	if err != nil {
 		return UserModel{}, fmt.Errorf("uuid conversion failed: %w", err)
 	}
 	model := UserModel{
 		ID:        idBytes,
-		Username:  user.Username().String(),
-		Status:    user.Status().String(),
-		CreatedAt: user.CreatedAt(),
-		UpdatedAt: user.UpdatedAt(),
+		Username:  usr.Username().String(),
+		Status:    usr.Status().String(),
+		CreatedAt: usr.CreatedAt(),
+		UpdatedAt: usr.UpdatedAt(),
 	}
 	return model, nil
 }
 
-func MapCredentialDomainToModel(cred *domain.Credential) (CredentialModel, error) {
+func MapCredentialToModel(cred *credential.Credential) (CredentialModel, error) {
 	if cred == nil {
 		return CredentialModel{}, errors.New("credential cannot be nil to map to model")
 	}

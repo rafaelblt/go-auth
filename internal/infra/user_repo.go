@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type UserRepo struct {
@@ -19,8 +19,8 @@ func NewUserRepo(db PGDB) (UserRepo, error) {
 	return UserRepo{db: db}, nil
 }
 
-func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
-	model, err := MapUserDomainToModel(user)
+func (repo UserRepo) Save(ctx context.Context, usr *user.User) error {
+	model, err := MapUserToModel(usr)
 	if err != nil {
 		return fmt.Errorf("failed to map user domain to model: %w", err)
 	}
@@ -35,7 +35,7 @@ func (repo UserRepo) Save(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
-func (repo UserRepo) ExistsByUsername(ctx context.Context, username domain.Username) (bool, error) {
+func (repo UserRepo) ExistsByUsername(ctx context.Context, username user.Username) (bool, error) {
 	var exists bool
 
 	query := `SELECT EXISTS( SELECT 1 FROM users WHERE username=$1 )`

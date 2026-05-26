@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
+	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,18 +34,18 @@ func (helper CredentialRepoTestHelper) Writer(db infra.PGDB) infra.CredentialRep
 	return writer
 }
 
-func (helper CredentialRepoTestHelper) PersistentUser(db infra.PGDB) *domain.User {
+func (helper CredentialRepoTestHelper) PersistentUser(db infra.PGDB) *user.User {
 	helper.t.Helper()
 	require.NotNil(helper.t, db)
 
-	user := domaintest.NewUser(helper.t, nil)
+	usr := usertest.NewUser(helper.t, nil)
 
 	userRepo, err := infra.NewUserRepo(db)
 	require.NoError(helper.t, err)
 
-	require.NoError(helper.t, userRepo.Save(context.Background(), user))
+	require.NoError(helper.t, userRepo.Save(context.Background(), usr))
 
-	return user
+	return usr
 }
 
 // TESTS
@@ -55,8 +56,8 @@ func TestCredentialRepo_Save(t *testing.T) {
 	repo := helper.Writer(db)
 	persistentUser := helper.PersistentUser(db)
 
-	credential := domaintest.PasswordCredential(t,
-		domaintest.WithUserID(persistentUser.ID()),
+	credential := credentialtest.PasswordCredential(t,
+		credentialtest.WithUserID(persistentUser.ID()),
 	)
 
 	err := repo.Save(context.Background(), credential)

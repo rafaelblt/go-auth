@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,16 +34,16 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-	user := domaintest.NewUser(t, nil)
+	usr := usertest.NewUser(t, nil)
 
-	err = uow.Do(ctx, func(deps usecase.UowDeps) error {
-		return deps.UserWriter.Save(ctx, user)
+	err = uow.Do(ctx, func(deps port.UowDeps) error {
+		return deps.UserWriter.Save(ctx, usr)
 	})
 
 	assert.NoError(t, err)
 	var exists bool
 	query := `SELECT EXISTS( SELECT 1 FROM users WHERE id=$1 )`
-	assert.NoError(t, pool.QueryRow(ctx, query, user.ID().Value()).Scan(&exists))
+	assert.NoError(t, pool.QueryRow(ctx, query, usr.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }
 
@@ -53,11 +54,11 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	uow, err := infra.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
-	user := domaintest.NewUser(t, nil)
-	credential := domaintest.PasswordCredential(t, domaintest.WithUserID(user.ID()))
+	usr := usertest.NewUser(t, nil)
+	credential := credentialtest.PasswordCredential(t, credentialtest.WithUserID(usr.ID()))
 
-	err = uow.Do(ctx, func(deps usecase.UowDeps) error {
-		require.NoError(t, deps.UserWriter.Save(ctx, user))
+	err = uow.Do(ctx, func(deps port.UowDeps) error {
+		require.NoError(t, deps.UserWriter.Save(ctx, usr))
 		return deps.CredentialWriter.Save(ctx, credential)
 	})
 

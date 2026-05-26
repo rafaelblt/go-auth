@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,9 +27,9 @@ func NewBcryptHasher(cfg BcryptConfig) (BcryptHasher, error) {
 	return hasher, nil
 }
 
-func (hasher BcryptHasher) Hash(plain domain.PlainPassword) (domain.CredentialSecret, error) {
+func (hasher BcryptHasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
 	if plain.IsZero() {
-		return domain.CredentialSecret{},
+		return credential.Secret{},
 		errors.New("plain password cannot be zero in bcrypt hashing")
 	}
 
@@ -38,20 +38,20 @@ func (hasher BcryptHasher) Hash(plain domain.PlainPassword) (domain.CredentialSe
 		hasher.cost,
 	)
 	if err != nil {
-		return domain.CredentialSecret{},
+		return credential.Secret{},
 		fmt.Errorf("bcrypt hash generation failed: %w", err)
 	}
 
-	secret, err := domain.NewCredentialSecret(string(bytes))
+	secret, err := credential.NewSecret(string(bytes))
 	if err != nil {
-		return domain.CredentialSecret{},
+		return credential.Secret{},
 		fmt.Errorf("new credential secret failed: %w", err)
 	}
 
 	return secret, err
 }
 
-func (hasher BcryptHasher) Verify(plain domain.PlainPassword, hash domain.CredentialSecret) (bool, error) {
+func (hasher BcryptHasher) Verify(plain credential.PlainPassword, hash credential.Secret) (bool, error) {
 	if plain.IsZero() {
 		return false,
 		errors.New("plain password cannot be zero in bcrypt verify")

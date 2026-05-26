@@ -3,22 +3,24 @@ package infra_test
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
+	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMapUserDomainToModel(t *testing.T) {
+func TestMapUserToModel(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		user      *domain.User
+		user      *user.User
 		expectErr bool
 	}{
 		{
 			desc:      "default user",
-			user:      domaintest.NewUser(t, nil),
+			user:      usertest.NewUser(t, nil),
 			expectErr: false,
 		},
 		{
@@ -28,13 +30,13 @@ func TestMapUserDomainToModel(t *testing.T) {
 		},
 		{
 			desc:      "user zero",
-			user:      &domain.User{},
+			user:      &user.User{},
 			expectErr: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			model, err := infra.MapUserDomainToModel(tC.user)
+			model, err := infra.MapUserToModel(tC.user)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, model)
@@ -52,15 +54,15 @@ func TestMapUserDomainToModel(t *testing.T) {
 	}
 }
 
-func TestMapCredentialDomainToModel(t *testing.T) {
+func TestMapCredentialToModel(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		cred      *domain.Credential
+		cred      *credential.Credential
 		expectErr bool
 	}{
 		{
 			desc:      "password credential",
-			cred:      domaintest.PasswordCredential(t),
+			cred:      credentialtest.PasswordCredential(t),
 			expectErr: false,
 		},
 		{
@@ -70,13 +72,13 @@ func TestMapCredentialDomainToModel(t *testing.T) {
 		},
 		{
 			desc:      "credential zero",
-			cred:      &domain.Credential{},
+			cred:      &credential.Credential{},
 			expectErr: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			model, err := infra.MapCredentialDomainToModel(tC.cred)
+			model, err := infra.MapCredentialToModel(tC.cred)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, model)

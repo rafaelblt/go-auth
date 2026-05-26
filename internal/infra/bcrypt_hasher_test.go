@@ -3,9 +3,9 @@ package infra_test
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -74,17 +74,17 @@ func TestBcryptHasher_Hash(t *testing.T) {
 
 	testCases := []struct {
 		desc      string
-		password  domain.PlainPassword
+		password  credential.PlainPassword
 		expectErr bool
 	}{
 		{
 			desc:      "plain password zero",
-			password:  domain.PlainPassword{},
+			password:  credential.PlainPassword{},
 			expectErr: true,
 		},
 		{
 			desc:      "valid case",
-			password:  testutil.MustPlainPassword(t, "12345678"),
+			password:  credentialtest.MustPlainPassword(t, "12345678"),
 			expectErr: false,
 		},
 	}
@@ -112,8 +112,8 @@ func TestBcryptHasher_Verify_WithPlainPasswordZero(t *testing.T) {
 	hasher, err := infra.NewBcryptHasher(cfg)
 	require.NoError(t, err)
 
-	password := domain.PlainPassword{}
-	secret := testutil.MustCredentialSecret(t, "secret")
+	password := credential.PlainPassword{}
+	secret := credentialtest.MustSecret(t, "secret")
 
 	check, err := hasher.Verify(password, secret)
 
@@ -126,8 +126,8 @@ func TestBcryptHasher_Verify_WithCredentialSecretZero(t *testing.T) {
 	hasher, err := infra.NewBcryptHasher(cfg)
 	require.NoError(t, err)
 
-	password := testutil.MustPlainPassword(t, "1240970sadpiogkj1")
-	secret := domain.CredentialSecret{}
+	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")
+	secret := credential.Secret{}
 
 	check, err := hasher.Verify(password, secret)
 
@@ -140,7 +140,7 @@ func TestBcryptHasher_Verify_WithValidPassword(t *testing.T) {
 	hasher, err := infra.NewBcryptHasher(cfg)
 	require.NoError(t, err)
 
-	password := testutil.MustPlainPassword(t, "1240970sadpiogkj1")
+	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")
 	secret, err := hasher.Hash(password)
 	require.NoError(t, err)
 

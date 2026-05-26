@@ -8,6 +8,6 @@ func NewSystemClock() SystemClock {
 	return SystemClock{}
 }
 
-func (c SystemClock) UtcNow() time.Time {
+func (c SystemClock) Now() time.Time {
 	return time.Now().UTC()
 }

@@ -14,7 +14,7 @@ import (
 
 type fakeClock struct{ now time.Time }
 
-func (c fakeClock) UtcNow() time.Time { return c.now }
+func (c fakeClock) Now() time.Time { return c.now }
 
 func accessTokenService() *AccessTokenService {
 	return &AccessTokenService{
@@ -196,7 +196,7 @@ func TestAccessTokenService_Issue_ReturnsTokenWithExpiration(t *testing.T) {
 	token, err := service.Issue(payload)
 
 	require.NoError(t, err)
-	expectedExp := service.clock.UtcNow().Add(service.expiration)
+	expectedExp := service.clock.Now().Add(service.expiration)
 	assert.Equal(t, expectedExp, token.ExpiresAt)
 }
 

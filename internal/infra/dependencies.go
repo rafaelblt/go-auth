@@ -6,13 +6,13 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type DependencyContainer struct {
 	pool  *pgxpool.Pool
-	clock usecase.Clock
+	clock port.Clock
 }
 
 type DependenciesConfig struct {
@@ -55,7 +55,7 @@ func (ctr *DependencyContainer) BuildRegister() (register.Register, error) {
 	return uc, nil
 }
 
-func (ctr *DependencyContainer) buildUow() (usecase.UnitOfWork, error) {
+func (ctr *DependencyContainer) buildUow() (port.UnitOfWork, error) {
 	uow, err := NewUnitOfWork(ctr.pool)
 	if err != nil {
 		return nil, fmt.Errorf("unit of work creation failed: %w", err)
@@ -63,7 +63,7 @@ func (ctr *DependencyContainer) buildUow() (usecase.UnitOfWork, error) {
 	return uow, nil
 }
 
-func (ctr *DependencyContainer) buildPwdHasher() (usecase.PasswordHasher, error) {
+func (ctr *DependencyContainer) buildPwdHasher() (port.PasswordHasher, error) {
 	hasher, err := NewBcryptHasher(BcryptConfig{
 		Cost: 8,
 	})

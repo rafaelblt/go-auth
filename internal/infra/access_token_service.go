@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 )
 
@@ -22,7 +23,7 @@ type AccessTokenService struct {
 	secret     []byte
 	issuer     string
 	method     jwt.SigningMethod
-	clock      usecase.Clock
+	clock      port.Clock
 	expiration time.Duration
 }
 
@@ -30,7 +31,7 @@ type AccessTokenServiceConfig struct {
 	Secret     []byte
 	Issuer     string
 	Method     jwt.SigningMethod
-	Clock      usecase.Clock
+	Clock      port.Clock
 	Expiration time.Duration
 }
 
@@ -78,7 +79,7 @@ func (s *AccessTokenService) Issue(payload usecase.AccessTokenPayload) (usecase.
 		return usecase.AccessToken{}, errors.New("user id cannot be zero")
 	}
 
-	now := s.clock.UtcNow()
+	now := s.clock.Now()
 	exp := now.Add(s.expiration)
 
 	claims := jwt.RegisteredClaims{
