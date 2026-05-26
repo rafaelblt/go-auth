@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -175,39 +175,39 @@ func TestNewAccessTokenService(t *testing.T) {
 
 func TestAccessTokenService_Issue_ReturnsValidToken(t *testing.T) {
 	service := accessTokenService()
-	payload := usecase.AccessTokenPayload{
-		UserID: domain.NewUserID(),
+	payload := port.AccessTokenPayload{
+		UserID: user.NewID(),
 	}
 
-	token, err := service.Issue(payload)
+	issued, err := service.Issue(payload)
 
 	require.NoError(t, err)
-	require.NotZero(t, token)
-	assert.NotZero(t, token.Raw)
-	assert.NotZero(t, token.ExpiresAt)
+	require.NotZero(t, issued)
+	assert.NotZero(t, issued.Token)
+	assert.NotZero(t, issued.ExpiresAt)
 }
 
 func TestAccessTokenService_Issue_ReturnsTokenWithExpiration(t *testing.T) {
 	service := accessTokenService()
-	payload := usecase.AccessTokenPayload{
-		UserID: domain.NewUserID(),
+	payload := port.AccessTokenPayload{
+		UserID: user.NewID(),
 	}
 
-	token, err := service.Issue(payload)
+	issued, err := service.Issue(payload)
 
 	require.NoError(t, err)
 	expectedExp := service.clock.Now().Add(service.expiration)
-	assert.Equal(t, expectedExp, token.ExpiresAt)
+	assert.Equal(t, expectedExp, issued.ExpiresAt)
 }
 
 func TestAccessTokenService_Issue_ReturnsErrorWithZeroUserID(t *testing.T) {
 	service := accessTokenService()
-	payload := usecase.AccessTokenPayload{UserID: domain.UserID{}}
+	payload := port.AccessTokenPayload{UserID: user.ID{}}
 
-	token, err := service.Issue(payload)
+	issued, err := service.Issue(payload)
 
 	require.Error(t, err)
-	require.Zero(t, token)
+	require.Zero(t, issued)
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForRandomToken(t *testing.T) {
@@ -222,11 +222,11 @@ func TestAccessTokenService_Validate_ReturnsErrorForRandomToken(t *testing.T) {
 func TestAccessTokenService_Validate_ReturnsClaimsForValidToken(t *testing.T) {
 	service := accessTokenService()
 
-	payload := usecase.AccessTokenPayload{UserID: domain.NewUserID()}
-	validToken, err := service.Issue(payload)
+	payload := port.AccessTokenPayload{UserID: user.NewID()}
+	valid, err := service.Issue(payload)
 	require.NoError(t, err)
 
-	claims, err := service.Validate(validToken.Raw)
+	claims, err := service.Validate(valid.Token.Value())
 
 	require.NoError(t, err)
 	require.NotZero(t, claims)
@@ -246,13 +246,13 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithNoClaims(t *testing
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentSecret(t *testing.T) {
 	service := accessTokenService()
 
-	payload := usecase.AccessTokenPayload{UserID: domain.NewUserID()}
-	token, err := service.Issue(payload)
+	payload := port.AccessTokenPayload{UserID: user.NewID()}
+	issued, err := service.Issue(payload)
 	require.NoError(t, err)
 
 	service.secret = []byte("bla-bla-bla-bla-67-3.14")
 
-	claims, err := service.Validate(token.Raw)
+	claims, err := service.Validate(issued.Token.Value())
 
 	require.Error(t, err)
 	require.Zero(t, claims)
@@ -264,11 +264,11 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentMethod(t *
 	serviceHS512 := accessTokenService()
 	serviceHS512.method = jwt.SigningMethodHS512
 
-	payload := usecase.AccessTokenPayload{UserID: domain.NewUserID()}
-	token, err := serviceHS512.Issue(payload)
+	payload := port.AccessTokenPayload{UserID: user.NewID()}
+	issued, err := serviceHS512.Issue(payload)
 	require.NoError(t, err)
 
-	claims, err := serviceHS256.Validate(token.Raw)
+	claims, err := serviceHS256.Validate(issued.Token.Value())
 
 	require.Error(t, err)
 	require.Zero(t, claims)

@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/rafaelblt/go-auth/internal/domain"
 	"github.com/rafaelblt/go-auth/internal/port"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 const (
-	minSecretBytes = 32
-	minExpiration = 1 * time.Minute
-	maxExpiration = 24 * time.Hour
+	minSecretBytes  = 32
+	minExpiration   = 1 * time.Minute
+	maxExpiration   = 24 * time.Hour
 	maxIssuerLength = 256
 )
 
@@ -74,9 +74,9 @@ func NewAccessTokenService(cfg AccessTokenServiceConfig) (*AccessTokenService, e
 	return &service, nil
 }
 
-func (s *AccessTokenService) Issue(payload usecase.AccessTokenPayload) (usecase.AccessToken, error) {
+func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.AccessTokenIssued, error) {
 	if payload.UserID.IsZero() {
-		return usecase.AccessToken{}, errors.New("user id cannot be zero")
+		return port.AccessTokenIssued{}, errors.New("user id cannot be zero")
 	}
 
 	now := s.clock.Now()
@@ -93,34 +93,38 @@ func (s *AccessTokenService) Issue(payload usecase.AccessTokenPayload) (usecase.
 
 	raw, err := token.SignedString(s.secret)
 	if err != nil {
-		return usecase.AccessToken{}, err
+		return port.AccessTokenIssued{}, err
 	}
 
-	accessToken := usecase.AccessToken{
-		Raw:       raw,
+	accessToken, err := session.NewAccessToken(raw)
+	if err != nil {
+		return port.AccessTokenIssued{}, err
+	}
+
+	issued := port.AccessTokenIssued{
+		Token:     accessToken,
 		ExpiresAt: exp,
 	}
-
-	return accessToken, nil
+	return issued, nil
 }
 
-func (e *AccessTokenService) Validate(raw string) (usecase.AccessTokenClaims, error) {
+func (e *AccessTokenService) Validate(raw string) (port.AccessTokenClaims, error) {
 	token, err := jwt.Parse(raw, e.keyfunc)
 	if err != nil {
-		return usecase.AccessTokenClaims{}, err
+		return port.AccessTokenClaims{}, err
 	}
 
 	sub, err := token.Claims.GetSubject()
 	if err != nil {
-		return usecase.AccessTokenClaims{}, err
+		return port.AccessTokenClaims{}, err
 	}
 
-	userID, err := domain.ParseUserID(sub)
+	userID, err := user.ParseID(sub)
 	if err != nil {
-		return usecase.AccessTokenClaims{}, err
+		return port.AccessTokenClaims{}, err
 	}
 
-	result := usecase.AccessTokenClaims{
+	result := port.AccessTokenClaims{
 		UserID: userID,
 	}
 	return result, nil
