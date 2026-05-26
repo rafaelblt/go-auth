@@ -8,9 +8,9 @@ import (
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
 type registerRequestBody struct {
@@ -103,7 +103,7 @@ func (h registerHandler) handleUseCaseError(err error) response {
 		return h.usernameAlreadyExists()
 	}
 
-	var verr *usecase.ValidationError
+	var verr *validation.FieldValidationError
 	if errors.As(err, &verr) {
 		response, err := h.mapValidationError(verr)
 		if err != nil {
@@ -126,7 +126,7 @@ func (h registerHandler) usernameAlreadyExists() response {
 	}
 }
 
-func (h registerHandler) mapValidationError(verr *usecase.ValidationError) (validationErrorBody, error) {
+func (h registerHandler) mapValidationError(verr *validation.FieldValidationError) (validationErrorBody, error) {
 	body := validationErrorBody{Errors: map[string]ValidationErrors{}}
 	usernameErrs := []fieldErrorData{}
 	passwordErrs := []fieldErrorData{}
