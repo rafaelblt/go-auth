@@ -1,6 +1,7 @@
 package user
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/validation"
@@ -43,7 +44,19 @@ func TestNewUsername(t *testing.T) {
 			desc:        "empty value",
 			input:       "",
 			normalized:  "",
-			expectedErr: []error{ErrUsernameEmpty},
+			expectedErr: []error{ErrUsernameTooShort},
+		},
+		{
+			desc:        "input too short",
+			input:       strings.Repeat("a", UsernameMinLen-1),
+			normalized:  "",
+			expectedErr: []error{ErrUsernameTooShort},
+		},
+		{
+			desc:        "input too long",
+			input:       strings.Repeat("a", UsernameMaxLen+1),
+			normalized:  "",
+			expectedErr: []error{ErrUsernameTooLong},
 		},
 	}
 	for _, tC := range testCases {

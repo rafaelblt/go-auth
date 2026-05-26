@@ -11,7 +11,13 @@ type Username struct {
 	value string
 }
 
-var ErrUsernameEmpty = errors.New("the username value is empty")
+const (
+	UsernameMinLen = 3
+	UsernameMaxLen = 32
+)
+
+var ErrUsernameTooLong = errors.New("the username value is too long")
+var ErrUsernameTooShort = errors.New("the username value is too short")
 
 func NewUsername(value string) (Username, error) {
 	normalized := normalizeUsername(value)
@@ -29,8 +35,11 @@ func ValidateUsername(value string) []error {
 
 	var errs []error
 
-	if len(normalized) == 0 {
-		errs = append(errs, ErrUsernameEmpty)
+	if len(normalized) < UsernameMinLen {
+		errs = append(errs, ErrUsernameTooShort)
+	}
+	if len(normalized) > UsernameMaxLen {
+		errs = append(errs, ErrUsernameTooLong)
 	}
 
 	return errs
