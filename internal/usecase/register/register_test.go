@@ -161,7 +161,7 @@ func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {
 			helper := NewTestHelper(t)
 			output, err := helper.UseCase().Execute(context.Background(), tC.input)
 			assert.Zero(t, output)
-			var verr *validation.ValidationError
+			var verr *validation.FieldValidationError
 			if assert.ErrorAs(t, err, &verr) {
 				assert.ElementsMatch(t, tC.expected, verr.Errors())
 			}
