@@ -123,7 +123,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			response := helper.SendRequest(tC.body)
 			decoded := DecodeResponseBody[validationErrorBody](t, response)
-			assert.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
+			require.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
 			assert.Equal(t, tC.expected, decoded.Errors)
 		})
 	}
