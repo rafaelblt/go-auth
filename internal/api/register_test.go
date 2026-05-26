@@ -8,9 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,11 +41,11 @@ func (helper RegisterTestHelper) SendRequest(body string) *http.Response {
 	return response
 }
 
-func (helper RegisterTestHelper) SaveUser(t *testing.T, user *domain.User) {
+func (helper RegisterTestHelper) SaveUser(t *testing.T, usr *user.User) {
 	t.Helper()
 	repo, err := infra.NewUserRepo(testDB.Pool())
 	require.NoError(t, err)
-	require.NoError(t, repo.Save(context.Background(), user))
+	require.NoError(t, repo.Save(context.Background(), usr))
 }
 
 func DecodeResponseBody[T any](t *testing.T, response *http.Response) T {
@@ -80,7 +81,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 		{
 			desc: "username too short",
 			body: helper.NewBody(
-				strings.Repeat("a", domain.UsernameMinLen-1),
+				strings.Repeat("a", user.UsernameMinLen-1),
 				"12345678",
 			),
 			expected: map[string]ValidationErrors{
@@ -90,7 +91,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 		{
 			desc: "username too long",
 			body: helper.NewBody(
-				strings.Repeat("a", domain.UsernameMaxLen+1),
+				strings.Repeat("a", user.UsernameMaxLen+1),
 				"12345678",
 			),
 			expected: map[string]ValidationErrors{
@@ -101,7 +102,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 			desc: "password too short",
 			body: helper.NewBody(
 				"rafael",
-				strings.Repeat("a", domain.PlainPasswordMinLen-1),
+				strings.Repeat("a", credential.PlainPasswordMinLen-1),
 			),
 			expected: map[string]ValidationErrors{
 				"password": {registerPasswordTooShortError},
@@ -111,7 +112,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 			desc: "password too long",
 			body: helper.NewBody(
 				"rafael",
-				strings.Repeat("a", domain.PlainPasswordMaxLen+1),
+				strings.Repeat("a", credential.PlainPasswordMaxLen+1),
 			),
 			expected: map[string]ValidationErrors{
 				"password": {registerPasswordTooLongError},
@@ -130,7 +131,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	user := domaintest.NewUser(t, nil)
+	user := usertest.NewUser(t, nil)
 	helper.SaveUser(t, user)
 
 	body := helper.NewBody(user.Username().String(), "12345678")

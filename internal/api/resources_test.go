@@ -3,13 +3,13 @@ package api
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 )
 
-func mapUserToDTO(t *testing.T, user *domain.User) usecase.UserDTO {
+func mapUserToDTO(t *testing.T, user *user.User) usecase.UserDTO {
 	t.Helper()
 	dto := usecase.MapUserToDTO(user)
 	return dto
@@ -22,7 +22,7 @@ func TestMapUserDTOToResource(t *testing.T) {
 		expectErr bool
 	}{
 		{desc: "user dto zero", dto: usecase.UserDTO{}, expectErr: true},
-		{desc: "default user", dto: mapUserToDTO(t, domaintest.NewUser(t, nil))},
+		{desc: "default user", dto: mapUserToDTO(t, usertest.NewUser(t, nil))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

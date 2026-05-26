@@ -7,9 +7,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type registerRequestBody struct {
@@ -131,13 +132,13 @@ func (h registerHandler) mapValidationError(verr *usecase.ValidationError) (vali
 	passwordErrs := []fieldErrorData{}
 
 	for _, fieldErr := range verr.Errors() {
-		if errors.Is(fieldErr.Err(), domain.ErrUsernameTooLong) {
+		if errors.Is(fieldErr.Err(), user.ErrUsernameTooLong) {
 			usernameErrs = append(usernameErrs, registerUsernameTooLongError)
-		} else if errors.Is(fieldErr.Err(), domain.ErrUsernameTooShort) {
+		} else if errors.Is(fieldErr.Err(), user.ErrUsernameTooShort) {
 			usernameErrs = append(usernameErrs, registerUsernameTooShortError)
-		} else if errors.Is(fieldErr.Err(), domain.ErrPlainPasswordTooLong) {
+		} else if errors.Is(fieldErr.Err(), credential.ErrPlainPasswordTooLong) {
 			passwordErrs = append(passwordErrs, registerPasswordTooLongError)
-		} else if errors.Is(fieldErr.Err(), domain.ErrPlainPasswordTooShort) {
+		} else if errors.Is(fieldErr.Err(), credential.ErrPlainPasswordTooShort) {
 			passwordErrs = append(passwordErrs, registerPasswordTooShortError)
 		} else {
 			return validationErrorBody{},
