@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,10 +78,10 @@ func TestNewRegister(t *testing.T) {
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, uc)
-			} else {
-				assert.NoError(t, err)
-				assert.NotZero(t, uc)
+				return
 			}
+			assert.NoError(t, err)
+			assert.NotZero(t, uc)
 		})
 	}
 }
@@ -100,68 +101,58 @@ func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		input    register.Input
-		expected []usecase.FieldError
+		expected []validation.FieldError
 	}{
 		{
 			desc: "username too short",
 			input: register.Input{
-				Username: "x",
+				Username: strings.Repeat("a", user.UsernameMinLen-1),
 				Password: "12345678",
 			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.UsernameField, domain.ErrUsernameTooShort),
-			},
-		},
-		{
-			desc: "username too long",
-			input: register.Input{
-				Username: strings.Repeat("a", domain.UsernameMaxLen+1),
-				Password: "12345678",
-			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.UsernameField, domain.ErrUsernameTooLong),
+			expected: []validation.FieldError{
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
 			},
 		},
 		{
 			desc: "password too short",
 			input: register.Input{
 				Username: "username",
-				Password: strings.Repeat("a", domain.PlainPasswordMinLen-1),
+				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
 			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.PasswordField, domain.ErrPlainPasswordTooShort),
+			expected: []validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
 			},
 		},
 		{
 			desc: "password too long",
 			input: register.Input{
 				Username: "username",
-				Password: strings.Repeat("a", domain.PlainPasswordMaxLen+1),
+				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
 			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.PasswordField, domain.ErrPlainPasswordTooLong),
+			expected: []validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
 			},
 		},
 		{
 			desc: "username and password too short",
 			input: register.Input{
-				Username: strings.Repeat("a", domain.UsernameMinLen-1),
-				Password: strings.Repeat("a", domain.PlainPasswordMinLen-1),
+				Username: strings.Repeat("a", user.UsernameMinLen-1),
+				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
 			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.UsernameField, domain.ErrUsernameTooShort),
-				usecase.NewFieldError(register.PasswordField, domain.ErrPlainPasswordTooShort),
+			expected: []validation.FieldError{
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
 			},
 		},
 		{
 			desc: "username and password too long",
 			input: register.Input{
-				Username: strings.Repeat("a", domain.UsernameMaxLen+1),
-				Password: strings.Repeat("a", domain.PlainPasswordMaxLen+1),
+				Username: strings.Repeat("a", user.UsernameMaxLen+1),
+				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
 			},
-			expected: []usecase.FieldError{
-				usecase.NewFieldError(register.UsernameField, domain.ErrUsernameTooLong),
-				usecase.NewFieldError(register.PasswordField, domain.ErrPlainPasswordTooLong),
+			expected: []validation.FieldError{
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
 			},
 		},
 	}
@@ -170,7 +161,7 @@ func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {
 			helper := NewTestHelper(t)
 			output, err := helper.UseCase().Execute(context.Background(), tC.input)
 			assert.Zero(t, output)
-			var verr *usecase.ValidationError
+			var verr *validation.ValidationError
 			if assert.ErrorAs(t, err, &verr) {
 				assert.ElementsMatch(t, tC.expected, verr.Errors())
 			}
@@ -200,7 +191,7 @@ func TestRegister_ShouldUseClock(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotZero(t, output)
-	assert.Equal(t, helper.FakeClock.UtcNow(), output.User.CreatedAt)
+	assert.Equal(t, helper.FakeClock.Now(), output.User.CreatedAt)
 }
 
 func TestRegister_SavesNewUser(t *testing.T) {

@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/usecasetest"
-	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +32,7 @@ func NewTestHelper(t *testing.T) TestHelper {
 		FakePasswordHasher:    shared.Ptr(usecasetest.NewFakePasswordHasher()),
 		FakeClock:             shared.Ptr(usecasetest.NewFakeClock(time.Now().UTC())),
 	}
-	uowDeps := usecase.UowDeps{
+	uowDeps := port.UowDeps{
 		UserWriter:       helper.FakeUserWriter,
 		CredentialWriter: helper.FakeCredentialWriter,
 	}
@@ -59,16 +60,16 @@ func (helper TestHelper) ValidInput() register.Input {
 	}
 }
 
-func (helper TestHelper) ValidUsername() domain.Username {
+func (helper TestHelper) ValidUsername() user.Username {
 	helper.t.Helper()
-	username, err := domain.NewUsername("username")
+	username, err := user.NewUsername("username")
 	require.NoError(helper.t, err)
 	return username
 }
 
-func (helper TestHelper) ValidPlainPassword() domain.PlainPassword {
+func (helper TestHelper) ValidPlainPassword() credential.PlainPassword {
 	helper.t.Helper()
-	pwd, err := domain.NewPlainPassword("12345678")
+	pwd, err := credential.NewPlainPassword("12345678")
 	require.NoError(helper.t, err)
 	return pwd
 }

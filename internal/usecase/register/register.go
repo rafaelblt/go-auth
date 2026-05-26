@@ -5,15 +5,18 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
 type Register struct {
-	userExists usecase.UserExistsChecker
-	uow        usecase.UnitOfWork
-	hasher     usecase.PasswordHasher
-	clock      usecase.Clock
+	userExists port.UserExistsChecker
+	uow        port.UnitOfWork
+	hasher     port.PasswordHasher
+	clock      port.Clock
 }
 
 var ErrUsernameAlreadyExists = errors.New("the provided username is already registered")
@@ -41,11 +44,11 @@ func New(cfg Config) (Register, error) {
 }
 
 func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
-	validation := usecase.NewValidationAccumulator()
+	validation := validation.NewAccumulator()
 
-	username, err := domain.NewUsername(input.Username)
+	username, err := user.NewUsername(input.Username)
 	validation.Add(UsernameField, err)
-	password, err := domain.NewPlainPassword(input.Password)
+	password, err := credential.NewPlainPassword(input.Password)
 	validation.Add(PasswordField, err)
 
 	err = validation.Err()
@@ -63,9 +66,9 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("password hashing failed: %w", err)
 	}
 
-	now := uc.clock.UtcNow()
+	now := uc.clock.Now()
 
-	user, err := uc.createUser(domain.NewUserParams{
+	usr, err := uc.createUser(user.CreationParams{
 		Username:  username,
 		CreatedAt: now,
 	})
@@ -73,10 +76,10 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	cred, err := uc.createCredential(domain.NewCredentialParams{
-		UserID:    user.ID(),
-		Kind:      domain.CredentialKindPassword,
-		Provider:  domain.CredentialProviderLocal,
+	cred, err := uc.createCredential(credential.CreationParams{
+		UserID:    usr.ID(),
+		Kind:      credential.KindPassword,
+		Provider:  credential.ProviderLocal,
 		Secret:    hashed,
 		CreatedAt: now,
 	})
@@ -84,16 +87,16 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	err = uc.save(ctx, user, cred)
+	err = uc.save(ctx, usr, cred)
 	if err != nil {
 		return Output{}, err
 	}
 
-	dto := usecase.MapUserToDTO(user)
+	dto := usecase.MapUserToDTO(usr)
 	return Output{User: dto}, nil
 }
 
-func (uc Register) checkUsernameExists(ctx context.Context, username domain.Username) error {
+func (uc Register) checkUsernameExists(ctx context.Context, username user.Username) error {
 	exists, err := uc.userExists.ExistsByUsername(ctx, username)
 	if err != nil {
 		return fmt.Errorf("user exists checker failed: %w", err)
@@ -104,34 +107,27 @@ func (uc Register) checkUsernameExists(ctx context.Context, username domain.User
 	return nil
 }
 
-func (uc Register) createUser(params domain.NewUserParams) (*domain.User, error) {
-	user, err := domain.NewUser(domain.NewUserParams{
-		Username:  params.Username,
-		CreatedAt: params.CreatedAt,
-	})
+func (uc Register) createUser(params user.CreationParams) (*user.User, error) {
+	usr, err := user.NewUser(params)
 	if err != nil {
 		return nil, fmt.Errorf("user creation failed: %w", err)
 	}
-	return user, nil
+	return usr, nil
 }
 
-func (uc Register) createCredential(params domain.NewCredentialParams) (*domain.Credential, error) {
-	cred, err := domain.NewCredential(params)
+func (uc Register) createCredential(params credential.CreationParams) (*credential.Credential, error) {
+	cred, err := credential.NewCredential(params)
 	if err != nil {
 		return nil, fmt.Errorf("credential creation failed: %w", err)
 	}
 	return cred, nil
 }
 
-func (uc Register) save(ctx context.Context, user *domain.User, cred *domain.Credential) error {
-	return uc.uow.Do(ctx, func(deps usecase.UowDeps) error {
+func (uc Register) save(ctx context.Context, user *user.User, cred *credential.Credential) error {
+	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		err := deps.UserWriter.Save(ctx, user)
 		if err != nil {
-			if errors.Is(err, domain.ErrUsernameAlreadyExists) {
-				return ErrUsernameAlreadyExists
-			} else {
-				return fmt.Errorf("user writer save failed: %w", err)
-			}
+			return fmt.Errorf("user writer save failed: %w", err)
 		}
 		err = deps.CredentialWriter.Save(ctx, cred)
 		if err != nil {
@@ -140,3 +136,4 @@ func (uc Register) save(ctx context.Context, user *domain.User, cred *domain.Cre
 		return nil
 	})
 }
+

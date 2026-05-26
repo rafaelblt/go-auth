@@ -5,46 +5,47 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 // Unit Of Work
 
 type FakeUnitOfWork struct {
-	deps usecase.UowDeps
+	deps port.UowDeps
 }
 
-func NewFakeUnitOfWork(deps usecase.UowDeps) FakeUnitOfWork {
+func NewFakeUnitOfWork(deps port.UowDeps) FakeUnitOfWork {
 	return FakeUnitOfWork{deps}
 }
-func (uow FakeUnitOfWork) Do(ctx context.Context, fn func(deps usecase.UowDeps) error) error {
+func (uow FakeUnitOfWork) Do(ctx context.Context, fn func(deps port.UowDeps) error) error {
 	return fn(uow.deps)
 }
 
 // Password Hasher
 
 type FakePasswordHasher struct {
-	received shared.Set[domain.PlainPassword]
+	received shared.Set[credential.PlainPassword]
 	err      error
 }
 
 func NewFakePasswordHasher() FakePasswordHasher {
 	return FakePasswordHasher{
-		received: shared.NewSet[domain.PlainPassword](),
+		received: shared.NewSet[credential.PlainPassword](),
 		err:      nil,
 	}
 }
-func (hasher *FakePasswordHasher) Hash(plain domain.PlainPassword) (domain.CredentialSecret, error) {
+func (hasher *FakePasswordHasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
 	if hasher.err == nil {
 		hasher.received.Add(plain)
-		return domain.NewCredentialSecret(fmt.Sprintf("hash <%s>", plain.Value()))
+		return credential.NewSecret(fmt.Sprintf("hash <%s>", plain.Value()))
 	}
-	return domain.CredentialSecret{}, hasher.err
+	return credential.Secret{}, hasher.err
 }
 func (hasher FakePasswordHasher) Verify(
-	plain domain.PlainPassword, hash domain.CredentialSecret,
+	plain credential.PlainPassword, hash credential.Secret,
 ) (bool, error) {
 	expectedHash, _ := hasher.Hash(plain)
 	return hash.Value() == expectedHash.Value(), nil
@@ -54,17 +55,17 @@ func (hasher *FakePasswordHasher) SetError(err error) { hasher.err = err }
 // User Finder
 
 type FakeUserFinder struct {
-	Data map[domain.UserID]domain.User
+	Data map[user.ID]user.User
 }
 
-func (finder FakeUserFinder) FindByID(ctx context.Context, id domain.UserID) (*domain.User, error) {
+func (finder FakeUserFinder) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
 	usr, exists := finder.Data[id]
 	if exists {
 		return &usr, nil
 	}
 	return nil, nil
 }
-func (finder FakeUserFinder) FindByUsername(ctx context.Context, username domain.Username) (*domain.User, error) {
+func (finder FakeUserFinder) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
 	for _, usr := range finder.Data {
 		if usr.Username() == username {
 			return &usr, nil
@@ -76,37 +77,37 @@ func (finder FakeUserFinder) FindByUsername(ctx context.Context, username domain
 // User Exists Checker
 
 type FakeUserExistsChecker struct {
-	Usernames shared.Set[domain.Username]
+	Usernames shared.Set[user.Username]
 }
 
 func NewFakeUserExistsChecker() FakeUserExistsChecker {
-	return FakeUserExistsChecker{Usernames: shared.NewSet[domain.Username]()}
+	return FakeUserExistsChecker{Usernames: shared.NewSet[user.Username]()}
 }
-func (checker FakeUserExistsChecker) ExistsByUsername(ctx context.Context, username domain.Username) (bool, error) {
+func (checker FakeUserExistsChecker) ExistsByUsername(ctx context.Context, username user.Username) (bool, error) {
 	return checker.Usernames.Contains(username), nil
 }
 
 // User Writer
 
 type FakeUserWriter struct {
-	saved []*domain.User
+	saved []*user.User
 	err   error
 }
 
 func NewFakeUserWriter() FakeUserWriter {
 	return FakeUserWriter{
-		saved: []*domain.User{},
+		saved: []*user.User{},
 		err:   nil,
 	}
 }
-func (writer *FakeUserWriter) Save(ctx context.Context, user *domain.User) error {
+func (writer *FakeUserWriter) Save(ctx context.Context, user *user.User) error {
 	if writer.err == nil {
 		writer.saved = append(writer.saved, user)
 		return nil
 	}
 	return writer.err
 }
-func (writer FakeUserWriter) UsernameIsSaved(username domain.Username) bool {
+func (writer FakeUserWriter) UsernameIsSaved(username user.Username) bool {
 	for _, usr := range writer.saved {
 		if usr.Username() == username {
 			return true
@@ -114,21 +115,21 @@ func (writer FakeUserWriter) UsernameIsSaved(username domain.Username) bool {
 	}
 	return false
 }
-func (w *FakeUserWriter) SavedUsers() []*domain.User { return w.saved }
+func (w *FakeUserWriter) SavedUsers() []*user.User { return w.saved }
 func (w *FakeUserWriter) SetError(err error) { w.err = err }
 
 // Credential Writer
 
 type FakeCredentialWriter struct {
-	saved []*domain.Credential
+	saved []*credential.Credential
 	err   error
 }
 
 func NewFakeCredentialWriter() FakeCredentialWriter {
-	return FakeCredentialWriter{saved: []*domain.Credential{}}
+	return FakeCredentialWriter{saved: []*credential.Credential{}}
 }
 func (writer *FakeCredentialWriter) Save(
-	ctx context.Context, credential *domain.Credential,
+	ctx context.Context, credential *credential.Credential,
 ) error {
 	if writer.err == nil {
 		writer.saved = append(writer.saved, credential)
@@ -136,7 +137,7 @@ func (writer *FakeCredentialWriter) Save(
 	}
 	return writer.err
 }
-func (w *FakeCredentialWriter) SavedCredentials() []*domain.Credential {
+func (w *FakeCredentialWriter) SavedCredentials() []*credential.Credential {
 	return w.saved
 }
 func (w *FakeCredentialWriter) SetError(err error) { w.err = err }
@@ -150,6 +151,6 @@ type FakeClock struct {
 func NewFakeClock(tm time.Time) FakeClock {
 	return FakeClock{tm: tm}
 }
-func (clk FakeClock) UtcNow() time.Time {
+func (clk FakeClock) Now() time.Time {
 	return clk.tm
 }

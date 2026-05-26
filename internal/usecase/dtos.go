@@ -3,7 +3,7 @@ package usecase
 import (
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type UserDTO struct {
@@ -16,7 +16,7 @@ type UserDTO struct {
 
 func (dto UserDTO) IsZero() bool { return dto.ID == "" }
 
-func MapUserToDTO(user *domain.User) UserDTO {
+func MapUserToDTO(user *user.User) UserDTO {
 	if user == nil {
 		panic("cannot map a nil user to dto")
 	}

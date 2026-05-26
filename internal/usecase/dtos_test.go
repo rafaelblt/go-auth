@@ -3,26 +3,26 @@ package usecase_test
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/domain"
-	"github.com/rafaelblt/go-auth/internal/testutil/domaintest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMapUserToDTO(t *testing.T) {
 	testCases := []struct {
 		desc  string
-		user  *domain.User
+		user  *user.User
 		panic bool
 	}{
 		{
 			desc:  "default user",
-			user:  domaintest.NewUser(t, nil),
+			user:  usertest.NewUser(t, nil),
 			panic: false,
 		},
 		{
 			desc:  "user zero",
-			user:  &domain.User{},
+			user:  &user.User{},
 			panic: true,
 		},
 		{
