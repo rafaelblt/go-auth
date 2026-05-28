@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/user"
 )
 
@@ -14,14 +15,17 @@ type UnitOfWork interface {
 }
 
 type UowDeps struct {
-	UserWriter       UserWriter
-	CredentialWriter CredentialWriter
+	UserWriter         UserWriter
+	CredentialWriter   CredentialWriter
+	SessionWriter      SessionWriter
+	RefreshTokenWriter RefreshTokenWriter
 }
 
 // User
 
 type UserReader interface {
 	FindByID(context.Context, user.ID) (*user.User, error)
+	FindByUsername(context.Context, user.Username) (*user.User, error)
 }
 
 type UserExistsChecker interface {
@@ -34,6 +38,23 @@ type UserWriter interface {
 
 // Credential
 
+type CredentialReader interface {
+	FindByID(context.Context, credential.ID) (*credential.Credential, error)
+	FindByUserAndKind(context.Context, user.ID, credential.Kind) (*credential.Credential, error)
+}
+
 type CredentialWriter interface {
 	Save(context.Context, *credential.Credential) error
+}
+
+// Session
+
+type SessionWriter interface {
+	Save(context.Context, *session.Session) error
+}
+
+// RefreshToken
+
+type RefreshTokenWriter interface {
+	Save(context.Context, *session.RefreshToken) error
 }
