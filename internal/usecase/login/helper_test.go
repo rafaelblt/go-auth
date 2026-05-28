@@ -1,0 +1,92 @@
+package login_test
+
+import (
+	"testing"
+
+	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usecasetest"
+	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/stretchr/testify/require"
+)
+
+type TestHelper struct {
+	t                      *testing.T
+	FakeUserReader         *usecasetest.FakeUserReader
+	FakeCredentialReader   *usecasetest.FakeCredentialReader
+	FakePasswordChecker    *usecasetest.FakePasswordChecker
+	FakeAccessTokenIssuer  *usecasetest.FakeAccessTokenIssuer
+	FakeRefreshTokenIssuer *usecasetest.FakeRefreshTokenIssuer
+	FakeUnitOfWork         *usecasetest.FakeUnitOfWork
+	FakeClock              *usecasetest.FakeClock
+}
+
+func NewTestHelper(t *testing.T) TestHelper {
+	helper := TestHelper{
+		t:                      t,
+		FakeUserReader:         usecasetest.NewFakeUserReader(),
+		FakeCredentialReader:   usecasetest.NewFakeCredentialReader(),
+		FakePasswordChecker:    usecasetest.NewFakePasswordChecker(),
+		FakeAccessTokenIssuer:  usecasetest.NewFakeAccessTokenIssuer(),
+		FakeRefreshTokenIssuer: usecasetest.NewFakeRefreshTokenIssuer(),
+		FakeUnitOfWork:         usecasetest.NewFakeUnitOfWork(),
+		FakeClock:              usecasetest.NewFakeClock(),
+	}
+	return helper
+}
+
+func (helper TestHelper) UseCase() login.Login {
+	helper.t.Helper()
+	uc, err := login.New(login.Config{
+		UserReader:         helper.FakeUserReader,
+		CredentialReader:   helper.FakeCredentialReader,
+		PasswordChecker:    helper.FakePasswordChecker,
+		AccessTokenIssuer:  helper.FakeAccessTokenIssuer,
+		RefreshTokenIssuer: helper.FakeRefreshTokenIssuer,
+		UnitOfWork:         helper.FakeUnitOfWork,
+		Clock:              helper.FakeClock,
+	})
+	require.NoError(helper.t, err)
+	return uc
+}
+
+func (helper TestHelper) ValidInput() login.Input {
+	helper.t.Helper()
+	return login.Input{
+		Username: helper.ValidUsername().String(),
+		Password: helper.ValidPlainPassword().Value(),
+	}
+}
+
+func (helper TestHelper) ValidUsername() user.Username {
+	return usertest.MustUsername(helper.t, "username")
+}
+
+func (helper TestHelper) ValidPlainPassword() credential.PlainPassword {
+	return credentialtest.MustPlainPassword(helper.t, "12345678")
+}
+
+func (helper TestHelper) GetUserAndPassword() (*user.User, credential.PlainPassword) {
+	helper.t.Helper()
+
+	usr := usertest.NewUser(helper.t, nil)
+	pwd := credentialtest.MustPlainPassword(helper.t, "al-=-vçd1çf1-04ktsx")
+
+	helper.AddUserAndPassword(usr, pwd)
+	return usr, pwd
+}
+
+func (helper TestHelper) AddUserAndPassword(user *user.User, pwd credential.PlainPassword) {
+	helper.FakeUserReader.InsertUser(user)
+	secret := credentialtest.MustSecret(helper.t, pwd.Value())
+	cred := credentialtest.NewCredential(helper.t, func(params *credential.RestoreParams) {
+		params.UserID = user.ID()
+		params.Kind = credential.KindPassword
+		params.Provider = credential.ProviderLocal
+		params.Secret = secret
+	})
+	helper.FakeCredentialReader.InsertCredential(cred)
+	helper.FakePasswordChecker.SetPair(pwd, secret)
+}
