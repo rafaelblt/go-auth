@@ -9,12 +9,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func NewCredential(t *testing.T, override func(*credential.RestoreParams)) *credential.Credential {
+	t.Helper()
+
+	secret := MustSecret(t, "default secret")
+
+	params := credential.RestoreParams{
+		ID:        credential.NewID(),
+		UserID:    user.NewID(),
+		Kind:      credential.KindPassword,
+		Secret:    secret,
+		CreatedAt: time.Date(2007, 8, 9, 20, 45, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 5, 21, 16, 0, 7, 0, time.UTC),
+	}
+
+	if override != nil {
+		override(&params)
+	}
+
+	entity, err := credential.RestoreCredential(params)
+	require.NoError(t, err)
+	return entity
+}
+
 type CredentialOption func(*credential.RestoreParams)
 
 func WithUserID(id user.ID) CredentialOption {
-    return func(p *credential.RestoreParams) {
-        p.UserID = id
-    }
+	return func(p *credential.RestoreParams) {
+		p.UserID = id
+	}
 }
 
 func PasswordCredential(t *testing.T, opts ...CredentialOption) *credential.Credential {
@@ -34,12 +57,11 @@ func PasswordCredential(t *testing.T, opts ...CredentialOption) *credential.Cred
 	}
 
 	for _, opt := range opts {
-        opt(&params)
-    }
+		opt(&params)
+	}
 
 	entity, err := credential.RestoreCredential(params)
 	require.NoError(t, err)
 
 	return entity
 }
-
