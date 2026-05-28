@@ -2,10 +2,8 @@ package register_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/usecasetest"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -17,8 +15,6 @@ type TestHelper struct {
 	t                     *testing.T
 	FakeUserExistsChecker *usecasetest.FakeUserExistsChecker
 	FakeUnitOfWork        *usecasetest.FakeUnitOfWork
-	FakeUserWriter        *usecasetest.FakeUserWriter
-	FakeCredentialWriter  *usecasetest.FakeCredentialWriter
 	FakePasswordHasher    *usecasetest.FakePasswordHasher
 	FakeClock             *usecasetest.FakeClock
 }
@@ -27,16 +23,10 @@ func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
 		t:                     t,
 		FakeUserExistsChecker: shared.Ptr(usecasetest.NewFakeUserExistsChecker()),
-		FakeUserWriter:        shared.Ptr(usecasetest.NewFakeUserWriter()),
-		FakeCredentialWriter:  shared.Ptr(usecasetest.NewFakeCredentialWriter()),
+		FakeUnitOfWork:        usecasetest.NewFakeUnitOfWork(),
 		FakePasswordHasher:    shared.Ptr(usecasetest.NewFakePasswordHasher()),
-		FakeClock:             shared.Ptr(usecasetest.NewFakeClock(time.Now().UTC())),
+		FakeClock: usecasetest.NewFakeClock(),
 	}
-	uowDeps := port.UowDeps{
-		UserWriter:       helper.FakeUserWriter,
-		CredentialWriter: helper.FakeCredentialWriter,
-	}
-	helper.FakeUnitOfWork = shared.Ptr(usecasetest.NewFakeUnitOfWork(uowDeps))
 	return helper
 }
 

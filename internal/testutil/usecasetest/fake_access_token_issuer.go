@@ -1,0 +1,53 @@
+package usecasetest
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/session"
+)
+
+type FakeAccessTokenIssuer struct {
+	payloads []port.AccessTokenPayload
+	issueds  []port.AccessTokenIssued
+	err      error
+}
+
+func NewFakeAccessTokenIssuer() *FakeAccessTokenIssuer {
+	return &FakeAccessTokenIssuer{}
+}
+
+func (iss *FakeAccessTokenIssuer) Issue(payload port.AccessTokenPayload) (port.AccessTokenIssued, error) {
+	iss.payloads = append(iss.payloads, payload)
+
+	if iss.err != nil {
+		return port.AccessTokenIssued{}, iss.err
+	}
+
+	token, err := session.NewAccessToken("default")
+	if err != nil {
+		e := fmt.Errorf("the default access token in fake issuer is invalid: %w", err)
+		return port.AccessTokenIssued{}, e
+	}
+
+	issued := port.AccessTokenIssued{
+		Token:     token,
+		ExpiresAt: time.Now().UTC().AddDate(1, 0, 0),
+	}
+	iss.issueds = append(iss.issueds, issued)
+
+	return issued, nil
+}
+
+func (iss *FakeAccessTokenIssuer) SetError(err error) {
+	iss.err = err
+}
+
+func (iss *FakeAccessTokenIssuer) LastPayload() port.AccessTokenPayload {
+	return iss.payloads[len(iss.payloads)-1]
+}
+
+func (iss *FakeAccessTokenIssuer) LastIssued() port.AccessTokenIssued {
+	return iss.issueds[len(iss.issueds)-1]
+}

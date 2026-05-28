@@ -175,7 +175,7 @@ func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
 	username := helper.ValidUsername()
 	input := helper.ValidInput()
 	input.Username = username.String()
-	helper.FakeUserExistsChecker.Usernames.Add(username)
+	helper.FakeUserExistsChecker.InsertUsername(username)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
@@ -201,13 +201,13 @@ func TestRegister_SavesNewUser(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	savedUsers := helper.FakeUserWriter.SavedUsers()
+	savedUsers := helper.FakeUnitOfWork.FakeUserWriter.SavedUsers()
 	require.Len(t, savedUsers, 1)
 	user := savedUsers[0]
 	assert.Equal(t, input.Username, user.Username().String())
 }
 
-func TestRegister_SavesNewCredential(t *testing.T) {
+func TestRegister_SavesNewCredential_AndHashesThePassword(t *testing.T) {
 	helper := NewTestHelper(t)
 
 	password := helper.ValidPlainPassword()
@@ -219,10 +219,12 @@ func TestRegister_SavesNewCredential(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	savedCreds := helper.FakeCredentialWriter.SavedCredentials()
-	require.Len(t, savedCreds, 1)
-	verify, _ := helper.FakePasswordHasher.Verify(password, savedCreds[0].Secret())
-	assert.True(t, verify)
+
+	secret, ok := helper.FakePasswordHasher.GetSecretByPassword(password)
+	require.True(t, ok, "use case didnt hash the password")
+	assert.True(t,
+		helper.FakeUnitOfWork.FakeCredentialWriter.CheckSecretIsSaved(secret),
+	)
 }
 
 func TestRegister_ReturnsError_WhenUserWriterFails(t *testing.T) {
@@ -230,7 +232,7 @@ func TestRegister_ReturnsError_WhenUserWriterFails(t *testing.T) {
 	input := helper.ValidInput()
 
 	expectedErr := errors.New("internal error")
-	helper.FakeUserWriter.SetError(expectedErr)
+	helper.FakeUnitOfWork.FakeUserWriter.SetError(expectedErr)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
@@ -243,7 +245,7 @@ func TestRegister_ReturnsError_WhenCredentialWriterFails(t *testing.T) {
 	input := helper.ValidInput()
 
 	expectedErr := errors.New("internal error")
-	helper.FakeCredentialWriter.SetError(expectedErr)
+	helper.FakeUnitOfWork.FakeCredentialWriter.SetError(expectedErr)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
