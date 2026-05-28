@@ -19,7 +19,7 @@ type RefreshTokenPayload struct {
 }
 
 type RefreshTokenIssued struct {
-	Token    session.RefreshToken
+	Token    *session.RefreshToken
 	RawValue string
 }
 
