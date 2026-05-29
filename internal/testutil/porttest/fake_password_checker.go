@@ -1,4 +1,4 @@
-package usecasetest
+package porttest
 
 import (
 	"github.com/rafaelblt/go-auth/internal/credential"

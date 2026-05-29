@@ -5,7 +5,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
-	"github.com/rafaelblt/go-auth/internal/testutil/usecasetest"
+	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -14,25 +14,25 @@ import (
 
 type TestHelper struct {
 	t                      *testing.T
-	FakeUserReader         *usecasetest.FakeUserReader
-	FakeCredentialReader   *usecasetest.FakeCredentialReader
-	FakePasswordChecker    *usecasetest.FakePasswordChecker
-	FakeAccessTokenIssuer  *usecasetest.FakeAccessTokenIssuer
-	FakeRefreshTokenIssuer *usecasetest.FakeRefreshTokenIssuer
-	FakeUnitOfWork         *usecasetest.FakeUnitOfWork
-	FakeClock              *usecasetest.FakeClock
+	FakeUserReader         *porttest.FakeUserReader
+	FakeCredentialReader   *porttest.FakeCredentialReader
+	FakePasswordChecker    *porttest.FakePasswordChecker
+	FakeAccessTokenIssuer  *porttest.FakeAccessTokenIssuer
+	FakeRefreshTokenIssuer *porttest.FakeRefreshTokenIssuer
+	FakeUnitOfWork         *porttest.FakeUnitOfWork
+	FakeClock              *porttest.FakeClock
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
 		t:                      t,
-		FakeUserReader:         usecasetest.NewFakeUserReader(),
-		FakeCredentialReader:   usecasetest.NewFakeCredentialReader(),
-		FakePasswordChecker:    usecasetest.NewFakePasswordChecker(),
-		FakeAccessTokenIssuer:  usecasetest.NewFakeAccessTokenIssuer(),
-		FakeRefreshTokenIssuer: usecasetest.NewFakeRefreshTokenIssuer(),
-		FakeUnitOfWork:         usecasetest.NewFakeUnitOfWork(),
-		FakeClock:              usecasetest.NewFakeClock(),
+		FakeUserReader:         porttest.NewFakeUserReader(),
+		FakeCredentialReader:   porttest.NewFakeCredentialReader(),
+		FakePasswordChecker:    porttest.NewFakePasswordChecker(),
+		FakeAccessTokenIssuer:  porttest.NewFakeAccessTokenIssuer(),
+		FakeRefreshTokenIssuer: porttest.NewFakeRefreshTokenIssuer(),
+		FakeUnitOfWork:         porttest.NewFakeUnitOfWork(),
+		FakeClock:              porttest.NewFakeClock(),
 	}
 	return helper
 }

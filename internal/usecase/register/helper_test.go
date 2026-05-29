@@ -5,7 +5,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/testutil/usecasetest"
+	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/require"
@@ -13,19 +13,19 @@ import (
 
 type TestHelper struct {
 	t                     *testing.T
-	FakeUserExistsChecker *usecasetest.FakeUserExistsChecker
-	FakeUnitOfWork        *usecasetest.FakeUnitOfWork
-	FakePasswordHasher    *usecasetest.FakePasswordHasher
-	FakeClock             *usecasetest.FakeClock
+	FakeUserExistsChecker *porttest.FakeUserExistsChecker
+	FakeUnitOfWork        *porttest.FakeUnitOfWork
+	FakePasswordHasher    *porttest.FakePasswordHasher
+	FakeClock             *porttest.FakeClock
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
 		t:                     t,
-		FakeUserExistsChecker: shared.Ptr(usecasetest.NewFakeUserExistsChecker()),
-		FakeUnitOfWork:        usecasetest.NewFakeUnitOfWork(),
-		FakePasswordHasher:    shared.Ptr(usecasetest.NewFakePasswordHasher()),
-		FakeClock: usecasetest.NewFakeClock(),
+		FakeUserExistsChecker: shared.Ptr(porttest.NewFakeUserExistsChecker()),
+		FakeUnitOfWork:        porttest.NewFakeUnitOfWork(),
+		FakePasswordHasher:    shared.Ptr(porttest.NewFakePasswordHasher()),
+		FakeClock:             porttest.NewFakeClock(),
 	}
 	return helper
 }

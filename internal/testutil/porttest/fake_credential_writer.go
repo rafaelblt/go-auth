@@ -1,4 +1,4 @@
-package usecasetest
+package porttest
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 type FakeCredentialWriter struct {
 	data []*credential.Credential
-	err   error
+	err  error
 }
 
 func NewFakeCredentialWriter() *FakeCredentialWriter {
@@ -35,7 +35,7 @@ func (w *FakeCredentialWriter) CheckSecretIsSaved(s credential.Secret) bool {
 			return true
 		}
 	}
-	return false	
+	return false
 }
 
 func (w *FakeCredentialWriter) SetError(err error) { w.err = err }

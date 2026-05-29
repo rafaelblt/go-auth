@@ -1,4 +1,4 @@
-package usecasetest
+package porttest
 
 import (
 	"fmt"
@@ -7,14 +7,14 @@ import (
 )
 
 type FakePasswordHasher struct {
-	data    map[credential.PlainPassword]credential.Secret
-	err     error
+	data map[credential.PlainPassword]credential.Secret
+	err  error
 }
 
 func NewFakePasswordHasher() FakePasswordHasher {
 	return FakePasswordHasher{
-		data:    make(map[credential.PlainPassword]credential.Secret),
-		err:     nil,
+		data: make(map[credential.PlainPassword]credential.Secret),
+		err:  nil,
 	}
 }
 
