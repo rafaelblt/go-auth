@@ -10,8 +10,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/migrations"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -21,7 +19,6 @@ import (
 
 type Database struct {
 	container *postgres.PostgresContainer
-	pool      *pgxpool.Pool
 	conn      string
 }
 
@@ -45,14 +42,8 @@ func NewDatabase(ctx context.Context) (*Database, error) {
 		return nil, err
 	}
 
-	pool, err := infra.NewPool(ctx, conn)
-	if err != nil {
-		return nil, fmt.Errorf("pool creation failed: %w", err)
-	}
-
 	db := Database{
 		container: testcontainer,
-		pool:      pool,
 		conn:      conn,
 	}
 
@@ -110,33 +101,23 @@ func runMigrations(dbURL string) error {
 }
 
 func (db *Database) ConnectionString() string { return db.conn }
-func (db *Database) Pool() *pgxpool.Pool      { return db.pool }
-
-func (db *Database) Reset(ctx context.Context) error {
-    _, err := db.Pool().Exec(ctx, `
-        TRUNCATE TABLE users, credentials
-        RESTART IDENTITY CASCADE
-    `)
-    return err
-}
 
 func (db *Database) Close(ctx context.Context) error {
 	if err := db.container.Terminate(ctx); err != nil {
 		return fmt.Errorf("test container terminate failed: %w", err)
 	}
-	db.pool.Close()
 
 	return nil
 }
 
 func checkDockerAvailable(ctx context.Context) error {
-    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    client, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return fmt.Errorf("Docker not found: %w", err)
     }
-    defer cli.Close()
+    defer client.Close()
 
-    if _, err := cli.Ping(ctx); err != nil {
+    if _, err := client.Ping(ctx); err != nil {
         return fmt.Errorf("Docker is unavailable (is it running?): %w", err)
     }
 

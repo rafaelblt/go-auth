@@ -1,0 +1,42 @@
+package api
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
+)
+
+type Config struct {
+	Dependencies Dependencies
+	DevMode      bool
+}
+
+type Dependencies struct {
+	Register register.Register
+}
+
+func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
+	register := newRegisterHandler(cfg.Dependencies.Register)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/auth/register", adaptHandler(register))
+
+	middlewares := make([]func(http.Handler) http.Handler, 0)
+	if !cfg.DevMode {
+		middlewares = append(middlewares, adaptMiddleware(logging))
+	}
+
+	chain := chain(mux, middlewares...)
+
+	return chain, nil
+}
+
+func chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+	// Aplica de trás pra frente pra manter a ordem correta
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
+}
+

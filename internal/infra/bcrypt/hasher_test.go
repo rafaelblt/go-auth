@@ -1,53 +1,52 @@
-package infra_test
+package bcrypt
 
 import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestNewBcryptHasher(t *testing.T) {
+func TestNewHasher(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		config    infra.BcryptConfig
+		config    Config
 		expectErr bool
 	}{
 		{
 			desc: "config with default cost",
-			config: infra.BcryptConfig{
+			config: Config{
 				Cost: bcrypt.DefaultCost,
 			},
 			expectErr: false,
 		},
 		{
 			desc: "config with exactly min cost",
-			config: infra.BcryptConfig{
+			config: Config{
 				Cost: bcrypt.MinCost,
 			},
 			expectErr: false,
 		},
 		{
 			desc: "config with exactly max cost",
-			config: infra.BcryptConfig{
+			config: Config{
 				Cost: bcrypt.MaxCost,
 			},
 			expectErr: false,
 		},
 		{
 			desc: "cost less than bcrypt min cost",
-			config: infra.BcryptConfig{
+			config: Config{
 				Cost: bcrypt.MinCost - 1,
 			},
 			expectErr: true,
 		},
 		{
 			desc: "cost greater than bcrypt max cost",
-			config: infra.BcryptConfig{
+			config: Config{
 				Cost: bcrypt.MaxCost + 1,
 			},
 			expectErr: true,
@@ -55,7 +54,7 @@ func TestNewBcryptHasher(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			hasher, err := infra.NewBcryptHasher(tC.config)
+			hasher, err := NewHasher(tC.config)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, hasher)
@@ -67,9 +66,9 @@ func TestNewBcryptHasher(t *testing.T) {
 	}
 }
 
-func TestBcryptHasher_Hash(t *testing.T) {
-	cfg := infra.BcryptConfig{Cost: bcrypt.MinCost}
-	hasher, err := infra.NewBcryptHasher(cfg)
+func TestHash(t *testing.T) {
+	cfg := Config{Cost: bcrypt.MinCost}
+	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -94,22 +93,22 @@ func TestBcryptHasher_Hash(t *testing.T) {
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, secret)
-			} else {
-				require.NoError(t, err)
-				require.NotZero(t, secret)
-				assert.NotEqual(t, tC.password.Value(), secret.Value())
-				assert.NoError(t, bcrypt.CompareHashAndPassword(
-					[]byte(secret.Value()),
-					[]byte(tC.password.Value()),
-				))
-			}
+				return
+			} 
+			require.NoError(t, err)
+			require.NotZero(t, secret)
+			assert.NotEqual(t, tC.password.Value(), secret.Value())
+			assert.NoError(t, bcrypt.CompareHashAndPassword(
+				[]byte(secret.Value()),
+				[]byte(tC.password.Value()),
+			))
 		})
 	}
 }
 
-func TestBcryptHasher_Verify_WithPlainPasswordZero(t *testing.T) {
-	cfg := infra.BcryptConfig{Cost: bcrypt.MinCost}
-	hasher, err := infra.NewBcryptHasher(cfg)
+func TestVerify_WithPlainPasswordZero(t *testing.T) {
+	cfg := Config{Cost: bcrypt.MinCost}
+	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
 	password := credential.PlainPassword{}
@@ -121,9 +120,9 @@ func TestBcryptHasher_Verify_WithPlainPasswordZero(t *testing.T) {
 	assert.False(t, check)
 }
 
-func TestBcryptHasher_Verify_WithCredentialSecretZero(t *testing.T) {
-	cfg := infra.BcryptConfig{Cost: bcrypt.MinCost}
-	hasher, err := infra.NewBcryptHasher(cfg)
+func TestVerify_WithCredentialSecretZero(t *testing.T) {
+	cfg := Config{Cost: bcrypt.MinCost}
+	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
 	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")
@@ -135,9 +134,9 @@ func TestBcryptHasher_Verify_WithCredentialSecretZero(t *testing.T) {
 	assert.False(t, check)
 }
 
-func TestBcryptHasher_Verify_WithValidPassword(t *testing.T) {
-	cfg := infra.BcryptConfig{Cost: bcrypt.MinCost}
-	hasher, err := infra.NewBcryptHasher(cfg)
+func TestVerify_WithValidPassword(t *testing.T) {
+	cfg := Config{Cost: bcrypt.MinCost}
+	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
 	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")

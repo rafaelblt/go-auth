@@ -11,6 +11,12 @@ type FieldValidationError struct {
 	errs shared.Set[FieldError]
 }
 
+func NewFieldValidationError(errs []FieldError) *FieldValidationError {
+	fieldErrs := shared.NewSetFrom(errs...)
+	fve := FieldValidationError{fieldErrs}
+	return &fve
+}
+
 func (fve *FieldValidationError) Error() string {
 	msgs := make([]string, fve.errs.Len())
 	for i, err := range fve.errs.Values() {

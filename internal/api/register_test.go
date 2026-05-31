@@ -1,145 +1,158 @@
 package api
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type RegisterTestHelper struct {
-	t *testing.T
+	t            *testing.T
+	FakeRegister *apitest.FakeRegister
 }
 
 func NewRegisterTestHelper(t *testing.T) RegisterTestHelper {
 	t.Helper()
-	return RegisterTestHelper{t}
+	fakeRegister := apitest.NewFakeRegister()
+	return RegisterTestHelper{t, fakeRegister}
 }
 
-func (helper RegisterTestHelper) NewBody(username, password string) string {
-	return fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, password)
+func (h RegisterTestHelper) Handler() registerHandler {
+	return newRegisterHandler(h.FakeRegister)
 }
 
-func (helper RegisterTestHelper) URL() string {
-	return testServer.URL + "/auth/register"
-}
-
-func (helper RegisterTestHelper) SendRequest(body string) *http.Response {
-	helper.t.Helper()
+func (h RegisterTestHelper) NewRequest(body string) *http.Request {
+	h.t.Helper()
 	reader := strings.NewReader(body)
-	response, err := http.Post(helper.URL(), "application/json", reader)
-	require.NoError(helper.t, err)
-	return response
+	req, err := http.NewRequest(http.MethodPost, "url", reader)
+	require.NoError(h.t, err)
+	return req
 }
 
-func (helper RegisterTestHelper) SaveUser(t *testing.T, usr *user.User) {
-	t.Helper()
-	repo, err := infra.NewUserRepo(testDB.Pool())
-	require.NoError(t, err)
-	require.NoError(t, repo.Save(context.Background(), usr))
-}
-
-func DecodeResponseBody[T any](t *testing.T, response *http.Response) T {
-	defer response.Body.Close()
-
-	var decoded T
-	require.NoError(t, json.NewDecoder(response.Body).Decode(&decoded))
-
-	return decoded
+func (h RegisterTestHelper) NewRequestWithFields(username, password string) *http.Request {
+	body := fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, password)
+	return h.NewRequest(body)
 }
 
 func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	body := `{"username":"maria","password":"12345678"}`
+	handler := helper.Handler()
+	req := helper.NewRequestWithFields("maria", "12345678")
 
-	response := helper.SendRequest(body)
+	resp := handler.Handle(req)
 
-	decoded := DecodeResponseBody[registerResponseBody](t, response)
-	assert.NotZero(t, decoded.User.ID)
-	assert.Equal(t, "maria", decoded.User.Username)
-	assert.Equal(t, "active", decoded.User.Status)
-	assert.NotZero(t, decoded.User.CreatedAt)
-	assert.NotZero(t, decoded.User.UpdatedAt)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.IsType(t, registerResponseBody{}, resp.Body)
+	body := resp.Body.(registerResponseBody)
+	assert.NotZero(t, body.User.ID)
+	assert.Equal(t, "maria", body.User.Username)
+	assert.Equal(t, "active", body.User.Status)
+	assert.NotZero(t, body.User.CreatedAt)
+	assert.NotZero(t, body.User.UpdatedAt)
 }
 
 func TestRegister_ReturnsValidationError(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
+	handler := helper.Handler()
 	testCases := []struct {
 		desc     string
-		body     string
-		expected map[string]ValidationErrors
+		err      *validation.FieldValidationError
+		expected validationErrorBody
 	}{
 		{
 			desc: "username too short",
-			body: helper.NewBody(
-				strings.Repeat("a", user.UsernameMinLen-1),
-				"12345678",
-			),
-			expected: map[string]ValidationErrors{
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
 				"username": {registerUsernameTooShortError},
-			},
+			}},
 		},
 		{
 			desc: "username too long",
-			body: helper.NewBody(
-				strings.Repeat("a", user.UsernameMaxLen+1),
-				"12345678",
-			),
-			expected: map[string]ValidationErrors{
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
 				"username": {registerUsernameTooLongError},
-			},
+			}},
 		},
 		{
 			desc: "password too short",
-			body: helper.NewBody(
-				"rafael",
-				strings.Repeat("a", credential.PlainPasswordMinLen-1),
-			),
-			expected: map[string]ValidationErrors{
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
 				"password": {registerPasswordTooShortError},
-			},
+			}},
 		},
 		{
 			desc: "password too long",
-			body: helper.NewBody(
-				"rafael",
-				strings.Repeat("a", credential.PlainPasswordMaxLen+1),
-			),
-			expected: map[string]ValidationErrors{
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
 				"password": {registerPasswordTooLongError},
-			},
+			}},
+		},
+		{
+			desc: "username and password too long",
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
+				"username": {registerUsernameTooLongError},
+				"password": {registerPasswordTooLongError},
+			}},
+		},
+		{
+			desc: "username and password too short",
+			err: validation.NewFieldValidationError([]validation.FieldError{
+				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
+				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
+			}),
+			expected: validationErrorBody{map[string]ValidationErrors{
+				"username": {registerUsernameTooShortError},
+				"password": {registerPasswordTooShortError},
+			}},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			response := helper.SendRequest(tC.body)
-			decoded := DecodeResponseBody[validationErrorBody](t, response)
-			require.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
-			assert.Equal(t, tC.expected, decoded.Errors)
+			helper.FakeRegister.SetFieldValidationError(tC.err)
+			req := helper.NewRequestWithFields("username", "password")
+			resp := handler.Handle(req)
+
+			require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
+			require.IsType(t, validationErrorBody{}, resp.Body)
+			body := resp.Body.(validationErrorBody)
+			assert.Equal(t, tC.expected, body)
 		})
 	}
 }
 
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	user := usertest.NewUser(t, nil)
-	helper.SaveUser(t, user)
+	handler := helper.Handler()
+	helper.FakeRegister.SetUsernameAlreadyExistsError()
+	req := helper.NewRequestWithFields("rafael", "12345678")
 
-	body := helper.NewBody(user.Username().String(), "12345678")
-	response := helper.SendRequest(body)
+	resp := handler.Handle(req)
 
-	decoded := DecodeResponseBody[errorBody](t, response)
-	assert.Equal(t, http.StatusConflict, response.StatusCode)
-	assert.Equal(t, registerUsernameAlreadyExistsError, decoded)
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
+	require.IsType(t, errorBody{}, resp.Body)
+	body := resp.Body.(errorBody)
+	assert.Equal(t, registerUsernameAlreadyExistsError, body)
 }
 
 func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
@@ -163,10 +176,45 @@ func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			helper := NewRegisterTestHelper(t)
-			response := helper.SendRequest(tC.body)
-			decoded := DecodeResponseBody[errorBody](t, response)
-			assert.Equal(t, http.StatusBadRequest, response.StatusCode)
-			assert.Equal(t, invalidJSONBodyErrorBody, decoded)
+			req := helper.NewRequest(tC.body)
+			resp := helper.Handler().Handle(req)
+
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			require.IsType(t, errorBody{}, resp.Body)
+			body := resp.Body.(errorBody)
+			assert.Equal(t, invalidJSONBodyErrorBody, body)
+		})
+	}
+}
+
+func TestRegister_ReturnsInternalServerError(t *testing.T) {
+	testCases := []struct {
+		desc string
+		body string
+	}{
+		{
+			desc: "with only start bracket",
+			body: "{",
+		},
+		{
+			desc: "with only end bracket",
+			body: "}",
+		},
+		{
+			desc: "with random chars",
+			body: "21j89kf dsag-ĺ1#fdsh",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			helper := NewRegisterTestHelper(t)
+			req := helper.NewRequest(tC.body)
+			resp := helper.Handler().Handle(req)
+
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			require.IsType(t, errorBody{}, resp.Body)
+			body := resp.Body.(errorBody)
+			assert.Equal(t, invalidJSONBodyErrorBody, body)
 		})
 	}
 }

@@ -1,4 +1,4 @@
-package infra
+package bcrypt
 
 import (
 	"errors"
@@ -8,57 +8,57 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type BcryptHasher struct {
+type Hasher struct {
 	cost int
 }
 
-type BcryptConfig struct {
+type Config struct {
 	Cost int
 }
 
-func NewBcryptHasher(cfg BcryptConfig) (BcryptHasher, error) {
+func NewHasher(cfg Config) (Hasher, error) {
 	if cfg.Cost < bcrypt.MinCost || cfg.Cost > bcrypt.MaxCost {
-		return BcryptHasher{},
-		fmt.Errorf("bcrypt cost %d is outside allowed inclusive range %d-%d",
+		e := fmt.Errorf("bcrypt cost %d is outside allowed inclusive range %d-%d",
 			cfg.Cost, bcrypt.MinCost, bcrypt.MaxCost)
+		return Hasher{}, e
 	}
 
-	hasher := BcryptHasher{cost: cfg.Cost}
+	hasher := Hasher{cost: cfg.Cost}
 	return hasher, nil
 }
 
-func (hasher BcryptHasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
+func (h Hasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
 	if plain.IsZero() {
 		return credential.Secret{},
-		errors.New("plain password cannot be zero in bcrypt hashing")
+			errors.New("plain password cannot be zero in bcrypt hashing")
 	}
 
 	bytes, err := bcrypt.GenerateFromPassword(
 		[]byte(plain.Value()),
-		hasher.cost,
+		h.cost,
 	)
 	if err != nil {
 		return credential.Secret{},
-		fmt.Errorf("bcrypt hash generation failed: %w", err)
+			fmt.Errorf("bcrypt hash generation failed: %w", err)
 	}
 
 	secret, err := credential.NewSecret(string(bytes))
 	if err != nil {
 		return credential.Secret{},
-		fmt.Errorf("new credential secret failed: %w", err)
+			fmt.Errorf("new credential secret failed: %w", err)
 	}
 
 	return secret, err
 }
 
-func (hasher BcryptHasher) Verify(plain credential.PlainPassword, hash credential.Secret) (bool, error) {
+func (h Hasher) Verify(plain credential.PlainPassword, hash credential.Secret) (bool, error) {
 	if plain.IsZero() {
 		return false,
-		errors.New("plain password cannot be zero in bcrypt verify")
+			errors.New("plain password cannot be zero in bcrypt verify")
 	}
 	if hash.IsZero() {
 		return false,
-		errors.New("credential secret cannot be zero in bcrypt verify")
+			errors.New("credential secret cannot be zero in bcrypt verify")
 	}
 
 	err := bcrypt.CompareHashAndPassword(

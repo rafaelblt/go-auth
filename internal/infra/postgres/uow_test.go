@@ -1,10 +1,10 @@
-package infra_test
+package postgres_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/infra"
+	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
@@ -13,15 +13,15 @@ import (
 )
 
 func TestNewUnitOfWork_WithTxBeginnerNil(t *testing.T) {
-	uow, err := infra.NewUnitOfWork(nil)
+	uow, err := postgres.NewUnitOfWork(nil)
 	assert.Error(t, err)
 	assert.Nil(t, uow)
 }
 
 func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
-	beginner := dbProvider.NewPool(t)
+	beginner := poolFactory.Acquire(t)
 
-	uow, err := infra.NewUnitOfWork(beginner)
+	uow, err := postgres.NewUnitOfWork(beginner)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, uow)
@@ -29,9 +29,8 @@ func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
 
 func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	ctx := context.Background()
-	pool := dbProvider.NewPool(t)
-
-	uow, err := infra.NewUnitOfWork(pool)
+	pool := poolFactory.Acquire(t)
+	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
 	usr := usertest.NewUser(t, nil)
@@ -49,9 +48,8 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 
 func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	ctx := context.Background()
-	pool := dbProvider.NewPool(t)
-
-	uow, err := infra.NewUnitOfWork(pool)
+	pool := poolFactory.Acquire(t)
+	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
 	usr := usertest.NewUser(t, nil)

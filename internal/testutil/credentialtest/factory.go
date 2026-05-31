@@ -18,6 +18,7 @@ func NewCredential(t *testing.T, override func(*credential.RestoreParams)) *cred
 		ID:        credential.NewID(),
 		UserID:    user.NewID(),
 		Kind:      credential.KindPassword,
+		Provider:  credential.ProviderLocal,
 		Secret:    secret,
 		CreatedAt: time.Date(2007, 8, 9, 20, 45, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2026, 5, 21, 16, 0, 7, 0, time.UTC),
@@ -28,7 +29,7 @@ func NewCredential(t *testing.T, override func(*credential.RestoreParams)) *cred
 	}
 
 	entity, err := credential.RestoreCredential(params)
-	require.NoError(t, err)
+	require.NoError(t, err, "credential restore failed")
 	return entity
 }
 

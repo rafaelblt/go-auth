@@ -1,45 +1,37 @@
-package infra_test
+package postgres_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/infra"
+	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type UserRepoTestHelper struct {
-	t *testing.T
+	t  *testing.T
+	db postgres.DB
 }
 
 func NewUserRepoTestHelper(t *testing.T) UserRepoTestHelper {
-	return UserRepoTestHelper{t}
+	db := poolFactory.Acquire(t)
+	return UserRepoTestHelper{t, db}
 }
 
-func (helper UserRepoTestHelper) DB() infra.PGDB {
-	return dbProvider.NewPool(helper.t)
-}
-
-func (helper UserRepoTestHelper) Repo(db infra.PGDB) infra.UserRepo {
+func (helper UserRepoTestHelper) Repo() postgres.UserRepo {
 	helper.t.Helper()
-	writer, err := infra.NewUserRepo(db)
+	repo, err := postgres.NewUserRepo(helper.db)
 	require.NoError(helper.t, err)
-	return writer
+	return repo
 }
 
-func TestUserRepo_Save(t *testing.T) {
-	helper := NewUserRepoTestHelper(t)
-	db := helper.DB()
-	repo := helper.Repo(db)
-	usr := usertest.NewUser(t, nil)
-
-	err := repo.Save(context.Background(), usr)
-
-	require.NoError(t, err)
-	var exists bool
-	err = db.QueryRow(context.Background(),
+func (helper UserRepoTestHelper) CheckUserIsSaved(usr *user.User) bool {
+	helper.t.Helper()
+	var result bool
+	err := helper.db.QueryRow(context.Background(),
 		`SELECT EXISTS(
 			SELECT 1 FROM users WHERE
 			id=$1 AND
@@ -53,14 +45,41 @@ func TestUserRepo_Save(t *testing.T) {
 		usr.Status().String(),
 		usr.CreatedAt(),
 		usr.UpdatedAt(),
-	).Scan(&exists)
-	require.True(t, exists)
+	).Scan(&result)
+	require.NoError(helper.t, err)
+	return result
+}
+
+func TestNewUserRepo_WithDBNil(t *testing.T) {
+	uow, err := postgres.NewUserRepo(nil)
+	assert.Error(t, err)
+	assert.Zero(t, uow)
+}
+
+func TestNewUserRepo_WithValidDB(t *testing.T) {
+	db := poolFactory.Acquire(t)
+
+	uow, err := postgres.NewUserRepo(db)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, uow)
+}
+
+func TestUserRepo_Save(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+	usr := usertest.NewUser(t, nil)
+
+	err := repo.Save(context.Background(), usr)
+
+	require.NoError(t, err)
+	require.True(t, helper.CheckUserIsSaved(usr))
 }
 
 func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
-	db := helper.DB()
-	repo := helper.Repo(db)
+	repo := helper.Repo()
+
 	usr := usertest.NewUser(t, nil)
 	require.NoError(t, repo.Save(context.Background(), usr))
 
@@ -72,8 +91,8 @@ func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 
 func TestUserRepo_ExistsByUsername_WhenUsernameNotExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
-	db := helper.DB()
-	repo := helper.Repo(db)
+	repo := helper.Repo()
+
 	usr := usertest.NewUser(t, nil)
 
 	exists, err := repo.ExistsByUsername(context.Background(), usr.Username())

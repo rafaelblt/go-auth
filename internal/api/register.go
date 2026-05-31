@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,8 +23,12 @@ type registerResponseBody struct {
 	User userResource `json:"user"`
 }
 
+type registerUseCase interface {
+	Execute(context.Context, register.Input) (register.Output, error)
+}
+
 type registerHandler struct {
-	uc     register.Register
+	uc     registerUseCase
 	logger *slog.Logger
 }
 
@@ -52,7 +57,7 @@ var (
 	}
 )
 
-func newRegisterHandler(uc register.Register) registerHandler {
+func newRegisterHandler(uc registerUseCase) registerHandler {
 	return registerHandler{uc, slog.Default()}
 }
 

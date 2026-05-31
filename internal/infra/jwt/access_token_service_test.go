@@ -1,4 +1,4 @@
-package infra
+package jwt
 
 import (
 	"strings"
@@ -7,21 +7,18 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type fakeClock struct{ now time.Time }
-
-func (c fakeClock) Now() time.Time { return c.now }
-
-func accessTokenService() *AccessTokenService {
+func service() *AccessTokenService {
 	return &AccessTokenService{
 		secret:     []byte("sa-dfo-0aSLf2q90kasdplg[=as-hgoq3ṕ,1.azd"),
 		issuer:     "issuer",
 		method:     jwt.SigningMethodHS256,
-		clock:      fakeClock{time.Now().UTC()},
+		clock:      porttest.NewFakeClock(),
 		expiration: time.Minute,
 	}
 }
@@ -38,7 +35,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("089sua)DFK!W0OLKADF-LPDÇŹXA,d0pfoiajgm9p81uh98sajdf1qw"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: 10*time.Minute,
 			},
 			expectErr: false,
@@ -49,7 +46,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte{},
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -60,7 +57,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("abc"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -71,7 +68,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -82,7 +79,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     strings.Repeat("a", maxIssuerLength+1),
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -93,7 +90,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "issuer",
 				Method:     nil,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -104,7 +101,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodNone,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -115,7 +112,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodPS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
 			expectErr: true,
@@ -137,7 +134,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: minExpiration - 1,
 			},
 			expectErr: true,
@@ -148,7 +145,7 @@ func TestNewAccessTokenService(t *testing.T) {
 				Secret:     []byte("secret"),
 				Issuer:     "issuer",
 				Method:     jwt.SigningMethodHS256,
-				Clock:      NewSystemClock(),
+				Clock:      porttest.NewFakeClock(),
 				Expiration: maxExpiration + 1,
 			},
 			expectErr: true,
@@ -174,7 +171,7 @@ func TestNewAccessTokenService(t *testing.T) {
 }
 
 func TestAccessTokenService_Issue_ReturnsValidToken(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 	payload := port.AccessTokenPayload{
 		UserID: user.NewID(),
 	}
@@ -188,7 +185,7 @@ func TestAccessTokenService_Issue_ReturnsValidToken(t *testing.T) {
 }
 
 func TestAccessTokenService_Issue_ReturnsTokenWithExpiration(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 	payload := port.AccessTokenPayload{
 		UserID: user.NewID(),
 	}
@@ -201,7 +198,7 @@ func TestAccessTokenService_Issue_ReturnsTokenWithExpiration(t *testing.T) {
 }
 
 func TestAccessTokenService_Issue_ReturnsErrorWithZeroUserID(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 	payload := port.AccessTokenPayload{UserID: user.ID{}}
 
 	issued, err := service.Issue(payload)
@@ -211,7 +208,7 @@ func TestAccessTokenService_Issue_ReturnsErrorWithZeroUserID(t *testing.T) {
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForRandomToken(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 
 	claims, err := service.Validate("random")
 
@@ -220,7 +217,7 @@ func TestAccessTokenService_Validate_ReturnsErrorForRandomToken(t *testing.T) {
 }
 
 func TestAccessTokenService_Validate_ReturnsClaimsForValidToken(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 
 	payload := port.AccessTokenPayload{UserID: user.NewID()}
 	valid, err := service.Issue(payload)
@@ -234,7 +231,7 @@ func TestAccessTokenService_Validate_ReturnsClaimsForValidToken(t *testing.T) {
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithNoClaims(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 	token := jwt.New(service.method)
 
 	claims, err := service.Validate(token.Raw)
@@ -244,7 +241,7 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithNoClaims(t *testing
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentSecret(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 
 	payload := port.AccessTokenPayload{UserID: user.NewID()}
 	issued, err := service.Issue(payload)
@@ -259,9 +256,9 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentSecret(t *
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentMethod(t *testing.T) {
-	serviceHS256 := accessTokenService()
+	serviceHS256 := service()
 
-	serviceHS512 := accessTokenService()
+	serviceHS512 := service()
 	serviceHS512.method = jwt.SigningMethodHS512
 
 	payload := port.AccessTokenPayload{UserID: user.NewID()}
@@ -275,7 +272,7 @@ func TestAccessTokenService_Validate_ReturnsErrorForTokenWithDifferentMethod(t *
 }
 
 func TestAccessTokenService_Validate_ReturnsErrorForTokenWithInvalidUserID(t *testing.T) {
-	service := accessTokenService()
+	service := service()
 
 	token := jwt.NewWithClaims(service.method, jwt.RegisteredClaims{
 		Issuer:    service.issuer,

@@ -3,42 +3,49 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/rafaelblt/go-auth/internal/api"
+	"github.com/rafaelblt/go-auth/internal/app"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 )
 
-func chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
-	// Aplica de trás pra frente pra manter a ordem correta
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
+func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
 	}
-	return h
 }
 
-func main() {
+func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	logger := slog.Default()
 
-	logger.Info("starting app...")
-
-	logger.Info("starting test database...")
-	db, err := testutil.NewDatabase(context.Background())
+	logger.Info("creating test database...")
+	db, err := testutil.NewDatabase(ctx)
 	if err != nil {
 		logger.Error("failed to create test database", "error", err)
-		os.Exit(1)
+		return err
 	}
-	logger.Info("test database created successfully")
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db.Close(ctx)
+	}()
 
-	logger.Info("creating api...")
-	handler, err := api.NewAPI(context.Background(), api.APIConfig{DBConnection: db.ConnectionString()})
+	logger.Info("building app...")
+	application, err := app.New(ctx, app.Config{
+		Database: db.ConnectionString(),
+	})
 	if err != nil {
-		logger.Error("failed to create api", "error", err)
-		os.Exit(1)
+		logger.Error("app build failed", "error", err)
+		return err
 	}
-	logger.Info("api ready")
+	defer application.Close()
 
-	logger.Info("listening...")
-	http.ListenAndServe(":8080", handler)
+	logger.Info("running app...")
+	return application.Run(ctx)
 }
