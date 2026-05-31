@@ -3,8 +3,6 @@ package api
 import (
 	"context"
 	"net/http"
-
-	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type Config struct {
@@ -13,7 +11,7 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Register register.Register
+	Register registerUseCase
 }
 
 func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
