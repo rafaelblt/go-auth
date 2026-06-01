@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -129,7 +130,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			helper.FakeRegister.SetFieldValidationError(tC.err)
+			helper.FakeRegister.SetError(tC.err)
 			req := helper.NewRequestWithFields("username", "password")
 			resp := handler.Handle(req)
 
@@ -144,7 +145,7 @@ func TestRegister_ReturnsValidationError(t *testing.T) {
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
 	handler := helper.Handler()
-	helper.FakeRegister.SetUsernameAlreadyExistsError()
+	helper.FakeRegister.SetError(register.ErrUsernameAlreadyExists)
 	req := helper.NewRequestWithFields("rafael", "12345678")
 
 	resp := handler.Handle(req)
@@ -188,33 +189,14 @@ func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
 }
 
 func TestRegister_ReturnsInternalServerError(t *testing.T) {
-	testCases := []struct {
-		desc string
-		body string
-	}{
-		{
-			desc: "with only start bracket",
-			body: "{",
-		},
-		{
-			desc: "with only end bracket",
-			body: "}",
-		},
-		{
-			desc: "with random chars",
-			body: "21j89kf dsag-ĺ1#fdsh",
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			helper := NewRegisterTestHelper(t)
-			req := helper.NewRequest(tC.body)
-			resp := helper.Handler().Handle(req)
+	helper := NewRegisterTestHelper(t)
+	req := helper.NewRequestWithFields("username", "password")
+	helper.FakeRegister.SetError(errors.New("internal error"))
 
-			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-			require.IsType(t, errorBody{}, resp.Body)
-			body := resp.Body.(errorBody)
-			assert.Equal(t, invalidJSONBodyErrorBody, body)
-		})
-	}
+	resp := helper.Handler().Handle(req)
+
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	require.IsType(t, errorBody{}, resp.Body)
+	body := resp.Body.(errorBody)
+	assert.Equal(t, internalServerErrorBody, body)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
-	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
 type FakeRegister struct {
@@ -42,10 +41,6 @@ func (fr *FakeRegister) Execute(ctx context.Context, in register.Input) (registe
 	return out, nil
 }
 
-func (fr *FakeRegister) SetUsernameAlreadyExistsError() {
-	fr.err = register.ErrUsernameAlreadyExists
-}
-
-func (fr *FakeRegister) SetFieldValidationError(fve *validation.FieldValidationError) {
-	fr.err = fve
+func (fr *FakeRegister) SetError(err error) {
+	fr.err = err
 }
