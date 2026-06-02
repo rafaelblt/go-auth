@@ -19,17 +19,17 @@ func TestNewPlainPassword(t *testing.T) {
 		{
 			desc:        "empty input",
 			input:       "",
-			expectedErr: []error{ErrPlainPasswordTooShort},
+			expectedErr: []error{validation.IssueMinLen(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", PlainPasswordMinLen-1),
-			expectedErr: []error{ErrPlainPasswordTooShort},
+			expectedErr: []error{validation.IssueMinLen(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", PlainPasswordMaxLen+1),
-			expectedErr: []error{ErrPlainPasswordTooLong},
+			expectedErr: []error{validation.IssueMaxLen(PlainPasswordMaxLen)},
 		},
 		{
 			desc:       "valid input",
@@ -59,9 +59,9 @@ func TestNewPlainPassword(t *testing.T) {
 
 			require.Error(t, err)
 			assert.True(t, password.IsZero())
-			var verr *validation.ValidationError
-			require.ErrorAs(t, err, &verr)
-			assert.Equal(t, tC.expectedErr, verr.Errors())
+			var issues validation.Issues
+			require.ErrorAs(t, err, &issues)
+			assert.ElementsMatch(t, tC.expectedErr, issues)
 		})
 	}
 }
