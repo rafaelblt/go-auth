@@ -44,19 +44,19 @@ func TestNewUsername(t *testing.T) {
 			desc:        "empty value",
 			input:       "",
 			normalized:  "",
-			expectedErr: []error{ErrUsernameTooShort},
+			expectedErr: []error{validation.IssueMinLen(UsernameMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", UsernameMinLen-1),
 			normalized:  "",
-			expectedErr: []error{ErrUsernameTooShort},
+			expectedErr: []error{validation.IssueMinLen(UsernameMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", UsernameMaxLen+1),
 			normalized:  "",
-			expectedErr: []error{ErrUsernameTooLong},
+			expectedErr: []error{validation.IssueMaxLen(UsernameMaxLen)},
 		},
 	}
 	for _, tC := range testCases {
@@ -71,9 +71,9 @@ func TestNewUsername(t *testing.T) {
 
 			require.Error(t, err)
 			assert.True(t, username.IsZero())
-			var verr *validation.ValidationError
-			require.ErrorAs(t, err, &verr)
-			assert.Equal(t, tC.expectedErr, verr.Errors())
+			var issues validation.Issues
+			require.ErrorAs(t, err, &issues)
+			assert.ElementsMatch(t, tC.expectedErr, issues)
 		})
 	}
 }
