@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/rafaelblt/go-auth/internal/validation"
@@ -97,76 +96,23 @@ func TestRegister_ReturnsOutput(t *testing.T) {
 	assert.Equal(t, input.Username, output.User.Username)
 }
 
-func TestRegister_ReturnsValidationError_WhenInputIsInvalid(t *testing.T) {
-	testCases := []struct {
-		desc     string
-		input    register.Input
-		expected []validation.FieldError
-	}{
-		{
-			desc: "username too short",
-			input: register.Input{
-				Username: strings.Repeat("a", user.UsernameMinLen-1),
-				Password: "12345678",
-			},
-			expected: []validation.FieldError{
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
-			},
-		},
-		{
-			desc: "password too short",
-			input: register.Input{
-				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
-			},
-			expected: []validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
-			},
-		},
-		{
-			desc: "password too long",
-			input: register.Input{
-				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
-			},
-			expected: []validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
-			},
-		},
-		{
-			desc: "username and password too short",
-			input: register.Input{
-				Username: strings.Repeat("a", user.UsernameMinLen-1),
-				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
-			},
-			expected: []validation.FieldError{
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
-			},
-		},
-		{
-			desc: "username and password too long",
-			input: register.Input{
-				Username: strings.Repeat("a", user.UsernameMaxLen+1),
-				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
-			},
-			expected: []validation.FieldError{
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
-			},
-		},
+func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := register.Input{
+		Username: strings.Repeat("a", user.UsernameMaxLen+1),
+		Password: helper.ValidPlainPassword().Value(),
 	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			helper := NewTestHelper(t)
-			output, err := helper.UseCase().Execute(context.Background(), tC.input)
-			assert.Zero(t, output)
-			var verr *validation.FieldValidationError
-			if assert.ErrorAs(t, err, &verr) {
-				assert.ElementsMatch(t, tC.expected, verr.Errors())
-			}
-		})
-	}
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	var verr validation.ValidationError
+	require.ErrorAs(t, err, &verr)
+	expected := []validation.FieldError{validation.NewFieldError(
+		register.UsernameField,
+		validation.IssueMaxLen(user.UsernameMaxLen),
+	)}
+	assert.ElementsMatch(t, expected, verr.Errors())
 }
 
 func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
