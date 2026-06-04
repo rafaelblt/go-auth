@@ -3,15 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"log/slog"
 	"net/http"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
-	"github.com/rafaelblt/go-auth/internal/user"
-	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
 type registerRequestBody struct {
@@ -28,43 +22,16 @@ type registerUseCase interface {
 }
 
 type registerHandler struct {
-	uc     registerUseCase
-	logger *slog.Logger
+	uc registerUseCase
 }
 
-var registerUsernameAlreadyExistsError = errorBody{errorData{
-	Code:    "USERNAME_ALREADY_EXISTS",
-	Message: "The provided username already exists.",
-}}
-
-// validation errors
-var (
-	registerUsernameTooLongError = fieldErrorData{
-		Code:    "USERNAME_TOO_LONG",
-		Message: "The provided username is too long.",
-	}
-	registerUsernameTooShortError = fieldErrorData{
-		Code:    "USERNAME_TOO_SHORT",
-		Message: "The provided username is too short.",
-	}
-	registerPasswordTooLongError = fieldErrorData{
-		Code:    "PASSWORD_TOO_LONG",
-		Message: "The provided password is too long.",
-	}
-	registerPasswordTooShortError = fieldErrorData{
-		Code:    "PASSWORD_TOO_SHORT",
-		Message: "The provided password is too short.",
-	}
-)
-
 func newRegisterHandler(uc registerUseCase) registerHandler {
-	return registerHandler{uc, slog.Default()}
+	return registerHandler{uc}
 }
 
 func (handler registerHandler) Handle(request *http.Request) response {
 	ctx := request.Context()
 	logger := loggerFrom(ctx)
-	handler.logger = logger
 
 	logger.Info("register request received")
 
@@ -81,10 +48,13 @@ func (handler registerHandler) Handle(request *http.Request) response {
 		Password: reqBody.Password,
 	})
 	if err != nil {
-		return handler.handleUseCaseError(err)
+		resp, err := adaptError(err)
+		if err != nil {
+			logger.Error("an error occurred while adapting the register error", "error", err)
+			return internalServerError()
+		}
+		return resp
 	}
-
-	logger.Info("registration completed successfully")
 
 	logger.Info("mapping register output to response")
 	resource, err := mapUserDTOToResource(output.User)
@@ -100,62 +70,4 @@ func (handler registerHandler) Handle(request *http.Request) response {
 
 	logger.Info("register response successfully returned")
 	return response
-}
-
-func (h registerHandler) handleUseCaseError(err error) response {
-	if errors.Is(err, register.ErrUsernameAlreadyExists) {
-		h.logger.Info("registration failed: username already exists")
-		return h.usernameAlreadyExists()
-	}
-
-	var verr *validation.FieldValidationError
-	if errors.As(err, &verr) {
-		response, err := h.mapValidationError(verr)
-		if err != nil {
-			h.logger.Error("register validation error could not be mapped", "error", err)
-			return internalServerError()
-		}
-		h.logger.Info("registration failed: validation error", makeValidationErrorLogFields(response.Errors))
-		return validationError(response)
-	}
-
-	h.logger.Error("unexpected error from register use case", "error", err)
-	return internalServerError()
-}
-
-func (h registerHandler) usernameAlreadyExists() response {
-	body := registerUsernameAlreadyExistsError
-	return response{
-		StatusCode: http.StatusConflict,
-		Body:       body,
-	}
-}
-
-func (h registerHandler) mapValidationError(verr *validation.FieldValidationError) (validationErrorBody, error) {
-	body := validationErrorBody{Errors: map[string]ValidationErrors{}}
-	usernameErrs := []fieldErrorData{}
-	passwordErrs := []fieldErrorData{}
-
-	for _, fieldErr := range verr.Errors() {
-		if errors.Is(fieldErr.Err(), user.ErrUsernameTooLong) {
-			usernameErrs = append(usernameErrs, registerUsernameTooLongError)
-		} else if errors.Is(fieldErr.Err(), user.ErrUsernameTooShort) {
-			usernameErrs = append(usernameErrs, registerUsernameTooShortError)
-		} else if errors.Is(fieldErr.Err(), credential.ErrPlainPasswordTooLong) {
-			passwordErrs = append(passwordErrs, registerPasswordTooLongError)
-		} else if errors.Is(fieldErr.Err(), credential.ErrPlainPasswordTooShort) {
-			passwordErrs = append(passwordErrs, registerPasswordTooShortError)
-		} else {
-			return validationErrorBody{},
-				fmt.Errorf("unexpected validation error from use case: %w", fieldErr.Err())
-		}
-	}
-
-	if len(usernameErrs) > 0 {
-		body.Errors["username"] = usernameErrs
-	}
-	if len(passwordErrs) > 0 {
-		body.Errors["password"] = passwordErrs
-	}
-	return body, nil
 }

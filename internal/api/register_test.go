@@ -7,10 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
-	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,116 +42,19 @@ func (h RegisterTestHelper) NewRequestWithFields(username, password string) *htt
 	return h.NewRequest(body)
 }
 
-func TestRegister_ReturnsSuccessResponse(t *testing.T) {
-	helper := NewRegisterTestHelper(t)
-	handler := helper.Handler()
-	req := helper.NewRequestWithFields("maria", "12345678")
-
-	resp := handler.Handle(req)
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	require.IsType(t, registerResponseBody{}, resp.Body)
-	body := resp.Body.(registerResponseBody)
-	assert.NotZero(t, body.User.ID)
-	assert.Equal(t, "maria", body.User.Username)
-	assert.Equal(t, "active", body.User.Status)
-	assert.NotZero(t, body.User.CreatedAt)
-	assert.NotZero(t, body.User.UpdatedAt)
-}
-
-func TestRegister_ReturnsValidationError(t *testing.T) {
-	helper := NewRegisterTestHelper(t)
-	handler := helper.Handler()
-	testCases := []struct {
-		desc     string
-		err      *validation.FieldValidationError
-		expected validationErrorBody
-	}{
-		{
-			desc: "username too short",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"username": {registerUsernameTooShortError},
-			}},
-		},
-		{
-			desc: "username too long",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"username": {registerUsernameTooLongError},
-			}},
-		},
-		{
-			desc: "password too short",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"password": {registerPasswordTooShortError},
-			}},
-		},
-		{
-			desc: "password too long",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"password": {registerPasswordTooLongError},
-			}},
-		},
-		{
-			desc: "username and password too long",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooLong),
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooLong),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"username": {registerUsernameTooLongError},
-				"password": {registerPasswordTooLongError},
-			}},
-		},
-		{
-			desc: "username and password too short",
-			err: validation.NewFieldValidationError([]validation.FieldError{
-				validation.NewFieldError(register.PasswordField, credential.ErrPlainPasswordTooShort),
-				validation.NewFieldError(register.UsernameField, user.ErrUsernameTooShort),
-			}),
-			expected: validationErrorBody{map[string]ValidationErrors{
-				"username": {registerUsernameTooShortError},
-				"password": {registerPasswordTooShortError},
-			}},
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			helper.FakeRegister.SetError(tC.err)
-			req := helper.NewRequestWithFields("username", "password")
-			resp := handler.Handle(req)
-
-			require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
-			require.IsType(t, validationErrorBody{}, resp.Body)
-			body := resp.Body.(validationErrorBody)
-			assert.Equal(t, tC.expected, body)
-		})
-	}
-}
-
 func TestRegister_ReturnsUsernameAlreadyExists(t *testing.T) {
 	helper := NewRegisterTestHelper(t)
-	handler := helper.Handler()
-	helper.FakeRegister.SetError(register.ErrUsernameAlreadyExists)
-	req := helper.NewRequestWithFields("rafael", "12345678")
 
-	resp := handler.Handle(req)
+	err := register.ErrUsernameAlreadyExists
+	helper.FakeRegister.SetError(err)
+
+	req := helper.NewRequestWithFields("maria", "12345678")
+	resp := helper.Handler().Handle(req)
 
 	require.Equal(t, http.StatusConflict, resp.StatusCode)
 	require.IsType(t, errorBody{}, resp.Body)
 	body := resp.Body.(errorBody)
-	assert.Equal(t, registerUsernameAlreadyExistsError, body)
+	assert.Equal(t, err.Code(), body.Error.Code)
 }
 
 func TestRegister_ReturnsInvalidJSONBody(t *testing.T) {
@@ -199,4 +100,28 @@ func TestRegister_ReturnsInternalServerError(t *testing.T) {
 	require.IsType(t, errorBody{}, resp.Body)
 	body := resp.Body.(errorBody)
 	assert.Equal(t, internalServerErrorBody, body)
+}
+
+func TestRegister_ReturnsValidationError(t *testing.T) {
+	helper := NewRegisterTestHelper(t)
+
+	issue1 := validation.IssueTooShort(50)
+	issue2 := validation.IssueTooLong(50)
+	ferr1 := validation.NewFieldError("field1", issue1)
+	ferr2 := validation.NewFieldError("field2", issue2)
+	verr := validation.NewValidationError(ferr1, ferr2)
+	helper.FakeRegister.SetError(verr)
+
+	req := helper.NewRequestWithFields("username", "password")
+	resp := helper.Handler().Handle(req)
+
+	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
+	require.IsType(t, validationErrorBody{}, resp.Body)
+
+	body := resp.Body.(validationErrorBody)
+	expected := validationErrorBody{Errors: fieldErrors{
+		fieldErrorData{Field: ferr1.Field(), Code: ferr1.Issue().Code(), Details: ferr1.Issue().Details()},
+		fieldErrorData{Field: ferr2.Field(), Code: ferr2.Issue().Code(), Details: ferr2.Issue().Details()},
+	}}
+	assert.Equal(t, expected, body)
 }

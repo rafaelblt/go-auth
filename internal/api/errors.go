@@ -18,14 +18,16 @@ type errorData struct {
 // Validation Error
 
 type validationErrorBody struct {
-	Errors map[string]ValidationErrors `json:"errors"`
+	Errors fieldErrors `json:"errors"`
 }
 
-type ValidationErrors = []fieldErrorData
+type validationErrors map[string]fieldErrors
+type fieldErrors = []fieldErrorData
 
 type fieldErrorData struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Field   string         `json:"field"`
+	Code    string         `json:"code"`
+	Details map[string]any `json:"details"`
 }
 
 // Built Errors
