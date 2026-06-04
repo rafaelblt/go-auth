@@ -2,7 +2,6 @@ package register
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
@@ -23,28 +22,6 @@ var ErrUsernameAlreadyExists = usecase.NewError(
 	"USERNAME_ALREADY_EXISTS",
 	usecase.ErrorKindConflict,
 )
-
-func New(cfg Config) (Register, error) {
-	if cfg.UserExistsChecker == nil {
-		return Register{}, errors.New("user exists checker cannot be nil")
-	}
-	if cfg.UnitOfWork == nil {
-		return Register{}, errors.New("unit of work cannot be nil")
-	}
-	if cfg.PasswordHasher == nil {
-		return Register{}, errors.New("password hasher cannot be nil")
-	}
-	if cfg.Clock == nil {
-		return Register{}, errors.New("clock cannot be nil")
-	}
-	uc := Register{
-		userExists: cfg.UserExistsChecker,
-		uow:        cfg.UnitOfWork,
-		hasher:     cfg.PasswordHasher,
-		clock:      cfg.Clock,
-	}
-	return uc, nil
-}
 
 func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 	validation := validation.NewAccumulator()
