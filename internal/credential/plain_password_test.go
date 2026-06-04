@@ -19,17 +19,17 @@ func TestNewPlainPassword(t *testing.T) {
 		{
 			desc:        "empty input",
 			input:       "",
-			expectedErr: []error{validation.IssueMinLen(PlainPasswordMinLen)},
+			expectedErr: []error{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", PlainPasswordMinLen-1),
-			expectedErr: []error{validation.IssueMinLen(PlainPasswordMinLen)},
+			expectedErr: []error{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", PlainPasswordMaxLen+1),
-			expectedErr: []error{validation.IssueMaxLen(PlainPasswordMaxLen)},
+			expectedErr: []error{validation.IssueTooLong(PlainPasswordMaxLen)},
 		},
 		{
 			desc:       "valid input",

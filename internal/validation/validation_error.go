@@ -8,6 +8,10 @@ type ValidationError struct {
 	errs []FieldError
 }
 
+func NewValidationError(errs ...FieldError) ValidationError {
+	return ValidationError{errs}
+}
+
 func (ve ValidationError) Error() string {
 	msgs := make([]string, len(ve.errs))
 

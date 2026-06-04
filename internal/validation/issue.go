@@ -9,13 +9,9 @@ const (
 	CodeTooShort = "TOO_SHORT"
 )
 
-type Issue struct {
-	code   string
-	params map[string]any
-}
-
-func (iss Issue) Error() string {
-	return iss.code
+type Issue interface {
+	Code() string
+	Details() map[string]any
 }
 
 type Issues []Issue
@@ -24,7 +20,7 @@ func (iss Issues) Error() string {
 	msgs := make([]string, len(iss))
 
 	for i, issue := range iss {
-		msgs[i] = issue.code
+		msgs[i] = issue.Code()
 	}
 
 	return strings.Join(msgs, "; ")

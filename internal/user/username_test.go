@@ -44,19 +44,19 @@ func TestNewUsername(t *testing.T) {
 			desc:        "empty value",
 			input:       "",
 			normalized:  "",
-			expectedErr: []error{validation.IssueMinLen(UsernameMinLen)},
+			expectedErr: []error{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", UsernameMinLen-1),
 			normalized:  "",
-			expectedErr: []error{validation.IssueMinLen(UsernameMinLen)},
+			expectedErr: []error{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", UsernameMaxLen+1),
 			normalized:  "",
-			expectedErr: []error{validation.IssueMaxLen(UsernameMaxLen)},
+			expectedErr: []error{validation.IssueTooLong(UsernameMaxLen)},
 		},
 	}
 	for _, tC := range testCases {

@@ -20,10 +20,10 @@ func NewUsername(value string) (Username, error) {
 
 	issues := make(validation.Issues, 0)
 	if len(normalized) < UsernameMinLen {
-		issues = append(issues, validation.IssueMinLen(UsernameMinLen))
+		issues = append(issues, validation.IssueTooShort(UsernameMinLen))
 	}
 	if len(normalized) > UsernameMaxLen {
-		issues = append(issues, validation.IssueMaxLen(UsernameMaxLen))
+		issues = append(issues, validation.IssueTooLong(UsernameMaxLen))
 	}
 
 	if len(issues) > 0 {
