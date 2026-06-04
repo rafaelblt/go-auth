@@ -1,7 +1,7 @@
 package register
 
-const UsernameField = "Username"
-const PasswordField = "Password"
+const FieldUsername = "Username"
+const FieldPassword = "Password"
 
 type Input struct {
 	Username string

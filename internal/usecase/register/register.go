@@ -47,9 +47,9 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 	validation := validation.NewAccumulator()
 
 	username, err := user.NewUsername(input.Username)
-	validation.Add(UsernameField, err)
+	validation.Add(FieldUsername, err)
 	password, err := credential.NewPlainPassword(input.Password)
-	validation.Add(PasswordField, err)
+	validation.Add(FieldPassword, err)
 
 	err = validation.Err()
 	if err != nil {
@@ -136,4 +136,3 @@ func (uc Register) save(ctx context.Context, user *user.User, cred *credential.C
 		return nil
 	})
 }
-
