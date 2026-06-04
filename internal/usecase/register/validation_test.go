@@ -26,8 +26,8 @@ func TestRegister_ReturnsValidationError_WithUsernameTooShort(t *testing.T) {
 	var verr validation.ValidationError
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
-		register.UsernameField,
-		validation.IssueMinLen(user.UsernameMinLen),
+		register.FieldUsername,
+		validation.IssueTooShort(user.UsernameMinLen),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -45,8 +45,8 @@ func TestRegister_ReturnsValidationError_WithPasswordTooLong(t *testing.T) {
 	var verr validation.ValidationError
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
-		register.PasswordField,
-		validation.IssueMaxLen(credential.PlainPasswordMaxLen),
+		register.FieldPassword,
+		validation.IssueTooLong(credential.PlainPasswordMaxLen),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -64,8 +64,8 @@ func TestRegister_ReturnsValidationError_WithPasswordTooShort(t *testing.T) {
 	var verr validation.ValidationError
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
-		register.PasswordField,
-		validation.IssueMinLen(credential.PlainPasswordMinLen),
+		register.FieldPassword,
+		validation.IssueTooShort(credential.PlainPasswordMinLen),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -84,12 +84,12 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{
 		validation.NewFieldError(
-			register.UsernameField,
-			validation.IssueMinLen(user.UsernameMinLen),
+			register.FieldUsername,
+			validation.IssueTooShort(user.UsernameMinLen),
 		),
 		validation.NewFieldError(
-			register.PasswordField,
-			validation.IssueMinLen(credential.PlainPasswordMinLen),
+			register.FieldPassword,
+			validation.IssueTooShort(credential.PlainPasswordMinLen),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())
@@ -109,12 +109,12 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLing(t *testi
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{
 		validation.NewFieldError(
-			register.UsernameField,
-			validation.IssueMaxLen(user.UsernameMaxLen),
+			register.FieldUsername,
+			validation.IssueTooLong(user.UsernameMaxLen),
 		),
 		validation.NewFieldError(
-			register.PasswordField,
-			validation.IssueMaxLen(credential.PlainPasswordMaxLen),
+			register.FieldPassword,
+			validation.IssueTooLong(credential.PlainPasswordMaxLen),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())

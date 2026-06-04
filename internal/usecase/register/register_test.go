@@ -109,8 +109,8 @@ func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
 	var verr validation.ValidationError
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
-		register.UsernameField,
-		validation.IssueMaxLen(user.UsernameMaxLen),
+		register.FieldUsername,
+		validation.IssueTooLong(user.UsernameMaxLen),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
