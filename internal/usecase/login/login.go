@@ -2,7 +2,6 @@ package login
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
@@ -32,7 +31,9 @@ type Login struct {
 	clock         port.Clock
 }
 
-var ErrInvalidCredentials = errors.New("login failed: invalid credentials")
+var ErrInvalidCredentials = usecase.NewError(
+	"INVALID_CREDENTIALS", usecase.ErrorKindUnauthorized,
+)
 
 func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	username, err := user.NewUsername(input.Username)

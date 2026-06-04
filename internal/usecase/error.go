@@ -4,7 +4,10 @@ import "fmt"
 
 type ErrorKind string
 
-const ErrorKindConflict ErrorKind = "conflict"
+const (
+	ErrorKindConflict ErrorKind = "conflict"
+	ErrorKindUnauthorized ErrorKind = "unauthorized"
+)
 
 type UseCaseError struct {
 	code string
