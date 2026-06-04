@@ -19,7 +19,10 @@ type Register struct {
 	clock      port.Clock
 }
 
-var ErrUsernameAlreadyExists = errors.New("the provided username is already registered")
+var ErrUsernameAlreadyExists = usecase.NewError(
+	"USERNAME_ALREADY_EXISTS",
+	usecase.ErrorKindConflict,
+)
 
 func New(cfg Config) (Register, error) {
 	if cfg.UserExistsChecker == nil {
