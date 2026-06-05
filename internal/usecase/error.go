@@ -1,11 +1,9 @@
 package usecase
 
-import "fmt"
-
 type ErrorKind string
 
 const (
-	ErrorKindConflict ErrorKind = "conflict"
+	ErrorKindConflict     ErrorKind = "conflict"
 	ErrorKindUnauthorized ErrorKind = "unauthorized"
 )
 
@@ -28,5 +26,5 @@ func (uce UseCaseError) Kind() ErrorKind {
 	return uce.kind
 }
 func (uce UseCaseError) Error() string {
-	return fmt.Sprintf("[%s] %s", uce.code, uce.kind)
+	return uce.code
 }
