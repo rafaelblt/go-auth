@@ -31,18 +31,12 @@ func newRegisterHandler(uc registerUseCase) registerHandler {
 
 func (handler registerHandler) Handle(request *http.Request) response {
 	ctx := request.Context()
-	logger := loggerFrom(ctx)
 
-	logger.Info("register request received")
-
-	logger.Info("decoding register request")
 	var reqBody registerRequestBody
 	if err := json.NewDecoder(request.Body).Decode(&reqBody); err != nil {
-		logger.Info("failed to decode register request", "error", err)
 		return invalidJSONBodyError()
 	}
 
-	logger.Info("executing register use case")
 	output, err := handler.uc.Execute(ctx, register.Input{
 		Username: reqBody.Username,
 		Password: reqBody.Password,
@@ -63,6 +57,5 @@ func (handler registerHandler) Handle(request *http.Request) response {
 		Body:       registerResponseBody{User: user},
 	}
 
-	logger.Info("register response successfully returned")
 	return response
 }
