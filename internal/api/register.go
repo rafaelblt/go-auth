@@ -14,7 +14,7 @@ type registerRequestBody struct {
 }
 
 type registerResponseBody struct {
-	User userResource `json:"user"`
+	User user `json:"user"`
 }
 
 type registerUseCase interface {
@@ -56,16 +56,11 @@ func (handler registerHandler) Handle(request *http.Request) response {
 		return resp
 	}
 
-	logger.Info("mapping register output to response")
-	resource, err := mapUserDTOToResource(output.User)
-	if err != nil {
-		logger.Error("failed to map user dto to resource", "error", err)
-		return internalServerError()
-	}
+	user := mapUserDTO(output.User)
 
 	response := response{
 		StatusCode: http.StatusOK,
-		Body:       registerResponseBody{User: resource},
+		Body:       registerResponseBody{User: user},
 	}
 
 	logger.Info("register response successfully returned")
