@@ -15,20 +15,28 @@ type handler interface {
 	Handle(*http.Request) response
 }
 
+type middleware = func(http.Handler, http.ResponseWriter, *http.Request)
+
 func adaptHandler(h handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger := loggerFrom(r.Context())
 
 		resp := h.Handle(r)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(resp.StatusCode)
+		var status int
+		var buf []byte
 
-		if err := json.NewEncoder(w).Encode(resp.Body); err != nil {
-			logger.Error("failed to encode http response body",
-				"error", err,
-				"body_type", fmt.Sprintf("%T", resp.Body))
+		buf, err := json.Marshal(resp.Body)
+		if err != nil {
+			msg := "failed to encode http response body"
+			logger.Error(msg, "error", err, "body_type", fmt.Sprintf("%T", resp.Body))
+			buf, _ = json.Marshal(internalServerErrorBody)
+			status = http.StatusInternalServerError
 		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		w.Write(buf)
 	}
 }
 
