@@ -1,29 +1,31 @@
 package api
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
-func adaptError(err error) (response, error) {
+func translateError(ctx context.Context, err error) response {
 	var uerr usecase.UseCaseError
 	if errors.As(err, &uerr) {
-		return adaptUseCaseError(uerr)
+		return translateUseCaseError(uerr)
 	}
 
 	var verr validation.ValidationError
 	if errors.As(err, &verr) {
-		return adaptValidationError(verr)
+		return translateValidationError(verr)
 	}
 
-	return response{}, fmt.Errorf("unexpected error: %w", err)
+	logger := loggerFrom(ctx)
+	logger.Error("unexpected error for translation", "error", err)
+	return internalServerError()
 }
 
-func adaptUseCaseError(uerr usecase.UseCaseError) (response, error) {
+func translateUseCaseError(uerr usecase.UseCaseError) response {
 	var status int
 	var msg string
 
@@ -31,6 +33,9 @@ func adaptUseCaseError(uerr usecase.UseCaseError) (response, error) {
 	case usecase.ErrorKindConflict:
 		status = http.StatusConflict
 		msg = "A conflict error occurred."
+	case usecase.ErrorKindUnauthorized:
+		status = http.StatusUnauthorized
+		msg = "Not authorized."
 	}
 
 	body := errorBody{Error: errorData{
@@ -41,10 +46,10 @@ func adaptUseCaseError(uerr usecase.UseCaseError) (response, error) {
 		StatusCode: status,
 		Body:       body,
 	}
-	return resp, nil
+	return resp
 }
 
-func adaptValidationError(verr validation.ValidationError) (response, error) {
+func translateValidationError(verr validation.ValidationError) response {
 	fieldErrs := make([]fieldErrorData, len(verr.Errors()))
 
 	for i, ferr := range verr.Errors() {
@@ -66,5 +71,5 @@ func adaptValidationError(verr validation.ValidationError) (response, error) {
 		StatusCode: http.StatusUnprocessableEntity,
 		Body:       body,
 	}
-	return resp, nil
+	return resp
 }

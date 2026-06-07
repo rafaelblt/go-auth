@@ -42,11 +42,7 @@ func (handler registerHandler) Handle(request *http.Request) response {
 		Password: reqBody.Password,
 	})
 	if err != nil {
-		resp, err := adaptError(err)
-		if err != nil {
-			logger.Error("an error occurred while adapting the register error", "error", err)
-			return internalServerError()
-		}
+		resp := translateError(ctx, err)
 		return resp
 	}
 
