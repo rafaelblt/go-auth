@@ -3,137 +3,99 @@ package jwt
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 const (
-	minSecretBytes  = 32
-	minExpiration   = 1 * time.Minute
-	maxExpiration   = 24 * time.Hour
-	maxIssuerLength = 256
+	minExpiration = 1 * time.Minute
+	maxExpiration = 24 * time.Hour
 )
 
 type AccessTokenService struct {
-	secret     []byte
-	issuer     string
-	method     jwt.SigningMethod
-	clock      port.Clock
+	signer     Signer
 	expiration time.Duration
+	clock      port.Clock
+}
+
+type Signer interface {
+	sign(claims) (string, error)
+	parse(string) (claims, error)
 }
 
 type AccessTokenServiceConfig struct {
-	Secret     []byte
-	Issuer     string
-	Method     jwt.SigningMethod
+	Signer     Signer
 	Clock      port.Clock
 	Expiration time.Duration
 }
 
 func NewAccessTokenService(cfg AccessTokenServiceConfig) (*AccessTokenService, error) {
-	secret := cfg.Secret
-	issuer := strings.TrimSpace(cfg.Issuer)
-	method := cfg.Method
-	clock := cfg.Clock
-	expiration := cfg.Expiration
-
-	if len(secret) < minSecretBytes {
-		return nil, errors.New("secret must be at least 32 bytes")
+	if cfg.Signer == nil {
+		return nil, errors.New("signer nil")
 	}
-	if len(issuer) == 0 {
-		return nil, errors.New("issuer must be a non-empty value")
+	if cfg.Clock == nil {
+		return nil, errors.New("clock nil")
 	}
-	if len(issuer) > maxIssuerLength {
-		return nil, errors.New("issuer must be at most 256 chars.")
-	}
-	if method == nil {
-		return nil, errors.New("signing method cannot be nil")
-	}
-	if _, ok := method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, errors.New("signing method must be HMAC-SHA family")
-	}
-	if clock == nil {
-		return nil, errors.New("clock cannot be nil")
-	}
-	if expiration < minExpiration || expiration > maxExpiration {
+	if cfg.Expiration < minExpiration || cfg.Expiration > maxExpiration {
 		return nil, errors.New("expiration must be between 1m and 24h")
 	}
 
 	service := AccessTokenService{
-		secret:     secret,
-		issuer:     issuer,
-		method:     method,
-		clock:      clock,
-		expiration: expiration,
+		signer:     cfg.Signer,
+		clock:      cfg.Clock,
+		expiration: cfg.Expiration,
 	}
 	return &service, nil
 }
 
 func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.AccessTokenIssued, error) {
 	if payload.UserID.IsZero() {
-		return port.AccessTokenIssued{}, errors.New("user id cannot be zero")
+		return port.AccessTokenIssued{}, errors.New("user id zero")
 	}
 
-	now := s.clock.Now()
-	exp := now.Add(s.expiration)
+	expiresAt := s.clock.Now().Add(s.expiration)
 
-	claims := jwt.RegisteredClaims{
-		Issuer:    s.issuer,
+	token, err := s.signer.sign(claims{
 		Subject:   payload.UserID.Value().String(),
-		ExpiresAt: jwt.NewNumericDate(exp),
-		IssuedAt:  jwt.NewNumericDate(now),
-	}
-
-	token := jwt.NewWithClaims(s.method, claims)
-
-	raw, err := token.SignedString(s.secret)
+		ExpiresAt: expiresAt,
+	})
 	if err != nil {
-		return port.AccessTokenIssued{}, err
+		return port.AccessTokenIssued{}, fmt.Errorf("signer sign failed: %w", err)
 	}
 
-	accessToken, err := session.NewAccessToken(raw)
+	accessToken, err := session.NewAccessToken(token)
 	if err != nil {
 		return port.AccessTokenIssued{}, err
 	}
 
 	issued := port.AccessTokenIssued{
 		Token:     accessToken,
-		ExpiresAt: exp,
+		ExpiresAt: expiresAt,
 	}
 	return issued, nil
 }
 
-func (e *AccessTokenService) Validate(raw string) (port.AccessTokenClaims, error) {
-	token, err := jwt.Parse(raw, e.keyfunc)
-	if err != nil {
-		return port.AccessTokenClaims{}, err
+func (s *AccessTokenService) Validate(raw string) (port.AccessTokenClaims, error) {
+	claims, err := s.signer.parse(raw)
+	switch {
+	case err == nil:
+		// continue
+	case errors.Is(err, errTokenInvalid):
+		return port.AccessTokenClaims{}, session.ErrTokenInvalid
+	case errors.Is(err, errTokenExpired):
+		return port.AccessTokenClaims{}, session.ErrTokenExpired
 	}
 
-	sub, err := token.Claims.GetSubject()
+	userID, err := user.ParseID(claims.Subject)
 	if err != nil {
-		return port.AccessTokenClaims{}, err
-	}
-
-	userID, err := user.ParseID(sub)
-	if err != nil {
-		return port.AccessTokenClaims{}, err
+		return port.AccessTokenClaims{}, fmt.Errorf("user id parse failed: %w", err)
 	}
 
 	result := port.AccessTokenClaims{
 		UserID: userID,
 	}
 	return result, nil
-}
-
-func (e *AccessTokenService) keyfunc(token *jwt.Token) (any, error) {
-	alg := token.Method.Alg()
-	if alg != e.method.Alg() {
-		return nil, fmt.Errorf("invalid algorithm: %v", alg)
-	}
-	return e.secret, nil
 }
