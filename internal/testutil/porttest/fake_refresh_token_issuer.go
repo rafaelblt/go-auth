@@ -27,7 +27,7 @@ func (iss *FakeRefreshTokenIssuer) Issue(payload port.RefreshTokenPayload) (port
 
 	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: payload.SessionID,
-		Hash:      "[default-fake-refresh-token-hash]",
+		Hash:      []byte("[default-fake-refresh-token-hash]"),
 		ParentID:  nil,
 		IssuedAt:  time.Now().UTC(),
 		ExpiresAt: time.Now().UTC().Add(10000000),
