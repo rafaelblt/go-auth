@@ -43,6 +43,12 @@ func NewSession(params SessionCreationParams) (*Session, error) {
 func (s Session) ID() SessionID       { return s.id }
 func (s Session) UserID() user.ID     { return s.userID }
 func (s Session) IssuedAt() time.Time { return s.issuedAt }
-func (s Session) UsedAt() *time.Time  { return s.revokedAt }
+
+func (s Session) RevokedAt() (time.Time, bool)  {
+	if s.revokedAt == nil {
+		return time.Time{}, false
+	}
+	return *s.revokedAt, true
+}
 
 func (s Session) IsZero() bool { return s.id.IsZero() }
