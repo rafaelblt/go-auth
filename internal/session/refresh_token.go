@@ -31,7 +31,6 @@ type RefreshTokenCreationParams struct {
 	ParentID  *RefreshTokenID
 	IssuedAt  time.Time
 	ExpiresAt time.Time
-	UsedAt    *time.Time
 }
 
 func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
@@ -51,7 +50,6 @@ func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 		parentID:  params.ParentID,
 		issuedAt:  params.IssuedAt,
 		expiresAt: params.ExpiresAt,
-		usedAt:    params.UsedAt,
 	}
 	return &token, nil
 }
