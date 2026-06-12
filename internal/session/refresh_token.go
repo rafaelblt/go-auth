@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -18,7 +19,7 @@ func NewRefreshTokenID() RefreshTokenID {
 type RefreshToken struct {
 	id        RefreshTokenID
 	sessionID SessionID
-	hash      string
+	hash      []byte
 	parentID  *RefreshTokenID
 	issuedAt  time.Time
 	expiresAt time.Time
@@ -27,7 +28,7 @@ type RefreshToken struct {
 
 type RefreshTokenCreationParams struct {
 	SessionID SessionID
-	Hash      string
+	Hash      []byte
 	ParentID  *RefreshTokenID
 	IssuedAt  time.Time
 	ExpiresAt time.Time
@@ -35,19 +36,22 @@ type RefreshTokenCreationParams struct {
 
 func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 	if params.SessionID.IsZero() {
-		return nil, errors.New("session id cannot be zero")
+		return nil, errors.New("session id zero")
 	}
-	if params.Hash == "" {
-		return nil, errors.New("hash cannot be empty")
+	if params.Hash == nil {
+		return nil, errors.New("hash nil")
+	}
+	if len(params.Hash) == 0 {
+		return nil, errors.New("hash empty")
 	}
 	if params.ParentID != nil && params.ParentID.IsZero() {
-		return nil, errors.New("parent id cannot be zero")
+		return nil, errors.New("parent id zero")
 	}
 	token := RefreshToken{
 		id:        NewRefreshTokenID(),
 		sessionID: params.SessionID,
-		hash:      params.Hash,
-		parentID:  params.ParentID,
+		hash:      slices.Clone(params.Hash),
+		parentID:  shared.ClonePtr(params.ParentID),
 		issuedAt:  params.IssuedAt,
 		expiresAt: params.ExpiresAt,
 	}
@@ -56,10 +60,23 @@ func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 
 func (t RefreshToken) ID() RefreshTokenID        { return t.id }
 func (t RefreshToken) SessionID() SessionID      { return t.sessionID }
-func (t RefreshToken) Hash() string              { return t.hash }
-func (t RefreshToken) ParentID() *RefreshTokenID { return t.parentID }
+func (t RefreshToken) Hash() []byte              { return slices.Clone(t.hash) }
 func (t RefreshToken) IssuedAt() time.Time       { return t.issuedAt }
 func (t RefreshToken) ExpiresAt() time.Time      { return t.expiresAt }
-func (t RefreshToken) UsedAt() *time.Time        { return t.usedAt }
+
+
+func (t RefreshToken) ParentID() (RefreshTokenID, bool) {
+	if t.parentID == nil {
+		return RefreshTokenID{}, false
+	}
+	return *t.parentID, true
+}
+
+func (t RefreshToken) UsedAt() (time.Time, bool) {
+	if t.usedAt == nil {
+		return time.Time{}, false
+	}
+	return *t.usedAt, true
+}
 
 func (t RefreshToken) IsZero() bool { return t.id.IsZero() }
