@@ -9,6 +9,10 @@ type RefreshTokenIssuer interface {
 	Issue(RefreshTokenPayload) (RefreshTokenIssued, error)
 }
 
+type RefreshTokenGenerator interface {
+	Generate() (RefreshTokenGenerated, error)
+}
+
 type RefreshTokenRotator interface {
 	Rotate(raw string) (RefreshTokenRotated, error)
 }
@@ -21,6 +25,11 @@ type RefreshTokenPayload struct {
 type RefreshTokenIssued struct {
 	Token    *session.RefreshToken
 	RawValue string
+}
+
+type RefreshTokenGenerated struct {
+	Raw  string
+	Hash []byte
 }
 
 type RefreshTokenRotated struct {
