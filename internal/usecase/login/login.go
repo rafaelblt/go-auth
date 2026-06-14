@@ -3,6 +3,7 @@ package login
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/port"
@@ -22,13 +23,14 @@ type Output struct {
 }
 
 type Login struct {
-	users         port.UserReader
-	credentials   port.CredentialReader
-	pwdChecker    port.PasswordChecker
-	accessIssuer  port.AccessTokenIssuer
-	refreshIssuer port.RefreshTokenIssuer
-	uow           port.UnitOfWork
-	clock         port.Clock
+	users            port.UserReader
+	credentials      port.CredentialReader
+	pwdChecker       port.PasswordChecker
+	accessIssuer     port.AccessTokenIssuer
+	refreshGenerator port.RefreshTokenGenerator
+	uow              port.UnitOfWork
+	clock            port.Clock
+	refreshTTL       time.Duration
 }
 
 var ErrInvalidCredentials = usecase.NewError(
@@ -71,7 +73,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 
 	now := uc.clock.Now()
 
-	session, err := session.NewSession(session.SessionCreationParams{
+	sess, err := session.NewSession(session.SessionCreationParams{
 		UserID:   user.ID(),
 		IssuedAt: now,
 	})
@@ -86,21 +88,29 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("access token issuer failed: %w", err)
 	}
 
-	issuedRefresh, err := uc.refreshIssuer.Issue(port.RefreshTokenPayload{
-		UserID:    user.ID(),
-		SessionID: session.ID(),
+	generatedRefresh, err := uc.refreshGenerator.Generate()
+	if err != nil {
+		return Output{}, fmt.Errorf("refresh token generator failed: %w", err)
+	}
+
+	refreshToken, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
+		SessionID: sess.ID(),
+		Hash:      generatedRefresh.Hash,
+		ParentID:  nil,
+		IssuedAt:  now,
+		ExpiresAt: now.Add(uc.refreshTTL),
 	})
 	if err != nil {
-		return Output{}, fmt.Errorf("access token issuer failed: %w", err)
+		return Output{}, fmt.Errorf("refresh token creation failed: %w", err)
 	}
 
 	uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.SessionWriter.Save(ctx, session)
+		err := deps.SessionWriter.Save(ctx, sess)
 		if err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
 		}
 
-		err = deps.RefreshTokenWriter.Save(ctx, issuedRefresh.Token)
+		err = deps.RefreshTokenWriter.Save(ctx, refreshToken)
 		if err != nil {
 			return fmt.Errorf("refresh token writer failed: %w", err)
 		}
@@ -110,7 +120,10 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 
 	output := Output{
 		AccessToken: usecase.MapAccessTokenIssuedToDTO(issuedAccess),
-		RefreshToken: usecase.MapRefreshTokenIssuedToDTO(issuedRefresh),
+		RefreshToken: usecase.RefreshTokenDTO{
+			Value:     generatedRefresh.Raw,
+			ExpiresAt: refreshToken.ExpiresAt(),
+		},
 	}
 	return output, nil
 }

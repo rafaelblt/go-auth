@@ -44,10 +44,10 @@ func (iss *FakeAccessTokenIssuer) SetError(err error) {
 	iss.err = err
 }
 
-func (iss *FakeAccessTokenIssuer) LastPayload() port.AccessTokenPayload {
-	return iss.payloads[len(iss.payloads)-1]
+func (iss *FakeAccessTokenIssuer) Payloads() []port.AccessTokenPayload {
+	return iss.payloads
 }
 
-func (iss *FakeAccessTokenIssuer) LastIssued() port.AccessTokenIssued {
-	return iss.issueds[len(iss.issueds)-1]
+func (iss *FakeAccessTokenIssuer) Issueds() []port.AccessTokenIssued {
+	return iss.issueds
 }

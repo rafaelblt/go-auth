@@ -2,6 +2,7 @@ package login_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
@@ -13,26 +14,28 @@ import (
 )
 
 type TestHelper struct {
-	t                      *testing.T
-	FakeUserReader         *porttest.FakeUserReader
-	FakeCredentialReader   *porttest.FakeCredentialReader
-	FakePasswordChecker    *porttest.FakePasswordChecker
-	FakeAccessTokenIssuer  *porttest.FakeAccessTokenIssuer
-	FakeRefreshTokenIssuer *porttest.FakeRefreshTokenIssuer
-	FakeUnitOfWork         *porttest.FakeUnitOfWork
-	FakeClock              *porttest.FakeClock
+	t                         *testing.T
+	FakeUserReader            *porttest.FakeUserReader
+	FakeCredentialReader      *porttest.FakeCredentialReader
+	FakePasswordChecker       *porttest.FakePasswordChecker
+	FakeAccessTokenIssuer     *porttest.FakeAccessTokenIssuer
+	FakeRefreshTokenGenerator *porttest.FakeRefreshTokenGenerator
+	FakeUnitOfWork            *porttest.FakeUnitOfWork
+	FakeClock                 *porttest.FakeClock
+	RefreshTokenTTL           time.Duration
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
-		t:                      t,
-		FakeUserReader:         porttest.NewFakeUserReader(),
-		FakeCredentialReader:   porttest.NewFakeCredentialReader(),
-		FakePasswordChecker:    porttest.NewFakePasswordChecker(),
-		FakeAccessTokenIssuer:  porttest.NewFakeAccessTokenIssuer(),
-		FakeRefreshTokenIssuer: porttest.NewFakeRefreshTokenIssuer(),
-		FakeUnitOfWork:         porttest.NewFakeUnitOfWork(),
-		FakeClock:              porttest.NewFakeClock(),
+		t:                         t,
+		FakeUserReader:            porttest.NewFakeUserReader(),
+		FakeCredentialReader:      porttest.NewFakeCredentialReader(),
+		FakePasswordChecker:       porttest.NewFakePasswordChecker(),
+		FakeAccessTokenIssuer:     porttest.NewFakeAccessTokenIssuer(),
+		FakeRefreshTokenGenerator: porttest.NewFakeRefreshTokenGenerator(),
+		FakeUnitOfWork:            porttest.NewFakeUnitOfWork(),
+		FakeClock:                 porttest.NewFakeClock(),
+		RefreshTokenTTL:           24 * time.Hour,
 	}
 	return helper
 }
@@ -40,13 +43,14 @@ func NewTestHelper(t *testing.T) TestHelper {
 func (helper TestHelper) UseCase() login.Login {
 	helper.t.Helper()
 	uc, err := login.New(login.Config{
-		UserReader:         helper.FakeUserReader,
-		CredentialReader:   helper.FakeCredentialReader,
-		PasswordChecker:    helper.FakePasswordChecker,
-		AccessTokenIssuer:  helper.FakeAccessTokenIssuer,
-		RefreshTokenIssuer: helper.FakeRefreshTokenIssuer,
-		UnitOfWork:         helper.FakeUnitOfWork,
-		Clock:              helper.FakeClock,
+		UserReader:            helper.FakeUserReader,
+		CredentialReader:      helper.FakeCredentialReader,
+		PasswordChecker:       helper.FakePasswordChecker,
+		AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
+		RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
+		UnitOfWork:            helper.FakeUnitOfWork,
+		Clock:                 helper.FakeClock,
+		RefreshTokenTTL:       helper.RefreshTokenTTL,
 	})
 	require.NoError(helper.t, err)
 	return uc
@@ -54,18 +58,11 @@ func (helper TestHelper) UseCase() login.Login {
 
 func (helper TestHelper) ValidInput() login.Input {
 	helper.t.Helper()
+	usr, pwd := helper.GetUserAndPassword()
 	return login.Input{
-		Username: helper.ValidUsername().String(),
-		Password: helper.ValidPlainPassword().Value(),
+		Username: usr.Username().String(),
+		Password: pwd.Value(),
 	}
-}
-
-func (helper TestHelper) ValidUsername() user.Username {
-	return usertest.MustUsername(helper.t, "username")
-}
-
-func (helper TestHelper) ValidPlainPassword() credential.PlainPassword {
-	return credentialtest.MustPlainPassword(helper.t, "12345678")
 }
 
 func (helper TestHelper) GetUserAndPassword() (*user.User, credential.PlainPassword) {
