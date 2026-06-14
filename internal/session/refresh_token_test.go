@@ -133,3 +133,6 @@ func TestNewRefreshToken_CopyParentID(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotEqual(t, providedPID, pid)
 }
+
+// TODO: RefreshToken.Use()
+// TODO: RefreshToken.HasParent()

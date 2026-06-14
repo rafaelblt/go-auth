@@ -67,7 +67,6 @@ func (t RefreshToken) Hash() []byte              { return slices.Clone(t.hash) }
 func (t RefreshToken) IssuedAt() time.Time       { return t.issuedAt }
 func (t RefreshToken) ExpiresAt() time.Time      { return t.expiresAt }
 
-
 func (t RefreshToken) ParentID() (RefreshTokenID, bool) {
 	if t.parentID == nil {
 		return RefreshTokenID{}, false
@@ -83,3 +82,18 @@ func (t RefreshToken) UsedAt() (time.Time, bool) {
 }
 
 func (t RefreshToken) IsZero() bool { return t.id.IsZero() }
+
+func (t RefreshToken) HasParent() bool {
+	return t.parentID != nil
+}
+
+func (t *RefreshToken) Use(usedAt time.Time) error {
+	if t.usedAt != nil {
+		return ErrTokenAlreadyUsed
+	}
+	if usedAt.After(t.expiresAt) {
+		return ErrTokenExpired
+	}
+	t.usedAt = &usedAt
+	return nil
+}
