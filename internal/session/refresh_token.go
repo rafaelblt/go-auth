@@ -47,6 +47,9 @@ func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 	if params.ParentID != nil && params.ParentID.IsZero() {
 		return nil, errors.New("parent id zero")
 	}
+	if params.IssuedAt.After(params.ExpiresAt) {
+		return nil, errors.New("issued at after expires at")
+	}
 	token := RefreshToken{
 		id:        NewRefreshTokenID(),
 		sessionID: params.SessionID,

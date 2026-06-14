@@ -61,6 +61,17 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			desc: "issued at after expires at",
+			params: RefreshTokenCreationParams{
+				SessionID: NewSessionID(),
+				Hash:      []byte("ao0kv-0opal"),
+				ParentID:  shared.Ptr(NewRefreshTokenID()),
+				IssuedAt:  time.Now().Add(time.Minute),
+				ExpiresAt: time.Now(),
+			},
+			expectErr: true,
+		},
+		{
 			desc: "valid case",
 			params: RefreshTokenCreationParams{
 				SessionID: NewSessionID(),
