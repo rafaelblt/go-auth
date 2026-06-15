@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/user"
 )
 
@@ -44,6 +46,52 @@ func (repo UserRepo) Save(ctx context.Context, usr *user.User) error {
 	}
 
 	return nil
+}
+
+func (repo UserRepo) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
+	sql := `SELECT id, username, status, created_at, updated_at
+			FROM users
+			WHERE username = $1`
+
+	row := repo.db.QueryRow(ctx, sql, username.String())
+
+	var idRaw string
+	var usernameRaw string
+	var statusRaw string
+	var createdAt time.Time
+	var updatedAt time.Time
+
+	err := row.Scan(&idRaw, &usernameRaw, &statusRaw, &createdAt, &updatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("scan user failed: %w", err)
+	}
+
+	id, err := user.ParseID(idRaw)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id failed: %w", err)
+	}
+	usernameFromDB, err := user.NewUsername(usernameRaw)
+	if err != nil {
+		return nil, fmt.Errorf("new username failed: %w", err)
+	}
+	status, err := user.ParseStatus(statusRaw)
+	if err != nil {
+		return nil, fmt.Errorf("parse user status failed: %w", err)
+	}
+	usr, err := user.RestoreUser(user.RestoreParams{
+		ID:        id,
+		Username:  usernameFromDB,
+		Status:    status,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore user failed: %w", err)
+	}
+	return usr, nil
 }
 
 func (repo UserRepo) ExistsByUsername(ctx context.Context, username user.Username) (bool, error) {

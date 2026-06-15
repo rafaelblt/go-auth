@@ -100,3 +100,28 @@ func TestUserRepo_ExistsByUsername_WhenUsernameNotExists(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, exists)
 }
+
+func TestUserRepo_FindByUsername_ReturnsNil_WhenUsernameNotExists(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+
+	ctx := context.Background()
+	usr, err := repo.FindByUsername(ctx, usertest.MustUsername(t, "not_exists"))
+
+	assert.NoError(t, err)
+	assert.Nil(t, usr)
+}
+
+func TestUserRepo_FindByUsername_ReturnsUser_WhenUsernameExists(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+	usr := usertest.NewUser(t, nil)
+	
+	ctx := context.Background()
+	require.NoError(t, repo.Save(ctx, usr))
+	found, err := repo.FindByUsername(ctx, usr.Username())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, usr)
+	assert.Equal(t, usr.ID(), found.ID())
+}
