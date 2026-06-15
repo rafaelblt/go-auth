@@ -1,7 +1,10 @@
 package porttest
 
 import (
+	"fmt"
+
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/session"
 )
 
 type FakeRefreshTokenGenerator struct {
@@ -14,12 +17,19 @@ func NewFakeRefreshTokenGenerator() *FakeRefreshTokenGenerator {
 }
 
 func (rtg *FakeRefreshTokenGenerator) Generate() (port.RefreshTokenGenerated, error) {
+	if rtg.err != nil {
+		return port.RefreshTokenGenerated{}, rtg.err
+	}
+	hash, err := session.NewRefreshTokenHash("[default-fake-refresh-token-hash-value]")
+	if err != nil {
+		e := fmt.Errorf("refresh token hash creation failed: %w", err)
+		return port.RefreshTokenGenerated{}, e
+	}
 	generated := port.RefreshTokenGenerated{
 		Raw:  "[default-fake-refresh-token-raw-value]",
-		Hash: []byte("[default-fake-refresh-token-hash-value]"),
+		Hash: hash,
 	}
 	rtg.gens = append(rtg.gens, generated)
-
 	return generated, nil
 }
 
