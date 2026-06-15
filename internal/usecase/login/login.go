@@ -119,7 +119,10 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	})
 
 	output := Output{
-		AccessToken: usecase.MapAccessTokenIssuedToDTO(issuedAccess),
+		AccessToken: usecase.AccessTokenDTO{
+			Value:     issuedAccess.Token.Value(),
+			ExpiresAt: issuedAccess.ExpiresAt,
+		},
 		RefreshToken: usecase.RefreshTokenDTO{
 			Value:     generatedRefresh.Raw,
 			ExpiresAt: refreshToken.ExpiresAt(),
