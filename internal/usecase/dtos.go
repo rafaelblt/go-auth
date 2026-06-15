@@ -57,15 +57,4 @@ type RefreshTokenDTO struct {
 	ExpiresAt time.Time
 }
 
-func MapRefreshTokenIssuedToDTO(issued port.RefreshTokenIssued) RefreshTokenDTO {
-	if issued.Token == nil {
-		panic("cannot map a nil refresh token to dto")
-	}
-	dto := RefreshTokenDTO{
-		Value:     issued.RawValue,
-		ExpiresAt: issued.Token.ExpiresAt(),
-	}
-	return dto
-}
-
 func (dto RefreshTokenDTO) IsZero() bool { return dto.Value == "" }
