@@ -33,6 +33,16 @@ type RefreshTokenCreationParams struct {
 	ExpiresAt time.Time
 }
 
+type RefreshTokenRestoreParams struct {
+	ID        RefreshTokenID
+	SessionID SessionID
+	Hash      RefreshTokenHash
+	ParentID  *RefreshTokenID
+	IssuedAt  time.Time
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+}
+
 func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 	if params.SessionID.IsZero() {
 		return nil, errors.New("session id zero")
@@ -53,6 +63,31 @@ func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 		parentID:  shared.ClonePtr(params.ParentID),
 		issuedAt:  params.IssuedAt,
 		expiresAt: params.ExpiresAt,
+	}
+	return &token, nil
+}
+
+func RestoreRefreshToken(params RefreshTokenRestoreParams) (*RefreshToken, error) {
+	if params.ID.IsZero() {
+		return nil, errors.New("id zero")
+	}
+	if params.SessionID.IsZero() {
+		return nil, errors.New("session id zero")
+	}
+	if params.Hash.IsZero() {
+		return nil, errors.New("hash zero")
+	}
+	if params.ParentID != nil && params.ParentID.IsZero() {
+		return nil, errors.New("parent id zero")
+	}
+	token := RefreshToken{
+		id:        NewRefreshTokenID(),
+		sessionID: params.SessionID,
+		hash:      params.Hash,
+		parentID:  shared.ClonePtr(params.ParentID),
+		issuedAt:  params.IssuedAt,
+		expiresAt: params.ExpiresAt,
+		usedAt:    shared.ClonePtr(params.UsedAt),
 	}
 	return &token, nil
 }
