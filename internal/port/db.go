@@ -58,3 +58,7 @@ type SessionWriter interface {
 type RefreshTokenWriter interface {
 	Save(context.Context, *session.RefreshToken) error
 }
+
+type RefreshTokenReader interface {
+	FindByHash(context.Context, session.RefreshTokenHash) (*session.RefreshToken, error)
+}
