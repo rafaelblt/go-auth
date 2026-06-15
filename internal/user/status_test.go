@@ -33,3 +33,5 @@ func TestStatus_IsActive(t *testing.T) {
 		})
 	}
 }
+
+// TODO: ParseStatus()
