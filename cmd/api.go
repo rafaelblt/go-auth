@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/app"
+	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 )
 
@@ -37,15 +37,15 @@ func run() error {
 	}()
 
 	logger.Info("building app...")
-	application, err := app.New(ctx, app.Config{
-		Database: db.ConnectionString(),
+	app, err := bootstrap.NewApp(ctx, bootstrap.Config{
+		DatabaseURL: db.ConnectionString(),
 	})
 	if err != nil {
 		logger.Error("app build failed", "error", err)
 		return err
 	}
-	defer application.Close()
+	defer app.Close()
 
 	logger.Info("running app...")
-	return application.Run(ctx)
+	return app.Run(ctx)
 }
