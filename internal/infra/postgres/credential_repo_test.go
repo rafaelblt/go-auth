@@ -25,7 +25,7 @@ func NewCredentialRepoTestHelper(t *testing.T) CredentialRepoTestHelper {
 	return CredentialRepoTestHelper{t, db}
 }
 
-func (helper CredentialRepoTestHelper) Repo() postgres.CredentialRepo {
+func (helper CredentialRepoTestHelper) Repo() *postgres.CredentialRepo {
 	helper.t.Helper()
 
 	repo, err := postgres.NewCredentialRepo(helper.db)

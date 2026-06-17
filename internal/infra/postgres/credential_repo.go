@@ -14,11 +14,11 @@ type CredentialRepo struct {
 	db DB
 }
 
-func NewCredentialRepo(db DB) (CredentialRepo, error) {
+func NewCredentialRepo(db DB) (*CredentialRepo, error) {
 	if db == nil {
-		return CredentialRepo{}, errors.New("DB nil")
+		return nil, errors.New("db nil")
 	}
-	return CredentialRepo{db: db}, nil
+	return &CredentialRepo{db: db}, nil
 }
 
 func (repo CredentialRepo) Save(ctx context.Context, cred *credential.Credential) error {

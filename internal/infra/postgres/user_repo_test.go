@@ -21,7 +21,7 @@ func NewUserRepoTestHelper(t *testing.T) UserRepoTestHelper {
 	return UserRepoTestHelper{t, db}
 }
 
-func (helper UserRepoTestHelper) Repo() postgres.UserRepo {
+func (helper UserRepoTestHelper) Repo() *postgres.UserRepo {
 	helper.t.Helper()
 	repo, err := postgres.NewUserRepo(helper.db)
 	require.NoError(helper.t, err)

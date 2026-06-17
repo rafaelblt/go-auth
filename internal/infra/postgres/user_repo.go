@@ -13,11 +13,11 @@ type UserRepo struct {
 	db DB
 }
 
-func NewUserRepo(db DB) (UserRepo, error) {
+func NewUserRepo(db DB) (*UserRepo, error) {
 	if db == nil {
-		return UserRepo{}, errors.New("DB nil")
+		return nil, errors.New("db nil")
 	}
-	return UserRepo{db: db}, nil
+	return &UserRepo{db: db}, nil
 }
 
 func (repo UserRepo) Save(ctx context.Context, usr *user.User) error {
