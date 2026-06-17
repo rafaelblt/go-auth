@@ -115,13 +115,38 @@ func TestUserRepo_FindByUsername_ReturnsNil_WhenUsernameNotExists(t *testing.T) 
 func TestUserRepo_FindByUsername_ReturnsUser_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	repo := helper.Repo()
-	usr := usertest.NewUser(t, nil)
+	testUser := usertest.NewUser(t, nil)
 	
 	ctx := context.Background()
-	require.NoError(t, repo.Save(ctx, usr))
-	found, err := repo.FindByUsername(ctx, usr.Username())
+	require.NoError(t, repo.Save(ctx, testUser))
+	found, err := repo.FindByUsername(ctx, testUser.Username())
 
 	assert.NoError(t, err)
-	assert.NotNil(t, usr)
-	assert.Equal(t, usr.ID(), found.ID())
+	assert.NotNil(t, found)
+	assert.Equal(t, found.ID(), found.ID())
+}
+
+func TestUserRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+
+	ctx := context.Background()
+	usr, err := repo.FindByID(ctx, user.NewID())
+
+	assert.NoError(t, err)
+	assert.Nil(t, usr)
+}
+
+func TestUserRepo_FindByID_ReturnsUser_WhenIDExists(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+	testUser := usertest.NewUser(t, nil)
+	
+	ctx := context.Background()
+	require.NoError(t, repo.Save(ctx, testUser))
+	found, err := repo.FindByID(ctx, testUser.ID())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, found)
+	assert.Equal(t, found.ID(), found.ID())
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -48,49 +47,57 @@ func (repo UserRepo) Save(ctx context.Context, usr *user.User) error {
 	return nil
 }
 
-func (repo UserRepo) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
-	sql := `SELECT id, username, status, created_at, updated_at
-			FROM users
-			WHERE username = $1`
+func (repo UserRepo) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
+	if id.IsZero() {
+		return nil, errors.New("id zero")
+	}
 
-	row := repo.db.QueryRow(ctx, sql, username.String())
+	sql := "SELECT * FROM users WHERE id = $1"
 
-	var idRaw string
-	var usernameRaw string
-	var statusRaw string
-	var createdAt time.Time
-	var updatedAt time.Time
+	rows, err := repo.db.Query(ctx, sql, id.Value().String())
+	if err != nil {
+		return nil, fmt.Errorf("db query failed: %w", err)
+	}
+	defer rows.Close()
 
-	err := row.Scan(&idRaw, &usernameRaw, &statusRaw, &createdAt, &updatedAt)
+	model, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[userModel])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("scan user failed: %w", err)
+		return nil, fmt.Errorf("collect one row failed: %w", err)
 	}
 
-	id, err := user.ParseID(idRaw)
+	usr, err := repo.mapModel(model)
 	if err != nil {
-		return nil, fmt.Errorf("parse user id failed: %w", err)
+		return nil, err
 	}
-	usernameFromDB, err := user.NewUsername(usernameRaw)
+
+	return usr, nil
+}
+
+func (repo UserRepo) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
+	sql := "SELECT * FROM users WHERE username = $1"
+
+	rows, err := repo.db.Query(ctx, sql, username.String())
 	if err != nil {
-		return nil, fmt.Errorf("new username failed: %w", err)
+		return nil, fmt.Errorf("db query failed: %w", err)
 	}
-	status, err := user.ParseStatus(statusRaw)
+	defer rows.Close()
+
+	model, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[userModel])
 	if err != nil {
-		return nil, fmt.Errorf("parse user status failed: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("collect one row failed: %w", err)
 	}
-	usr, err := user.RestoreUser(user.RestoreParams{
-		ID:        id,
-		Username:  usernameFromDB,
-		Status:    status,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	})
+
+	usr, err := repo.mapModel(model)
 	if err != nil {
-		return nil, fmt.Errorf("restore user failed: %w", err)
+		return nil, err
 	}
+
 	return usr, nil
 }
 
@@ -104,4 +111,32 @@ func (repo UserRepo) ExistsByUsername(ctx context.Context, username user.Usernam
 	}
 
 	return exists, nil
+}
+
+func (repo *UserRepo) mapModel(model userModel) (*user.User, error) {
+	id, err := user.ParseID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id failed: %w", err)
+	}
+	username, err := user.NewUsername(model.Username)
+	if err != nil {
+		return nil, fmt.Errorf("username creation failed: %w", err)
+	}
+	status, err := user.ParseStatus(model.Status)
+	if err != nil {
+		return nil, fmt.Errorf("parse user status failed: %w", err)
+	}
+
+	usr, err := user.RestoreUser(user.RestoreParams{
+		ID:        id,
+		Username:  username,
+		Status:    status,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore user failed: %w", err)
+	}
+
+	return usr, nil
 }

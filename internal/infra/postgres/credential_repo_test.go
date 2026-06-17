@@ -9,6 +9,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,4 +84,66 @@ func TestCredentialRepo_Save(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckCredentialIsSaved(cred))
+}
+
+func TestCredentialRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
+	helper := NewCredentialRepoTestHelper(t)
+	repo := helper.Repo()
+
+	ctx := context.Background()
+	cred, err := repo.FindByID(ctx, credential.NewID())
+
+	assert.NoError(t, err)
+	assert.Nil(t, cred)
+}
+
+func TestCredentialRepo_FindByID_ReturnsCredential_WhenIDExists(t *testing.T) {
+	helper := NewCredentialRepoTestHelper(t)
+	usr := usertest.NewUser(t, nil)
+	helper.SaveUser(usr)
+	
+	cred := credentialtest.NewCredential(t, func(params *credential.RestoreParams) {
+		params.UserID = usr.ID()
+	})
+	
+	repo := helper.Repo()
+	ctx := context.Background()
+	require.NoError(t, repo.Save(ctx, cred))
+
+	found, err := repo.FindByID(ctx, cred.ID())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, found)
+	assert.Equal(t, cred.ID(), found.ID())
+}
+
+func TestCredentialRepo_FindByUserAndKind_ReturnsNil_WhenNotExists(t *testing.T) {
+	helper := NewCredentialRepoTestHelper(t)
+	repo := helper.Repo()
+
+	ctx := context.Background()
+	cred, err := repo.FindByUserAndKind(ctx, user.NewID(), credential.KindPassword)
+
+	assert.NoError(t, err)
+	assert.Nil(t, cred)
+}
+
+func TestCredentialRepo_FindByUserAndKind_ReturnsCredential_WhenExists(t *testing.T) {
+	helper := NewCredentialRepoTestHelper(t)
+	usr := usertest.NewUser(t, nil)
+	helper.SaveUser(usr)
+	
+	testCred := credentialtest.NewCredential(t, func(p *credential.RestoreParams) {
+		p.UserID = usr.ID()
+	})
+
+	repo := helper.Repo()
+	ctx := context.Background()
+	require.NoError(t, repo.Save(ctx, testCred))
+
+	found, err := repo.FindByUserAndKind(ctx, testCred.UserID(), testCred.Kind())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, found)
+	assert.Equal(t, testCred.ID(), found.ID())
 }
