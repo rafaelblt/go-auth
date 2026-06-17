@@ -12,15 +12,26 @@ type Provider struct {
 var ProviderLocal = Provider{value: "local"}
 
 func NewProvider(value string) (Provider, error) {
-	normalized := strings.TrimSpace(value)
+	normalized := strings.ToLower(strings.TrimSpace(value))
 	if normalized == "" {
-		return Provider{}, errors.New("credential provider value cannot be empty")
+		return Provider{}, errors.New("value empty")
 	}
 	if normalized == ProviderLocal.value {
-		return Provider{}, errors.New("credential provider 'local' is reserved")
+		return Provider{}, errors.New("'local' is reserved")
 	}
 	return Provider{normalized}, nil
 }
 
-func (cp Provider) String() string { return cp.value }
-func (cp Provider) IsZero() bool   { return cp.value == "" }
+func ParseProvider(value string) (Provider, error) {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "" {
+		return Provider{}, errors.New("value empty")
+	}
+	if normalized == ProviderLocal.value {
+		return ProviderLocal, nil
+	}
+	return Provider{normalized}, nil
+}
+
+func (p Provider) String() string { return p.value }
+func (p Provider) IsZero() bool   { return p.value == "" }
