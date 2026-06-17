@@ -16,15 +16,15 @@ type Config struct {
 	Cost int
 }
 
-func NewHasher(cfg Config) (Hasher, error) {
+func NewHasher(cfg Config) (*Hasher, error) {
 	if cfg.Cost < bcrypt.MinCost || cfg.Cost > bcrypt.MaxCost {
 		e := fmt.Errorf("bcrypt cost %d is outside allowed inclusive range %d-%d",
 			cfg.Cost, bcrypt.MinCost, bcrypt.MaxCost)
-		return Hasher{}, e
+		return nil, e
 	}
 
 	hasher := Hasher{cost: cfg.Cost}
-	return hasher, nil
+	return &hasher, nil
 }
 
 func (h Hasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
