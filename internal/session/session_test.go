@@ -46,3 +46,5 @@ func TestNewSession(t *testing.T) {
 		})
 	}
 }
+
+// RestoreSession()

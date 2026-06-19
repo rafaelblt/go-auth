@@ -28,6 +28,13 @@ type SessionCreationParams struct {
 	IssuedAt time.Time
 }
 
+type SessionRestoreParams struct {
+	ID        SessionID
+	UserID    user.ID
+	IssuedAt  time.Time
+	RevokedAt *time.Time
+}
+
 func NewSession(params SessionCreationParams) (*Session, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("user id cannot be zero")
@@ -40,11 +47,28 @@ func NewSession(params SessionCreationParams) (*Session, error) {
 	return &session, nil
 }
 
+func RestoreSession(params SessionRestoreParams) (*Session, error) {
+	if params.ID.IsZero() {
+		return nil, errors.New("session id zero")
+	}
+	if params.UserID.IsZero() {
+		return nil, errors.New("user id zero")
+	}
+	revokedAt := shared.ClonePtr(params.RevokedAt)
+	session := Session{
+		id:        params.ID,
+		userID:    params.UserID,
+		issuedAt:  params.IssuedAt,
+		revokedAt: revokedAt,
+	}
+	return &session, nil
+}
+
 func (s Session) ID() SessionID       { return s.id }
 func (s Session) UserID() user.ID     { return s.userID }
 func (s Session) IssuedAt() time.Time { return s.issuedAt }
 
-func (s Session) RevokedAt() (time.Time, bool)  {
+func (s Session) RevokedAt() (time.Time, bool) {
 	if s.revokedAt == nil {
 		return time.Time{}, false
 	}
