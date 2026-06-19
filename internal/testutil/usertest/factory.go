@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NewUser(t *testing.T, override func(*user.RestoreParams)) *user.User {
+func NewUser(t *testing.T, override func(p *user.RestoreParams)) *user.User {
 	t.Helper()
 
     params := user.RestoreParams{
