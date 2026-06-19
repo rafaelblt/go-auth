@@ -35,4 +35,5 @@ func ParseEntityID(value string) (EntityID, error) {
 }
 
 func (id EntityID) Value() uuid.UUID { return id.value }
-func (id EntityID) IsZero() bool { return id.value == uuid.Nil }
+func (id EntityID) String() string   { return id.value.String() }
+func (id EntityID) IsZero() bool     { return id.value == uuid.Nil }
