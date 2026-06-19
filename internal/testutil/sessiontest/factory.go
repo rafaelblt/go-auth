@@ -31,21 +31,21 @@ func NewSession(t *testing.T, override func(p *session.SessionRestoreParams)) *s
 func NewRefreshToken(t *testing.T, override func(params *session.RefreshTokenRestoreParams)) *session.RefreshToken {
 	t.Helper()
 
-    params := session.RefreshTokenRestoreParams{
-        ID:        session.NewRefreshTokenID(),
-        SessionID: session.NewSessionID(),
-        Hash:      MustRefreshTokenHash(t, "default_hash"),
-        ParentID:  nil,
-        IssuedAt:  time.Now().UTC(),
-        ExpiresAt: time.Now().UTC().Add(time.Hour),
-        UsedAt:    nil,
-    }
+	params := session.RefreshTokenRestoreParams{
+		ID:        session.NewRefreshTokenID(),
+		SessionID: session.NewSessionID(),
+		Hash:      MustRefreshTokenHash(t, "default_hash"),
+		ParentID:  nil,
+		IssuedAt:  time.Date(1957, 10, 4, 0, 0, 0, 0, time.UTC),
+		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
+		UsedAt:    nil,
+	}
 
-    if override != nil {
-        override(&params)
-    }
+	if override != nil {
+		override(&params)
+	}
 
-    entity, err := session.RestoreRefreshToken(params)
-    require.NoError(t, err)
-    return entity
+	entity, err := session.RestoreRefreshToken(params)
+	require.NoError(t, err)
+	return entity
 }
