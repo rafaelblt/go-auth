@@ -3,36 +3,22 @@ package bootstrap
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rafaelblt/go-auth/internal/infra"
-	"github.com/rafaelblt/go-auth/internal/infra/bcrypt"
-	"github.com/rafaelblt/go-auth/internal/infra/jwt"
-	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/infra/refreshtoken"
 )
 
 type App struct {
 	router http.Handler
 	addr   string
-	deps   dependencies
-}
-
-type dependencies struct {
-	Pool                  *pgxpool.Pool
-	UserRepo              *postgres.UserRepo
-	CredentialRepo        *postgres.CredentialRepo
-	UnitOfWork            *postgres.UnitOfWork
-	PasswordHasher        *bcrypt.Hasher
-	Clock                 *infra.SystemClock
-	AccessTokenService    *jwt.AccessTokenService
-	RefreshTokenGenerator *refreshtoken.Generator
+	deps   infraDeps
 }
 
 func NewApp(ctx context.Context, cfg Config) (*App, error) {
-	app := App{}
+	err := cfg.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("config invalid: %w", err)
+	}
 
 	deps, err := newInfra(ctx, cfg)
 	if err != nil {
@@ -41,24 +27,33 @@ func NewApp(ctx context.Context, cfg Config) (*App, error) {
 
 	uc, err := newUsecases(cfg, deps)
 	if err != nil {
+		deps.pool.Close()
 		return nil, err
 	}
 
 	router, err := newRouter(ctx, uc)
 	if err != nil {
+		deps.pool.Close()
 		return nil, err
 	}
 
-	app.router = router
+	app := App{
+		router: router,
+		addr:   cfg.Address,
+		deps:   deps,
+	}
 	return &app, nil
 }
 
-func (app *App) Router() http.Handler {
-	return app.router
-}
-
 func (app *App) Run(ctx context.Context) error {
-	server := &http.Server{Addr: app.addr, Handler: app.router}
+	server := &http.Server{
+		Addr:              app.addr,
+		Handler:           app.router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
 	errChan := make(chan error, 1)
 	go func() {
@@ -79,6 +74,6 @@ func (app *App) Run(ctx context.Context) error {
 }
 
 func (app *App) Close() error {
-	app.deps.Pool.Close()
+	app.deps.pool.Close()
 	return nil
 }
