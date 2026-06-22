@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/infra"
@@ -16,6 +17,8 @@ import (
 )
 
 type infraDeps struct {
+	pool *pgxpool.Pool
+
 	Clock                 *infra.SystemClock
 	UnitOfWork            *postgres.UnitOfWork
 	Users                 *postgres.UserRepo
@@ -53,7 +56,7 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 		return infraDeps{}, err
 	}
 
-	accessTokens, err := buildAccessTokenService(clock)
+	accessTokens, err := buildAccessTokenService(clock, cfg.AccessTokenTTL)
 	if err != nil {
 		return infraDeps{}, err
 	}
@@ -64,6 +67,7 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 	}
 
 	deps := infraDeps{
+		pool:                  pool,
 		Clock:                 clock,
 		UnitOfWork:            uow,
 		Users:                 users,
@@ -116,7 +120,7 @@ func buildPasswordHasher(cost int) (*bcrypt.Hasher, error) {
 	return hasher, nil
 }
 
-func buildAccessTokenService(clock port.Clock) (*jwt.AccessTokenService, error) {
+func buildAccessTokenService(clock port.Clock, exp time.Duration) (*jwt.AccessTokenService, error) {
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("ed25519 generate key failed: %w", err)
@@ -127,15 +131,16 @@ func buildAccessTokenService(clock port.Clock) (*jwt.AccessTokenService, error) 
 		Clock:      clock,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Ed25519Signer creation failed: %w", err)
+		return nil, fmt.Errorf("new ed25519 signer failed: %w", err)
 	}
 
 	service, err := jwt.NewAccessTokenService(jwt.AccessTokenServiceConfig{
-		Signer: signer,
-		Clock:  clock,
+		Signer:     signer,
+		Clock:      clock,
+		Expiration: exp,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("AccessService creation failed: %w", err)
+		return nil, fmt.Errorf("new access token service failed: %w", err)
 	}
 
 	return service, nil
