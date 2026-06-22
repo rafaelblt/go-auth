@@ -30,3 +30,5 @@ func TestLoadConfig_ReturnsError_WithDatabaseNotDefined(t *testing.T) {
 	assert.Zero(t, cfg)
 	assert.Error(t, err)
 }
+
+// TODO: test Validate()
