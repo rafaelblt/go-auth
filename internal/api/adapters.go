@@ -23,8 +23,8 @@ func adaptHandler(h handler) http.HandlerFunc {
 
 		resp := h.Handle(r)
 
-		var status int
 		var buf []byte
+		status := resp.StatusCode
 
 		buf, err := json.Marshal(resp.Body)
 		if err != nil {
