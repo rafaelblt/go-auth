@@ -31,20 +31,23 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/register", adaptHandler(register))
 	mux.HandleFunc("POST /v1/auth/login", adaptHandler(login))
 
-	middlewares := make([]func(http.Handler) http.Handler, 0)
-	if !cfg.DevMode {
-		middlewares = append(middlewares, adaptMiddleware(logging))
-	}
-
-	chain := chain(mux, middlewares...)
+	chain := chainMiddlewares(cfg, mux)
 
 	return chain, nil
 }
 
-func chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
-	// Aplica de trás pra frente pra manter a ordem correta
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
+func chainMiddlewares(cfg Config, handler http.Handler) http.Handler {
+	type middleware func(http.Handler) http.Handler
+	middlewares := make([]middleware, 0)
+
+	if !cfg.DevMode {
+		middlewares = append(middlewares, adaptMiddleware(logging))
 	}
-	return h
+	middlewares = append(middlewares, adaptMiddleware(recovery))
+
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i](handler)
+	}
+
+	return handler
 }
