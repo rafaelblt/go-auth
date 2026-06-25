@@ -112,7 +112,13 @@ func (t RefreshToken) UsedAt() (time.Time, bool) {
 	return *t.usedAt, true
 }
 
-func (t RefreshToken) IsZero() bool { return t.id.IsZero() }
+func (t RefreshToken) IsZero() bool  {
+	return t.id.IsZero()
+}
+
+func (t *RefreshToken) IsUsed() bool {
+	return t.usedAt != nil
+}
 
 func (t RefreshToken) HasParent() bool {
 	return t.parentID != nil

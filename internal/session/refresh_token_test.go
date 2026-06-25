@@ -110,3 +110,4 @@ func TestNewRefreshToken_CopyParentID(t *testing.T) {
 // TODO: RestoreRefreshToken()
 // TODO: RefreshToken.Use()
 // TODO: RefreshToken.HasParent()
+// TODO: RefreshToken.IsUsed()
