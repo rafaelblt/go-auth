@@ -76,3 +76,14 @@ func (s Session) RevokedAt() (time.Time, bool) {
 }
 
 func (s Session) IsZero() bool { return s.id.IsZero() }
+
+func (s *Session) IsRevoked() bool {
+	return s.revokedAt != nil
+}
+
+func (s *Session) Revoke(revokedAt time.Time) {
+	if s.revokedAt != nil {
+		return
+	}
+	s.revokedAt = &revokedAt
+}
