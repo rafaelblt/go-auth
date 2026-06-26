@@ -7,6 +7,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -37,14 +38,15 @@ func (helper *SessionRepoTestHelper) Repo() *postgres.SessionRepo {
 
 func (helper *SessionRepoTestHelper) SaveUser(usr *user.User) {
 	helper.t.Helper()
-
-	userRepo, err := postgres.NewUserRepo(helper.db)
-	require.NoError(helper.t, err)
-
-	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
+	postgrestest.InsertUser(helper.t, helper.db, usr)
 }
 
-func (helper *SessionRepoTestHelper) CheckSessionIsSaved(sess *session.Session) bool {
+func (helper *SessionRepoTestHelper) SaveSession(sess *session.Session) {
+	helper.t.Helper()
+	postgrestest.InsertSession(helper.t, helper.db, sess)
+}
+
+func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) bool {
 	var result bool
 
 	var revokedAtPtr *time.Time
@@ -101,5 +103,36 @@ func TestSessionRepo_Save(t *testing.T) {
 	err := repo.Add(context.Background(), sess)
 
 	require.NoError(t, err)
-	require.True(t, helper.CheckSessionIsSaved(sess))
+	require.True(t, helper.CheckSessionExists(sess))
+}
+
+func TestSessionRepo_Update(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+
+	usr := usertest.NewUser(t, nil)
+	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
+
+	helper.SaveUser(usr)
+	helper.SaveSession(sess)
+
+	sess.Revoke(time.Now().UTC())
+
+	repo := helper.Repo()
+	err := repo.Update(context.Background(), sess)
+
+	require.NoError(t, err)
+	require.True(t, helper.CheckSessionExists(sess))
+}
+
+func TestSessionRepo_Update_FailsWithSessionNonExistent(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+
+	sess := sessiontest.NewSession(t, nil)
+
+	repo := helper.Repo()
+	err := repo.Update(context.Background(), sess)
+
+	require.Error(t, err)
 }

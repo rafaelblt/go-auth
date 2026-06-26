@@ -43,6 +43,30 @@ func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	return nil
 }
 
+func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) error {
+	model, err := repo.mapToModel(sess)
+	if err != nil {
+		return fmt.Errorf("map session to model failed: %w", err)
+	}
+
+	sql := `UPDATE sessions
+			SET revoked_at = $2
+			WHERE id = $1`
+	tag, err := repo.db.Exec(ctx, sql,
+		model.ID,
+		model.RevokedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("session update failed: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected in session update")
+	}
+
+	return nil
+}
+
 func (repo *SessionRepo) mapToModel(sess *session.Session) (sessionModel, error) {
 	if sess == nil {
 		return sessionModel{}, errors.New("session nil")
