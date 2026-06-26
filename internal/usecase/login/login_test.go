@@ -153,7 +153,7 @@ func TestLogin_ShouldSaveSession(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), helper.ValidInput())
 	require.NoError(t, err)
 
-	saved := helper.FakeUnitOfWork.FakeSessionWriter.SavedSessions()
+	saved := helper.FakeUnitOfWork.FakeSessionWriter.Data()
 	assert.Len(t, saved, 1)
 	session := saved[0]
 
@@ -166,9 +166,9 @@ func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), helper.ValidInput())
 	require.NoError(t, err)
 
-	session := helper.FakeUnitOfWork.FakeSessionWriter.SavedSessions()[0]
+	session := helper.FakeUnitOfWork.FakeSessionWriter.Data()[0]
 	expectedHash := helper.FakeRefreshTokenGenerator.Generated()[0].Hash
-	saved := helper.FakeUnitOfWork.FakeRefreshTokenWriter.SavedTokens()
+	saved := helper.FakeUnitOfWork.FakeRefreshTokenWriter.Data()
 	assert.Len(t, saved, 1)
 	token := saved[0]
 
