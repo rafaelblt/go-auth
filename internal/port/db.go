@@ -51,12 +51,14 @@ type CredentialWriter interface {
 
 type SessionWriter interface {
 	Add(context.Context, *session.Session) error
+	Update(context.Context, *session.Session) error
 }
 
 // RefreshToken
 
 type RefreshTokenWriter interface {
 	Add(context.Context, *session.RefreshToken) error
+	Update(context.Context, *session.RefreshToken) error
 }
 
 type RefreshTokenReader interface {
