@@ -70,7 +70,7 @@ func TestUserRepo_Save(t *testing.T) {
 	repo := helper.Repo()
 	usr := usertest.NewUser(t, nil)
 
-	err := repo.Save(context.Background(), usr)
+	err := repo.Add(context.Background(), usr)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckUserIsSaved(usr))
@@ -81,7 +81,7 @@ func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 	repo := helper.Repo()
 
 	usr := usertest.NewUser(t, nil)
-	require.NoError(t, repo.Save(context.Background(), usr))
+	require.NoError(t, repo.Add(context.Background(), usr))
 
 	exists, err := repo.ExistsByUsername(context.Background(), usr.Username())
 
@@ -116,9 +116,9 @@ func TestUserRepo_FindByUsername_ReturnsUser_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	repo := helper.Repo()
 	testUser := usertest.NewUser(t, nil)
-	
+
 	ctx := context.Background()
-	require.NoError(t, repo.Save(ctx, testUser))
+	require.NoError(t, repo.Add(ctx, testUser))
 	found, err := repo.FindByUsername(ctx, testUser.Username())
 
 	assert.NoError(t, err)
@@ -141,9 +141,9 @@ func TestUserRepo_FindByID_ReturnsUser_WhenIDExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	repo := helper.Repo()
 	testUser := usertest.NewUser(t, nil)
-	
+
 	ctx := context.Background()
-	require.NoError(t, repo.Save(ctx, testUser))
+	require.NoError(t, repo.Add(ctx, testUser))
 	found, err := repo.FindByID(ctx, testUser.ID())
 
 	assert.NoError(t, err)

@@ -20,7 +20,7 @@ func NewRefreshTokenRepo(db DB) (*RefreshTokenRepo, error) {
 	return &RefreshTokenRepo{db: db}, nil
 }
 
-func (repo *RefreshTokenRepo) Save(ctx context.Context, token *session.RefreshToken) error {
+func (repo *RefreshTokenRepo) Add(ctx context.Context, token *session.RefreshToken) error {
 	model, err := repo.mapToModel(token)
 	if err != nil {
 		return fmt.Errorf("map refresh token to model failed: %w", err)
@@ -41,6 +41,32 @@ func (repo *RefreshTokenRepo) Save(ctx context.Context, token *session.RefreshTo
 
 	if err != nil {
 		return fmt.Errorf("refresh token insert failed: %w", err)
+	}
+
+	return nil
+}
+
+func (repo *RefreshTokenRepo) Update(ctx context.Context, token *session.RefreshToken) error {
+	model, err := repo.mapToModel(token)
+	if err != nil {
+		return fmt.Errorf("map refresh token to model failed: %w", err)
+	}
+
+	sql := `UPDATE refresh_tokens
+			SET parent_id = $2
+			SET used_at = $3
+			WHERE id = $1`
+	tag, err := repo.db.Exec(ctx, sql,
+		model.ID,
+		model.ParentID,
+		model.UsedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("session update failed: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected in session update")
 	}
 
 	return nil

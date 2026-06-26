@@ -40,7 +40,7 @@ func (helper CredentialRepoTestHelper) SaveUser(usr *user.User) {
 	userRepo, err := postgres.NewUserRepo(helper.db)
 	require.NoError(helper.t, err)
 
-	require.NoError(helper.t, userRepo.Save(context.Background(), usr))
+	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
 }
 
 func (helper CredentialRepoTestHelper) CheckCredentialIsSaved(cred *credential.Credential) bool {
@@ -80,7 +80,7 @@ func TestCredentialRepo_Save(t *testing.T) {
 		params.UserID = usr.ID()
 	})
 
-	err := repo.Save(context.Background(), cred)
+	err := repo.Add(context.Background(), cred)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckCredentialIsSaved(cred))
@@ -101,14 +101,14 @@ func TestCredentialRepo_FindByID_ReturnsCredential_WhenIDExists(t *testing.T) {
 	helper := NewCredentialRepoTestHelper(t)
 	usr := usertest.NewUser(t, nil)
 	helper.SaveUser(usr)
-	
+
 	cred := credentialtest.NewCredential(t, func(params *credential.RestoreParams) {
 		params.UserID = usr.ID()
 	})
-	
+
 	repo := helper.Repo()
 	ctx := context.Background()
-	require.NoError(t, repo.Save(ctx, cred))
+	require.NoError(t, repo.Add(ctx, cred))
 
 	found, err := repo.FindByID(ctx, cred.ID())
 
@@ -132,14 +132,14 @@ func TestCredentialRepo_FindByUserAndKind_ReturnsCredential_WhenExists(t *testin
 	helper := NewCredentialRepoTestHelper(t)
 	usr := usertest.NewUser(t, nil)
 	helper.SaveUser(usr)
-	
+
 	testCred := credentialtest.NewCredential(t, func(p *credential.RestoreParams) {
 		p.UserID = usr.ID()
 	})
 
 	repo := helper.Repo()
 	ctx := context.Background()
-	require.NoError(t, repo.Save(ctx, testCred))
+	require.NoError(t, repo.Add(ctx, testCred))
 
 	found, err := repo.FindByUserAndKind(ctx, testCred.UserID(), testCred.Kind())
 

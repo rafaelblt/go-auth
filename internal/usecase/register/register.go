@@ -105,11 +105,11 @@ func (uc Register) createCredential(params credential.CreationParams) (*credenti
 
 func (uc Register) save(ctx context.Context, user *user.User, cred *credential.Credential) error {
 	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.UserWriter.Save(ctx, user)
+		err := deps.UserWriter.Add(ctx, user)
 		if err != nil {
 			return fmt.Errorf("user writer save failed: %w", err)
 		}
-		err = deps.CredentialWriter.Save(ctx, cred)
+		err = deps.CredentialWriter.Add(ctx, cred)
 		if err != nil {
 			return fmt.Errorf("credential writer save failed: %w", err)
 		}

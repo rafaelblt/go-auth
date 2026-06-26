@@ -47,9 +47,9 @@ func (helper *RefreshTokenRepoTestHelper) SaveSession(sess *session.Session) {
 	usr := usertest.NewUser(helper.t, func(p *user.RestoreParams) {
 		p.ID = sess.UserID()
 	})
-	require.NoError(helper.t, userRepo.Save(context.Background(), usr))
+	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
 
-	require.NoError(helper.t, sessRepo.Save(context.Background(), sess))
+	require.NoError(helper.t, sessRepo.Add(context.Background(), sess))
 }
 
 func (helper *RefreshTokenRepoTestHelper) CheckRefreshTokenIsSaved(token *session.RefreshToken) bool {
@@ -119,7 +119,7 @@ func TestRefreshTokenRepo_Save(t *testing.T) {
 	})
 
 	repo := helper.Repo()
-	err := repo.Save(context.Background(), token)
+	err := repo.Add(context.Background(), token)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckRefreshTokenIsSaved(token))

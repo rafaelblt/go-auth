@@ -41,7 +41,7 @@ func (helper *SessionRepoTestHelper) SaveUser(usr *user.User) {
 	userRepo, err := postgres.NewUserRepo(helper.db)
 	require.NoError(helper.t, err)
 
-	require.NoError(helper.t, userRepo.Save(context.Background(), usr))
+	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
 }
 
 func (helper *SessionRepoTestHelper) CheckSessionIsSaved(sess *session.Session) bool {
@@ -98,7 +98,7 @@ func TestSessionRepo_Save(t *testing.T) {
 	})
 
 	repo := helper.Repo()
-	err := repo.Save(context.Background(), sess)
+	err := repo.Add(context.Background(), sess)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckSessionIsSaved(sess))

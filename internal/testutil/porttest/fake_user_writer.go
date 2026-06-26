@@ -17,7 +17,7 @@ func NewFakeUserWriter() *FakeUserWriter {
 		err:   nil,
 	}
 }
-func (w *FakeUserWriter) Save(ctx context.Context, user *user.User) error {
+func (w *FakeUserWriter) Add(ctx context.Context, user *user.User) error {
 	if w.err == nil {
 		w.users = append(w.users, user)
 		return nil

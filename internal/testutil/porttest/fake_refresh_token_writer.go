@@ -15,7 +15,7 @@ func NewFakeRefreshTokenWriter() *FakeRefreshTokenWriter {
 	return &FakeRefreshTokenWriter{saved: []*session.RefreshToken{}}
 }
 
-func (w *FakeRefreshTokenWriter) Save(
+func (w *FakeRefreshTokenWriter) Add(
 	ctx context.Context, session *session.RefreshToken,
 ) error {
 	if w.err == nil {

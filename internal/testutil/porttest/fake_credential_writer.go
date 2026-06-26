@@ -15,7 +15,7 @@ func NewFakeCredentialWriter() *FakeCredentialWriter {
 	return &FakeCredentialWriter{data: []*credential.Credential{}}
 }
 
-func (w *FakeCredentialWriter) Save(
+func (w *FakeCredentialWriter) Add(
 	ctx context.Context, cred *credential.Credential,
 ) error {
 	if w.err != nil {

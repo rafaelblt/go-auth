@@ -33,7 +33,7 @@ type UserExistsChecker interface {
 }
 
 type UserWriter interface {
-	Save(context.Context, *user.User) error
+	Add(context.Context, *user.User) error
 }
 
 // Credential
@@ -44,19 +44,19 @@ type CredentialReader interface {
 }
 
 type CredentialWriter interface {
-	Save(context.Context, *credential.Credential) error
+	Add(context.Context, *credential.Credential) error
 }
 
 // Session
 
 type SessionWriter interface {
-	Save(context.Context, *session.Session) error
+	Add(context.Context, *session.Session) error
 }
 
 // RefreshToken
 
 type RefreshTokenWriter interface {
-	Save(context.Context, *session.RefreshToken) error
+	Add(context.Context, *session.RefreshToken) error
 }
 
 type RefreshTokenReader interface {

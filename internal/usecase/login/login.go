@@ -105,12 +105,12 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	}
 
 	uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.SessionWriter.Save(ctx, sess)
+		err := deps.SessionWriter.Add(ctx, sess)
 		if err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
 		}
 
-		err = deps.RefreshTokenWriter.Save(ctx, refreshToken)
+		err = deps.RefreshTokenWriter.Add(ctx, refreshToken)
 		if err != nil {
 			return fmt.Errorf("refresh token writer failed: %w", err)
 		}

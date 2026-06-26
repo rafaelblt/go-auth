@@ -20,7 +20,7 @@ func NewUserRepo(db DB) (*UserRepo, error) {
 	return &UserRepo{db: db}, nil
 }
 
-func (repo UserRepo) Save(ctx context.Context, usr *user.User) error {
+func (repo UserRepo) Add(ctx context.Context, usr *user.User) error {
 	if usr == nil {
 		return errors.New("cannot save a nil user in database")
 	}

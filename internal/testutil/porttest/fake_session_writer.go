@@ -15,7 +15,7 @@ func NewFakeSessionWriter() *FakeSessionWriter {
 	return &FakeSessionWriter{saved: []*session.Session{}}
 }
 
-func (w *FakeSessionWriter) Save(
+func (w *FakeSessionWriter) Add(
 	ctx context.Context, session *session.Session,
 ) error {
 	if w.err == nil {

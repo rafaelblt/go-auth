@@ -20,7 +20,7 @@ func NewSessionRepo(db DB) (*SessionRepo, error) {
 	return &SessionRepo{db: db}, nil
 }
 
-func (repo *SessionRepo) Save(ctx context.Context, sess *session.Session) error {
+func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	model, err := repo.mapToModel(sess)
 	if err != nil {
 		return fmt.Errorf("map session to model failed: %w", err)

@@ -39,7 +39,7 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	usr := usertest.NewUser(t, nil)
 
 	err = uow.Do(ctx, func(deps port.UowDeps) error {
-		return deps.UserWriter.Save(ctx, usr)
+		return deps.UserWriter.Add(ctx, usr)
 	})
 
 	assert.NoError(t, err)
@@ -61,8 +61,8 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	})
 
 	err = uow.Do(ctx, func(deps port.UowDeps) error {
-		require.NoError(t, deps.UserWriter.Save(ctx, usr))
-		return deps.CredentialWriter.Save(ctx, cred)
+		require.NoError(t, deps.UserWriter.Add(ctx, usr))
+		return deps.CredentialWriter.Add(ctx, cred)
 	})
 
 	assert.NoError(t, err)
@@ -84,8 +84,8 @@ func TestUnitOfWork_Do_WithSessionWriter(t *testing.T) {
 
 	ctx := context.Background()
 	err = uow.Do(ctx, func(deps port.UowDeps) error {
-		require.NoError(t, deps.UserWriter.Save(ctx, usr))
-		return deps.SessionWriter.Save(ctx, sess)
+		require.NoError(t, deps.UserWriter.Add(ctx, usr))
+		return deps.SessionWriter.Add(ctx, sess)
 	})
 
 	assert.NoError(t, err)
@@ -110,9 +110,9 @@ func TestUnitOfWork_Do_WithRefreshTokenWriter(t *testing.T) {
 
 	ctx := context.Background()
 	err = uow.Do(ctx, func(deps port.UowDeps) error {
-		require.NoError(t, deps.UserWriter.Save(ctx, usr))
-		require.NoError(t, deps.SessionWriter.Save(ctx, sess))
-		return deps.RefreshTokenWriter.Save(ctx, token)
+		require.NoError(t, deps.UserWriter.Add(ctx, usr))
+		require.NoError(t, deps.SessionWriter.Add(ctx, sess))
+		return deps.RefreshTokenWriter.Add(ctx, token)
 	})
 
 	assert.NoError(t, err)
