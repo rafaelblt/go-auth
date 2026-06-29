@@ -8,12 +8,16 @@ import (
 )
 
 type FakeSessionWriter struct {
-	data []*session.Session
-	err  error
+	adds    []*session.Session
+	updates []*session.Session
+	err     error
 }
 
 func NewFakeSessionWriter() *FakeSessionWriter {
-	return &FakeSessionWriter{data: []*session.Session{}}
+	return &FakeSessionWriter{
+		adds:    []*session.Session{},
+		updates: []*session.Session{},
+	}
 }
 
 func (w *FakeSessionWriter) Add(
@@ -28,7 +32,7 @@ func (w *FakeSessionWriter) Add(
 	if sess.IsZero() {
 		return errors.New("session zero")
 	}
-	w.data = append(w.data, sess)
+	w.adds = append(w.adds, sess)
 	return w.err
 }
 
@@ -44,23 +48,18 @@ func (w *FakeSessionWriter) Update(
 	if sess.IsZero() {
 		return errors.New("session zero")
 	}
-	var idx int
-	var found *session.Session
-	for i, s := range w.data {
-		if s.ID() == sess.ID() {
-			idx = i
-			found = s
-		}
-	}
-	if found == nil {
-		return errors.New("session not found")
-	}
-	w.data[idx] = found
+	w.updates = append(w.updates, sess)
 	return nil
 }
 
-func (w *FakeSessionWriter) Data() []*session.Session {
-	return w.data
+func (w *FakeSessionWriter) Adds() []*session.Session {
+	return w.adds
 }
 
-func (w *FakeSessionWriter) SetError(err error) { w.err = err }
+func (w *FakeSessionWriter) Updates() []*session.Session {
+	return w.updates
+}
+
+func (w *FakeSessionWriter) SetError(err error) {
+	w.err = err
+}
