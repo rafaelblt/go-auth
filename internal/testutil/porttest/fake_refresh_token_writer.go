@@ -8,12 +8,16 @@ import (
 )
 
 type FakeRefreshTokenWriter struct {
-	data []*session.RefreshToken
-	err  error
+	adds    []*session.RefreshToken
+	updates []*session.RefreshToken
+	err     error
 }
 
 func NewFakeRefreshTokenWriter() *FakeRefreshTokenWriter {
-	return &FakeRefreshTokenWriter{data: []*session.RefreshToken{}}
+	return &FakeRefreshTokenWriter{
+		adds:    []*session.RefreshToken{},
+		updates: []*session.RefreshToken{},
+	}
 }
 
 func (w *FakeRefreshTokenWriter) Add(
@@ -28,7 +32,7 @@ func (w *FakeRefreshTokenWriter) Add(
 	if token.IsZero() {
 		return errors.New("refresh token zero")
 	}
-	w.data = append(w.data, token)
+	w.adds = append(w.adds, token)
 	return w.err
 }
 
@@ -44,23 +48,18 @@ func (w *FakeRefreshTokenWriter) Update(
 	if token.IsZero() {
 		return errors.New("refresh token zero")
 	}
-	var idx int
-	var found *session.RefreshToken
-	for i, t := range w.data {
-		if t.ID() == token.ID() {
-			idx = i
-			found = t
-		}
-	}
-	if found == nil {
-		return errors.New("refresh token not found")
-	}
-	w.data[idx] = found
+	w.updates = append(w.updates, token)
 	return nil
 }
 
-func (w *FakeRefreshTokenWriter) Data() []*session.RefreshToken {
-	return w.data
+func (w *FakeRefreshTokenWriter) Adds() []*session.RefreshToken {
+	return w.adds
 }
 
-func (w *FakeRefreshTokenWriter) SetError(err error) { w.err = err }
+func (w *FakeRefreshTokenWriter) Updates() []*session.RefreshToken {
+	return w.updates
+}
+
+func (w *FakeRefreshTokenWriter) SetError(err error) {
+	w.err = err
+}

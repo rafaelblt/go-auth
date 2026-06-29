@@ -168,7 +168,7 @@ func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
 
 	session := helper.FakeUnitOfWork.FakeSessionWriter.Data()[0]
 	expectedHash := helper.FakeRefreshTokenGenerator.Generated()[0].Hash
-	saved := helper.FakeUnitOfWork.FakeRefreshTokenWriter.Data()
+	saved := helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds()
 	assert.Len(t, saved, 1)
 	token := saved[0]
 
