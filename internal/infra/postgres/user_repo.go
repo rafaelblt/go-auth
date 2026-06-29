@@ -20,7 +20,7 @@ func NewUserRepo(db DB) (*UserRepo, error) {
 	return &UserRepo{db: db}, nil
 }
 
-func (repo UserRepo) Add(ctx context.Context, usr *user.User) error {
+func (repo *UserRepo) Add(ctx context.Context, usr *user.User) error {
 	if usr == nil {
 		return errors.New("cannot save a nil user in database")
 	}
@@ -47,7 +47,7 @@ func (repo UserRepo) Add(ctx context.Context, usr *user.User) error {
 	return nil
 }
 
-func (repo UserRepo) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
+func (repo *UserRepo) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
 	if id.IsZero() {
 		return nil, errors.New("id zero")
 	}
@@ -76,7 +76,7 @@ func (repo UserRepo) FindByID(ctx context.Context, id user.ID) (*user.User, erro
 	return usr, nil
 }
 
-func (repo UserRepo) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
+func (repo *UserRepo) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
 	sql := "SELECT * FROM users WHERE username = $1"
 
 	rows, err := repo.db.Query(ctx, sql, username.String())
@@ -101,7 +101,7 @@ func (repo UserRepo) FindByUsername(ctx context.Context, username user.Username)
 	return usr, nil
 }
 
-func (repo UserRepo) ExistsByUsername(ctx context.Context, username user.Username) (bool, error) {
+func (repo *UserRepo) ExistsByUsername(ctx context.Context, username user.Username) (bool, error) {
 	var exists bool
 
 	sql := `SELECT EXISTS( SELECT 1 FROM users WHERE username=$1 )`

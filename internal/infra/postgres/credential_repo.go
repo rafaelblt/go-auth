@@ -21,7 +21,7 @@ func NewCredentialRepo(db DB) (*CredentialRepo, error) {
 	return &CredentialRepo{db: db}, nil
 }
 
-func (repo CredentialRepo) Add(ctx context.Context, cred *credential.Credential) error {
+func (repo *CredentialRepo) Add(ctx context.Context, cred *credential.Credential) error {
 	if cred == nil {
 		return errors.New("cannot save a nil credential in database")
 	}
