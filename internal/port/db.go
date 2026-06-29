@@ -49,6 +49,10 @@ type CredentialWriter interface {
 
 // Session
 
+type SessionReader interface {
+	FindByID(context.Context, session.SessionID) (*session.Session, error)
+}
+
 type SessionWriter interface {
 	Add(context.Context, *session.Session) error
 	Update(context.Context, *session.Session) error
