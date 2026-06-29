@@ -3,12 +3,9 @@ package register_test
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
-	"github.com/rafaelblt/go-auth/internal/user"
-	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,25 +91,6 @@ func TestRegister_ReturnsOutput(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, output)
 	assert.Equal(t, input.Username, output.User.Username)
-}
-
-func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
-	helper := NewTestHelper(t)
-	input := register.Input{
-		Username: strings.Repeat("a", user.UsernameMaxLen+1),
-		Password: helper.ValidPlainPassword().Value(),
-	}
-
-	output, err := helper.UseCase().Execute(context.Background(), input)
-
-	assert.Zero(t, output)
-	var verr validation.ValidationError
-	require.ErrorAs(t, err, &verr)
-	expected := []validation.FieldError{validation.NewFieldError(
-		register.FieldUsername,
-		validation.IssueTooLong(user.UsernameMaxLen),
-	)}
-	assert.ElementsMatch(t, expected, verr.Errors())
 }
 
 func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {

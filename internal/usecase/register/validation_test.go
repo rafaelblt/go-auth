@@ -32,6 +32,25 @@ func TestRegister_ReturnsValidationError_WithUsernameTooShort(t *testing.T) {
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
 
+func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := register.Input{
+		Username: strings.Repeat("a", user.UsernameMaxLen+1),
+		Password: helper.ValidPlainPassword().Value(),
+	}
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	var verr validation.ValidationError
+	require.ErrorAs(t, err, &verr)
+	expected := []validation.FieldError{validation.NewFieldError(
+		register.FieldUsername,
+		validation.IssueTooLong(user.UsernameMaxLen),
+	)}
+	assert.ElementsMatch(t, expected, verr.Errors())
+}
+
 func TestRegister_ReturnsValidationError_WithPasswordTooLong(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
@@ -95,7 +114,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
 
-func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLing(t *testing.T) {
+func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: strings.Repeat("a", user.UsernameMaxLen+1),
