@@ -28,7 +28,7 @@ func NewSession(t *testing.T, override func(p *session.SessionRestoreParams)) *s
 	return entity
 }
 
-func NewRefreshToken(t *testing.T, override func(params *session.RefreshTokenRestoreParams)) *session.RefreshToken {
+func NewRefreshToken(t *testing.T, override func(p *session.RefreshTokenRestoreParams)) *session.RefreshToken {
 	t.Helper()
 
 	params := session.RefreshTokenRestoreParams{
