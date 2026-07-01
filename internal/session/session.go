@@ -16,6 +16,14 @@ func NewSessionID() SessionID {
 	return SessionID{shared.NewEntityID()}
 }
 
+func ParseSessionID(value string) (SessionID, error) {
+	id, err := shared.ParseEntityID(value)
+	if err != nil {
+		return SessionID{}, err
+	}
+	return SessionID{id}, nil
+}
+
 type Session struct {
 	id        SessionID
 	userID    user.ID

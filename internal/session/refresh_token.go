@@ -15,6 +15,14 @@ func NewRefreshTokenID() RefreshTokenID {
 	return RefreshTokenID{shared.NewEntityID()}
 }
 
+func ParseRefreshTokenID(value string) (RefreshTokenID, error) {
+	id, err := shared.ParseEntityID(value)
+	if err != nil {
+		return RefreshTokenID{}, err
+	}
+	return RefreshTokenID{id}, nil
+}
+
 type RefreshToken struct {
 	id        RefreshTokenID
 	sessionID SessionID
