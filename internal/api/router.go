@@ -14,6 +14,7 @@ type Config struct {
 type Dependencies struct {
 	Register registerUseCase
 	Login    loginUseCase
+	Refresh  refreshUseCase
 }
 
 func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
@@ -23,13 +24,18 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	if cfg.Dependencies.Login == nil {
 		return nil, errors.New("login nil")
 	}
+	if cfg.Dependencies.Refresh == nil {
+		return nil, errors.New("refresh nil")
+	}
 
 	register := newRegisterHandler(cfg.Dependencies.Register)
 	login := newLoginHandler(cfg.Dependencies.Login)
+	refresh := newRefreshHandler(cfg.Dependencies.Refresh)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/auth/register", adaptHandler(register))
 	mux.HandleFunc("POST /v1/auth/login", adaptHandler(login))
+	mux.HandleFunc("POST /v1/auth/refresh", adaptHandler(refresh))
 
 	chain := chainMiddlewares(cfg, mux)
 
