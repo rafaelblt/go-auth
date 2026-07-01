@@ -136,3 +136,5 @@ func TestSessionRepo_Update_FailsWithSessionNonExistent(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+// TODO: FindByID

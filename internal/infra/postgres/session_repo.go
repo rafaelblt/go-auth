@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type SessionRepo struct {
@@ -67,6 +69,31 @@ func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) erro
 	return nil
 }
 
+func (repo *SessionRepo) FindByID(ctx context.Context, id session.SessionID) (*session.Session, error) {
+	sql := "SELECT * FROM sessions WHERE id = $1"
+
+	rows, err := repo.db.Query(ctx, sql, id.Value())
+	if err != nil {
+		return nil, fmt.Errorf("db query failed: %w", err)
+	}
+	defer rows.Close()
+
+	model, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[sessionModel])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("collect one row failed: %w", err)
+	}
+
+	sess, err := repo.mapToEntity(model)
+	if err != nil {
+		return nil, err
+	}
+
+	return sess, nil
+}
+
 func (repo *SessionRepo) mapToModel(sess *session.Session) (sessionModel, error) {
 	if sess == nil {
 		return sessionModel{}, errors.New("session nil")
@@ -93,4 +120,27 @@ func (repo *SessionRepo) mapToModel(sess *session.Session) (sessionModel, error)
 	}
 
 	return model, nil
+}
+
+func (repo *SessionRepo) mapToEntity(model sessionModel) (*session.Session, error) {
+	id, err := session.ParseSessionID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse session id failed: %w", err)
+	}
+	userID, err := user.ParseID(model.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id failed: %w", err)
+	}
+
+	sess, err := session.RestoreSession(session.SessionRestoreParams{
+		ID:        id,
+		UserID:    userID,
+		IssuedAt:  model.IssuedAt,
+		RevokedAt: model.RevokedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore session failed: %w", err)
+	}
+
+	return sess, nil
 }
