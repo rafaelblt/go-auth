@@ -23,9 +23,12 @@ type infraDeps struct {
 	UnitOfWork            *postgres.UnitOfWork
 	Users                 *postgres.UserRepo
 	Credentials           *postgres.CredentialRepo
+	Sessions              *postgres.SessionRepo
+	RefreshTokens         *postgres.RefreshTokenRepo
 	PasswordHasher        *bcrypt.Hasher
 	AccessTokenService    *jwt.AccessTokenService
 	RefreshTokenGenerator *refreshtoken.Generator
+	RefreshTokenResolver  *refreshtoken.Resolver
 }
 
 func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
@@ -51,6 +54,16 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 		return infraDeps{}, err
 	}
 
+	sessions, err := buildSessionRepo(pool)
+	if err != nil {
+		return infraDeps{}, err
+	}
+
+	refreshTokens, err := buildRefreshTokenRepo(pool)
+	if err != nil {
+		return infraDeps{}, err
+	}
+
 	hasher, err := buildPasswordHasher(cfg.BcryptCost)
 	if err != nil {
 		return infraDeps{}, err
@@ -66,15 +79,23 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 		return infraDeps{}, err
 	}
 
+	refreshResolver, err := buildRefreshTokenResolver(refreshTokens)
+	if err != nil {
+		return infraDeps{}, err
+	}
+
 	deps := infraDeps{
 		pool:                  pool,
 		Clock:                 clock,
 		UnitOfWork:            uow,
 		Users:                 users,
 		Credentials:           creds,
+		Sessions:              sessions,
+		RefreshTokens:         refreshTokens,
 		PasswordHasher:        hasher,
 		AccessTokenService:    accessTokens,
 		RefreshTokenGenerator: refreshGenerator,
+		RefreshTokenResolver:  refreshResolver,
 	}
 
 	return deps, nil
@@ -108,6 +129,22 @@ func buildCredentialRepo(db postgres.DB) (*postgres.CredentialRepo, error) {
 	repo, err := postgres.NewCredentialRepo(db)
 	if err != nil {
 		return nil, fmt.Errorf("credential repo creation failed: %w", err)
+	}
+	return repo, nil
+}
+
+func buildSessionRepo(db postgres.DB) (*postgres.SessionRepo, error) {
+	repo, err := postgres.NewSessionRepo(db)
+	if err != nil {
+		return nil, fmt.Errorf("session repo creation failed: %w", err)
+	}
+	return repo, nil
+}
+
+func buildRefreshTokenRepo(db postgres.DB) (*postgres.RefreshTokenRepo, error) {
+	repo, err := postgres.NewRefreshTokenRepo(db)
+	if err != nil {
+		return nil, fmt.Errorf("refresh token repo creation failed: %w", err)
 	}
 	return repo, nil
 }
@@ -149,4 +186,14 @@ func buildAccessTokenService(clock port.Clock, exp time.Duration) (*jwt.AccessTo
 func buildRefreshTokenGenerator() (*refreshtoken.Generator, error) {
 	generator := refreshtoken.NewGenerator()
 	return generator, nil
+}
+
+func buildRefreshTokenResolver(reader port.RefreshTokenReader) (*refreshtoken.Resolver, error) {
+	resolver, err := refreshtoken.NewResolver(refreshtoken.ResolverConfig{
+		RefreshTokenReader: reader,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("new refresh token resolver failed: %w", err)
+	}
+	return resolver, nil
 }

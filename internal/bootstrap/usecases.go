@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type usecases struct {
 	Register *register.Register
 	Login    *login.Login
+	Refresh  *refresh.Refresh
 }
 
 func newUsecases(cfg Config, deps infraDeps) (usecases, error) {
@@ -23,9 +25,15 @@ func newUsecases(cfg Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
+	refr, err := buildRefresh(cfg, deps)
+	if err != nil {
+		return usecases{}, err
+	}
+
 	uc := usecases{
 		Register: &regst,
 		Login:    &logn,
+		Refresh:  refr,
 	}
 	return uc, nil
 }
@@ -56,6 +64,22 @@ func buildLogin(cfg Config, deps infraDeps) (login.Login, error) {
 	})
 	if err != nil {
 		return login.Login{}, fmt.Errorf("login creation failed: %w", err)
+	}
+	return uc, nil
+}
+
+func buildRefresh(cfg Config, deps infraDeps) (*refresh.Refresh, error) {
+	uc, err := refresh.New(refresh.Config{
+		SessionReader:         deps.Sessions,
+		AccessTokenIssuer:     deps.AccessTokenService,
+		RefreshTokenResolver:  deps.RefreshTokenResolver,
+		RefreshTokenGenerator: deps.RefreshTokenGenerator,
+		UnitOfWork:            deps.UnitOfWork,
+		Clock:                 deps.Clock,
+		RefreshTokenTTL:       cfg.RefreshTokenTTL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("refresh creation failed: %w", err)
 	}
 	return uc, nil
 }

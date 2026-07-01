@@ -12,6 +12,7 @@ func newRouter(ctx context.Context, uc usecases) (http.Handler, error) {
 	cfg := api.Config{Dependencies: api.Dependencies{
 		Register: uc.Register,
 		Login:    uc.Login,
+		Refresh:  uc.Refresh,
 	}}
 
 	router, err := api.NewRouter(ctx, cfg)
