@@ -124,3 +124,6 @@ func TestRefreshTokenRepo_Save(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, helper.CheckRefreshTokenIsSaved(token))
 }
+
+// TODO: Update
+// TODO: FindByHash

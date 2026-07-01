@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/session"
 )
 
@@ -72,6 +73,31 @@ func (repo *RefreshTokenRepo) Update(ctx context.Context, token *session.Refresh
 	return nil
 }
 
+func (repo *RefreshTokenRepo) FindByHash(ctx context.Context, hash session.RefreshTokenHash) (*session.RefreshToken, error) {
+	sql := "SELECT * FROM refresh_tokens WHERE hash = $1"
+
+	rows, err := repo.db.Query(ctx, sql, hash.Value())
+	if err != nil {
+		return nil, fmt.Errorf("db query failed: %w", err)
+	}
+	defer rows.Close()
+
+	model, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[refreshTokenModel])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("collect one row failed: %w", err)
+	}
+
+	token, err := repo.mapToEntity(model)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
 func (repo *RefreshTokenRepo) mapToModel(token *session.RefreshToken) (refreshTokenModel, error) {
 	if token == nil {
 		return refreshTokenModel{}, errors.New("refresh token nil")
@@ -111,4 +137,45 @@ func (repo *RefreshTokenRepo) mapToModel(token *session.RefreshToken) (refreshTo
 	}
 
 	return model, nil
+}
+
+func (repo *RefreshTokenRepo) mapToEntity(model refreshTokenModel) (*session.RefreshToken, error) {
+	id, err := session.ParseRefreshTokenID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse refresh token id failed: %w", err)
+	}
+
+	sessionID, err := session.ParseSessionID(model.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("parse session id failed: %w", err)
+	}
+
+	hash, err := session.NewRefreshTokenHash(model.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("new refresh token hash failed: %w", err)
+	}
+
+	var parentID *session.RefreshTokenID
+	if model.ParentID != nil {
+		pID, err := session.ParseRefreshTokenID(*model.ParentID)
+		if err != nil {
+			return nil, fmt.Errorf("parse parent token id failed: %w", err)
+		}
+		parentID = &pID
+	}
+
+	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
+		ID:        id,
+		SessionID: sessionID,
+		Hash:      hash,
+		ParentID:  parentID,
+		IssuedAt:  model.IssuedAt,
+		ExpiresAt: model.ExpiresAt,
+		UsedAt:    model.UsedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore refresh token failed: %w", err)
+	}
+
+	return token, nil
 }
