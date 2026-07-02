@@ -1,20 +1,32 @@
 package session
 
 import (
+	"bytes"
 	"errors"
+	"slices"
 )
 
 type RefreshTokenHash struct {
-	value string
+	value []byte
 }
 
-func NewRefreshTokenHash(value string) (RefreshTokenHash, error) {
+func NewRefreshTokenHash(value []byte) (RefreshTokenHash, error) {
 	if len(value) == 0 {
 		return RefreshTokenHash{}, errors.New("value empty")
 	}
-	obj := RefreshTokenHash{value: value}
+	copy := slices.Clone(value)
+	obj := RefreshTokenHash{value: copy}
 	return obj, nil
 }
 
-func (h RefreshTokenHash) Value() string { return h.value }
-func (h RefreshTokenHash) IsZero() bool { return h.value == "" }
+func (h RefreshTokenHash) Value() []byte {
+	return h.value[:]
+}
+
+func (h RefreshTokenHash) IsZero() bool {
+	return h.value == nil
+}
+
+func (h RefreshTokenHash) Equal(other RefreshTokenHash) bool {
+	return bytes.Equal(h.value, other.value)
+}

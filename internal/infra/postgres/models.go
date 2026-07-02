@@ -35,7 +35,7 @@ type refreshTokenModel struct {
 	model
 	SessionID string     `db:"session_id"`
 	ParentID  *string    `db:"parent_id"`
-	Hash      string     `db:"hash"`
+	Hash      []byte     `db:"hash"`
 	IssuedAt  time.Time  `db:"issued_at"`
 	ExpiresAt time.Time  `db:"expires_at"`
 	UsedAt    *time.Time `db:"used_at"`

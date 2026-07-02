@@ -25,7 +25,7 @@ func (r *FakeRefreshTokenReader) FindByHash(ctx context.Context, hash session.Re
 		return nil, r.err
 	}
 	for _, token := range r.data {
-		if token.Hash() == hash {
+		if token.Hash().Equal(hash) {
 			return token, nil
 		}
 	}

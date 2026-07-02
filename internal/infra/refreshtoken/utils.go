@@ -32,8 +32,7 @@ func decodeToken(token string) ([]byte, error) {
 
 func hashToken(token []byte) (session.RefreshTokenHash, error) {
 	sum := sha256.Sum256(token)
-	hash := string(sum[:])
-	obj, err := session.NewRefreshTokenHash(hash)
+	obj, err := session.NewRefreshTokenHash(sum[:])
 	if err != nil {
 		e := fmt.Errorf("refresh token hash creation failed: %w", err)
 		return session.RefreshTokenHash{}, e

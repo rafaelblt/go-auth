@@ -34,7 +34,7 @@ func NewRefreshToken(t *testing.T, override func(p *session.RefreshTokenRestoreP
 	params := session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
-		Hash:      MustRefreshTokenHash(t, "default_hash"),
+		Hash:      MustRefreshTokenHash(t, []byte{0, 1, 0, 7, 2, 0, 2, 6}),
 		ParentID:  nil,
 		IssuedAt:  time.Date(1957, 10, 4, 0, 0, 0, 0, time.UTC),
 		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),

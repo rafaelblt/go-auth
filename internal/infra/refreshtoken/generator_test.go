@@ -28,7 +28,7 @@ func TestGenerator_ReturnsDifferentResults(t *testing.T) {
 		generated, err := g.Generate()
 		require.NoError(t, err)
 		raws.Add(generated.Raw)
-		hashes.Add(generated.Hash.Value())
+		hashes.Add(string(generated.Hash.Value()))
 	}
 
 	assert.Equal(t, total, raws.Len())

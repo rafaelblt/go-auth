@@ -13,7 +13,7 @@ func MustAccessToken(t *testing.T, value string) session.AccessToken {
 	return token
 }
 
-func MustRefreshTokenHash(t *testing.T, value string) session.RefreshTokenHash {
+func MustRefreshTokenHash(t *testing.T, value []byte) session.RefreshTokenHash {
 	hash, err := session.NewRefreshTokenHash(value)
 	require.NoError(t, err)
 	return hash

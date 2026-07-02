@@ -20,7 +20,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 			desc: "session id zero",
 			params: RefreshTokenCreationParams{
 				SessionID: SessionID{},
-				Hash:      RefreshTokenHash{value: "hash"},
+				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
 				IssuedAt:  time.Now(),
 				ExpiresAt: time.Now(),
@@ -42,7 +42,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 			desc: "parent id zero",
 			params: RefreshTokenCreationParams{
 				SessionID: NewSessionID(),
-				Hash:      RefreshTokenHash{value: "hash"},
+				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(RefreshTokenID{}),
 				IssuedAt:  time.Now(),
 				ExpiresAt: time.Now(),
@@ -53,7 +53,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 			desc: "issued at after expires at",
 			params: RefreshTokenCreationParams{
 				SessionID: NewSessionID(),
-				Hash:      RefreshTokenHash{value: "hash"},
+				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
 				IssuedAt:  time.Now().Add(time.Minute),
 				ExpiresAt: time.Now(),
@@ -64,7 +64,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 			desc: "valid case",
 			params: RefreshTokenCreationParams{
 				SessionID: NewSessionID(),
-				Hash:      RefreshTokenHash{value: "hash"},
+				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
 				IssuedAt:  time.Now(),
 				ExpiresAt: time.Now(),
@@ -90,7 +90,7 @@ func TestNewRefreshToken_CopyParentID(t *testing.T) {
 	providedPID := shared.Ptr(NewRefreshTokenID())
 	token, err := NewRefreshToken(RefreshTokenCreationParams{
 		SessionID: NewSessionID(),
-		Hash:      RefreshTokenHash{value: "hash"},
+		Hash:      RefreshTokenHash{value: []byte{1}},
 		ParentID:  providedPID,
 		IssuedAt:  time.Now(),
 		ExpiresAt: time.Now(),
