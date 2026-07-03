@@ -18,16 +18,16 @@ func TestNewSession(t *testing.T) {
 		{
 			desc: "user id zero",
 			params: SessionCreationParams{
-				UserID:   user.ID{},
-				IssuedAt: time.Now(),
+				UserID:    user.ID{},
+				CreatedAt: time.Now(),
 			},
 			expectErr: true,
 		},
 		{
 			desc: "valid case",
 			params: SessionCreationParams{
-				UserID:   user.NewID(),
-				IssuedAt: time.Now(),
+				UserID:    user.NewID(),
+				CreatedAt: time.Now(),
 			},
 			expectErr: false,
 		},
@@ -42,7 +42,7 @@ func TestNewSession(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.Equal(t, tC.params.UserID, token.UserID())
-			assert.Equal(t, tC.params.IssuedAt, token.IssuedAt())
+			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
 		})
 	}
 }

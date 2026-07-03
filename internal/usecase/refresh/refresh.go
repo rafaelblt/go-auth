@@ -201,7 +201,7 @@ func (uc *Refresh) createToken(
 		SessionID: sessionID,
 		Hash:      hash,
 		ParentID:  &parentID,
-		IssuedAt:  now,
+		CreatedAt: now,
 		ExpiresAt: now.Add(uc.refreshTTL),
 	})
 	if err != nil {

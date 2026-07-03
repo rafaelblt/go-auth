@@ -74,8 +74,8 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	now := uc.clock.Now()
 
 	sess, err := session.NewSession(session.SessionCreationParams{
-		UserID:   user.ID(),
-		IssuedAt: now,
+		UserID:    user.ID(),
+		CreatedAt: now,
 	})
 	if err != nil {
 		return Output{}, fmt.Errorf("session creation failed: %w", err)
@@ -97,7 +97,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		SessionID: sess.ID(),
 		Hash:      generatedRefresh.Hash,
 		ParentID:  nil,
-		IssuedAt:  now,
+		CreatedAt: now,
 		ExpiresAt: now.Add(uc.refreshTTL),
 	})
 	if err != nil {

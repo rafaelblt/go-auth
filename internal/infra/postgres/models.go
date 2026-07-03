@@ -27,7 +27,7 @@ type credentialModel struct {
 type sessionModel struct {
 	ID        string     `db:"id"`
 	UserID    string     `db:"user_id"`
-	IssuedAt  time.Time  `db:"issued_at"`
+	CreatedAt time.Time  `db:"created_at"`
 	RevokedAt *time.Time `db:"revoked_at"`
 }
 
@@ -51,7 +51,7 @@ func mapSessionToModel(sess *session.Session) (sessionModel, error) {
 
 	id := sess.ID().String()
 	userID := sess.UserID().String()
-	issuedAt := sess.IssuedAt()
+	createdAt := sess.CreatedAt()
 	var revokedAtPtr *time.Time
 
 	revokedAt, ok := sess.RevokedAt()
@@ -62,7 +62,7 @@ func mapSessionToModel(sess *session.Session) (sessionModel, error) {
 	model := sessionModel{
 		ID:        id,
 		UserID:    userID,
-		IssuedAt:  issuedAt,
+		CreatedAt: createdAt,
 		RevokedAt: revokedAtPtr,
 	}
 
@@ -82,7 +82,7 @@ func mapSessionToEntity(model sessionModel) (*session.Session, error) {
 	sess, err := session.RestoreSession(session.SessionRestoreParams{
 		ID:        id,
 		UserID:    userID,
-		IssuedAt:  model.IssuedAt,
+		CreatedAt: model.CreatedAt,
 		RevokedAt: model.RevokedAt,
 	})
 	if err != nil {

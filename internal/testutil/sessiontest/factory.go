@@ -15,7 +15,7 @@ func NewSession(t *testing.T, override func(p *session.SessionRestoreParams)) *s
 	params := session.SessionRestoreParams{
 		ID:        session.NewSessionID(),
 		UserID:    user.NewID(),
-		IssuedAt:  time.Date(1969, 7, 20, 0, 0, 0, 0, time.UTC),
+		CreatedAt: time.Date(1969, 7, 20, 0, 0, 0, 0, time.UTC),
 		RevokedAt: nil,
 	}
 

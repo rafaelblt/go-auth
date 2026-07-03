@@ -40,7 +40,7 @@ func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
 	require.NotZero(t, sess, "session zero")
 
 	sql := `INSERT INTO sessions
-			(id, user_id, issued_at, revoked_at)
+			(id, user_id, created_at, revoked_at)
 			VALUES ($1, $2, $3, $4)`
 
 	var revokedAt *time.Time
@@ -51,7 +51,7 @@ func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
 	_, err := db.Exec(t.Context(), sql,
 		sess.ID().Value(),
 		sess.UserID().String(),
-		sess.IssuedAt(),
+		sess.CreatedAt(),
 		revokedAt,
 	)
 

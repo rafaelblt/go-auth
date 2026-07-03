@@ -150,7 +150,7 @@ func TestLogin_ShouldSaveSession(t *testing.T) {
 	require.NoError(t, err)
 
 	sess := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Adds())
-	assert.Equal(t, helper.FakeClock.Now(), sess.IssuedAt())
+	assert.Equal(t, helper.FakeClock.Now(), sess.CreatedAt())
 }
 
 func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
@@ -166,6 +166,6 @@ func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
 	assert.Equal(t, sess.ID(), token.SessionID())
 	assert.Equal(t, generated.Hash, token.Hash())
 	assert.False(t, token.HasParent())
-	assert.Equal(t, helper.FakeClock.Now(), token.IssuedAt())
+	assert.Equal(t, helper.FakeClock.Now(), token.CreatedAt())
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), token.ExpiresAt())
 }

@@ -3,7 +3,7 @@ CREATE TABLE sessions (
     user_id UUID NOT NULL
         REFERENCES users(id)
         ON DELETE CASCADE,
-    issued_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
     revoked_at TIMESTAMPTZ NULL
 );
 

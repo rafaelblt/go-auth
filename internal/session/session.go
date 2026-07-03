@@ -27,19 +27,19 @@ func ParseSessionID(value string) (SessionID, error) {
 type Session struct {
 	id        SessionID
 	userID    user.ID
-	issuedAt  time.Time
+	createdAt time.Time
 	revokedAt *time.Time
 }
 
 type SessionCreationParams struct {
-	UserID   user.ID
-	IssuedAt time.Time
+	UserID    user.ID
+	CreatedAt time.Time
 }
 
 type SessionRestoreParams struct {
 	ID        SessionID
 	UserID    user.ID
-	IssuedAt  time.Time
+	CreatedAt time.Time
 	RevokedAt *time.Time
 }
 
@@ -48,9 +48,9 @@ func NewSession(params SessionCreationParams) (*Session, error) {
 		return nil, errors.New("user id cannot be zero")
 	}
 	session := Session{
-		id:       NewSessionID(),
-		userID:   params.UserID,
-		issuedAt: params.IssuedAt,
+		id:        NewSessionID(),
+		userID:    params.UserID,
+		createdAt: params.CreatedAt,
 	}
 	return &session, nil
 }
@@ -66,15 +66,15 @@ func RestoreSession(params SessionRestoreParams) (*Session, error) {
 	session := Session{
 		id:        params.ID,
 		userID:    params.UserID,
-		issuedAt:  params.IssuedAt,
+		createdAt: params.CreatedAt,
 		revokedAt: revokedAt,
 	}
 	return &session, nil
 }
 
-func (s Session) ID() SessionID       { return s.id }
-func (s Session) UserID() user.ID     { return s.userID }
-func (s Session) IssuedAt() time.Time { return s.issuedAt }
+func (s Session) ID() SessionID        { return s.id }
+func (s Session) UserID() user.ID      { return s.userID }
+func (s Session) CreatedAt() time.Time { return s.createdAt }
 
 func (s Session) RevokedAt() (time.Time, bool) {
 	if s.revokedAt == nil {
