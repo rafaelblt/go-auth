@@ -3,7 +3,10 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -11,6 +14,16 @@ func NewPool(ctx context.Context, conn string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(conn)
 	if err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
+	}
+
+	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
+	cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "timestamptz",
+			OID:   pgtype.TimestamptzOID,
+			Codec: &pgtype.TimestamptzCodec{ScanLocation: time.UTC},
+		})
+		return nil
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
