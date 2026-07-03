@@ -56,6 +56,8 @@ func (helper *SessionRepoTestHelper) GetSession() *session.Session {
 }
 
 func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) bool {
+	helper.t.Helper()
+
 	var result bool
 
 	var revokedAtPtr *time.Time
@@ -69,12 +71,12 @@ func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) b
 			SELECT 1 FROM sessions WHERE
 			id=$1 AND
 			user_id=$2 AND
-			issued_at=$3 AND
+			created_at=$3 AND
 			revoked_at IS NOT DISTINCT FROM $4
 		)`,
 		sess.ID().Value(),
 		sess.UserID().Value(),
-		sess.IssuedAt(),
+		sess.CreatedAt(),
 		revokedAtPtr,
 	).Scan(&result)
 	require.NoError(helper.t, err)
@@ -98,7 +100,7 @@ func TestNewSessionRepo_WithValidDB(t *testing.T) {
 	assert.NotNil(t, uow)
 }
 
-func TestSessionRepo_Save(t *testing.T) {
+func TestSessionRepo_Add(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
 
 	usr := usertest.NewUser(t, nil)
@@ -157,10 +159,10 @@ func TestSessionRepo_FindByID_ReturnsSession_WhenIDExists(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, found)
-	assert.Equal(t, found.ID(), sess.ID())
-	assert.Equal(t, found.UserID(), sess.UserID())
-	assert.Equal(t, found.IssuedAt(), sess.IssuedAt())
+	assert.Equal(t, sess.ID(), found.ID())
+	assert.Equal(t, sess.UserID(), found.UserID())
+	assert.Equal(t, sess.CreatedAt(), found.CreatedAt())
 	actualRevokedAt, _ := found.RevokedAt()
 	expectedRevokedAt, _ := sess.RevokedAt()
-	assert.Equal(t, actualRevokedAt, expectedRevokedAt)
+	assert.Equal(t, expectedRevokedAt, actualRevokedAt)
 }
