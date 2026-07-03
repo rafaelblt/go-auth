@@ -36,14 +36,23 @@ func (helper *SessionRepoTestHelper) Repo() *postgres.SessionRepo {
 	return repo
 }
 
-func (helper *SessionRepoTestHelper) SaveUser(usr *user.User) {
+func (helper *SessionRepoTestHelper) AddUser(usr *user.User) {
 	helper.t.Helper()
 	postgrestest.InsertUser(helper.t, helper.db, usr)
 }
 
-func (helper *SessionRepoTestHelper) SaveSession(sess *session.Session) {
+func (helper *SessionRepoTestHelper) GetSession() *session.Session {
 	helper.t.Helper()
+
+	usr := usertest.NewUser(helper.t, nil)
+	postgrestest.InsertUser(helper.t, helper.db, usr)
+
+	sess := sessiontest.NewSession(helper.t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
 	postgrestest.InsertSession(helper.t, helper.db, sess)
+
+	return sess
 }
 
 func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) bool {
@@ -93,14 +102,13 @@ func TestSessionRepo_Save(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
 
 	usr := usertest.NewUser(t, nil)
-	helper.SaveUser(usr)
-
+	helper.AddUser(usr)
 	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
 		p.UserID = usr.ID()
 	})
 
 	repo := helper.Repo()
-	err := repo.Add(context.Background(), sess)
+	err := repo.Add(t.Context(), sess)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckSessionExists(sess))
@@ -109,18 +117,11 @@ func TestSessionRepo_Save(t *testing.T) {
 func TestSessionRepo_Update(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
 
-	usr := usertest.NewUser(t, nil)
-	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
-		p.UserID = usr.ID()
-	})
-
-	helper.SaveUser(usr)
-	helper.SaveSession(sess)
-
+	sess := helper.GetSession()
 	sess.Revoke(time.Now().UTC())
 
 	repo := helper.Repo()
-	err := repo.Update(context.Background(), sess)
+	err := repo.Update(t.Context(), sess)
 
 	require.NoError(t, err)
 	require.True(t, helper.CheckSessionExists(sess))
@@ -132,9 +133,34 @@ func TestSessionRepo_Update_FailsWithSessionNonExistent(t *testing.T) {
 	sess := sessiontest.NewSession(t, nil)
 
 	repo := helper.Repo()
-	err := repo.Update(context.Background(), sess)
+	err := repo.Update(t.Context(), sess)
 
 	require.Error(t, err)
 }
 
-// TODO: FindByID
+func TestSessionRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	repo := helper.Repo()
+
+	usr, err := repo.FindByID(t.Context(), session.NewSessionID())
+
+	assert.NoError(t, err)
+	assert.Nil(t, usr)
+}
+
+func TestSessionRepo_FindByID_ReturnsSession_WhenIDExists(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := helper.GetSession()
+
+	repo := helper.Repo()
+	found, err := repo.FindByID(t.Context(), sess.ID())
+
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, found.ID(), sess.ID())
+	assert.Equal(t, found.UserID(), sess.UserID())
+	assert.Equal(t, found.IssuedAt(), sess.IssuedAt())
+	actualRevokedAt, _ := found.RevokedAt()
+	expectedRevokedAt, _ := sess.RevokedAt()
+	assert.Equal(t, actualRevokedAt, expectedRevokedAt)
+}
