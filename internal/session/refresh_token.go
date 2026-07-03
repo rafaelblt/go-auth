@@ -28,7 +28,7 @@ type RefreshToken struct {
 	sessionID SessionID
 	hash      RefreshTokenHash
 	parentID  *RefreshTokenID
-	issuedAt  time.Time
+	createdAt time.Time
 	expiresAt time.Time
 	usedAt    *time.Time
 }
@@ -37,7 +37,7 @@ type RefreshTokenCreationParams struct {
 	SessionID SessionID
 	Hash      RefreshTokenHash
 	ParentID  *RefreshTokenID
-	IssuedAt  time.Time
+	CreatedAt time.Time
 	ExpiresAt time.Time
 }
 
@@ -46,7 +46,7 @@ type RefreshTokenRestoreParams struct {
 	SessionID SessionID
 	Hash      RefreshTokenHash
 	ParentID  *RefreshTokenID
-	IssuedAt  time.Time
+	CreatedAt time.Time
 	ExpiresAt time.Time
 	UsedAt    *time.Time
 }
@@ -61,15 +61,15 @@ func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
 	if params.ParentID != nil && params.ParentID.IsZero() {
 		return nil, errors.New("parent id zero")
 	}
-	if params.IssuedAt.After(params.ExpiresAt) {
-		return nil, errors.New("issued at after expires at")
+	if params.CreatedAt.After(params.ExpiresAt) {
+		return nil, errors.New("created at after expires at")
 	}
 	token := RefreshToken{
 		id:        NewRefreshTokenID(),
 		sessionID: params.SessionID,
 		hash:      params.Hash,
 		parentID:  shared.ClonePtr(params.ParentID),
-		issuedAt:  params.IssuedAt,
+		createdAt: params.CreatedAt,
 		expiresAt: params.ExpiresAt,
 	}
 	return &token, nil
@@ -93,7 +93,7 @@ func RestoreRefreshToken(params RefreshTokenRestoreParams) (*RefreshToken, error
 		sessionID: params.SessionID,
 		hash:      params.Hash,
 		parentID:  shared.ClonePtr(params.ParentID),
-		issuedAt:  params.IssuedAt,
+		createdAt: params.CreatedAt,
 		expiresAt: params.ExpiresAt,
 		usedAt:    shared.ClonePtr(params.UsedAt),
 	}
@@ -103,7 +103,7 @@ func RestoreRefreshToken(params RefreshTokenRestoreParams) (*RefreshToken, error
 func (t RefreshToken) ID() RefreshTokenID     { return t.id }
 func (t RefreshToken) SessionID() SessionID   { return t.sessionID }
 func (t RefreshToken) Hash() RefreshTokenHash { return t.hash }
-func (t RefreshToken) IssuedAt() time.Time    { return t.issuedAt }
+func (t RefreshToken) CreatedAt() time.Time   { return t.createdAt }
 func (t RefreshToken) ExpiresAt() time.Time   { return t.expiresAt }
 
 func (t RefreshToken) ParentID() (RefreshTokenID, bool) {
@@ -120,7 +120,7 @@ func (t RefreshToken) UsedAt() (time.Time, bool) {
 	return *t.usedAt, true
 }
 
-func (t RefreshToken) IsZero() bool  {
+func (t RefreshToken) IsZero() bool {
 	return t.id.IsZero()
 }
 

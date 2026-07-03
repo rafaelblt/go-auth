@@ -75,7 +75,7 @@ func (helper *RefreshTokenRepoTestHelper) CheckRefreshTokenIsSaved(token *sessio
 			session_id=$2 AND
 			parent_id IS NOT DISTINCT FROM $3 AND
 			hash=$4 AND
-			issued_at=$5 AND
+			created_at=$5 AND
 			expires_at=$6 AND
 			used_at IS NOT DISTINCT FROM $7
 		)`,
@@ -83,7 +83,7 @@ func (helper *RefreshTokenRepoTestHelper) CheckRefreshTokenIsSaved(token *sessio
 		token.SessionID().Value(),
 		parentIDPtr,
 		token.Hash().Value(),
-		token.IssuedAt(),
+		token.CreatedAt(),
 		token.ExpiresAt(),
 		usedAtPtr,
 	).Scan(&result)
@@ -108,7 +108,7 @@ func TestNewRefreshTokenRepo_WithValidDB(t *testing.T) {
 	assert.NotNil(t, uow)
 }
 
-func TestRefreshTokenRepo_Save(t *testing.T) {
+func TestRefreshTokenRepo_Add(t *testing.T) {
 	helper := NewRefreshTokenRepoTestHelper(t)
 
 	sess := sessiontest.NewSession(t, nil)

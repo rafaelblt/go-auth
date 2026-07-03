@@ -1,13 +1,20 @@
 package postgres
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"time"
 
-type model struct {
+	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/user"
+)
+
+type Model struct {
 	ID string `db:"id"`
 }
 
 type userModel struct {
-	model
+	ID        string    `db:"id"`
 	Username  string    `db:"username"`
 	Status    string    `db:"status"`
 	CreatedAt time.Time `db:"created_at"`
@@ -15,7 +22,7 @@ type userModel struct {
 }
 
 type credentialModel struct {
-	model
+	ID        string    `db:"id"`
 	UserID    string    `db:"user_id"`
 	Kind      string    `db:"kind"`
 	Provider  string    `db:"provider"`
@@ -32,11 +39,11 @@ type sessionModel struct {
 }
 
 type refreshTokenModel struct {
-	model
+	ID        string     `db:"id"`
 	SessionID string     `db:"session_id"`
 	ParentID  *string    `db:"parent_id"`
 	Hash      []byte     `db:"hash"`
-	IssuedAt  time.Time  `db:"issued_at"`
+	CreatedAt time.Time  `db:"created_at"`
 	ExpiresAt time.Time  `db:"expires_at"`
 	UsedAt    *time.Time `db:"used_at"`
 }
@@ -92,3 +99,84 @@ func mapSessionToEntity(model sessionModel) (*session.Session, error) {
 	return sess, nil
 }
 
+func mapRefreshTokenToModel(token *session.RefreshToken) (refreshTokenModel, error) {
+	if token == nil {
+		return refreshTokenModel{}, errors.New("refresh token nil")
+	}
+	if token.IsZero() {
+		return refreshTokenModel{}, errors.New("refresh token zero")
+	}
+
+	id := token.ID().String()
+	sessionID := token.SessionID().String()
+	hash := token.Hash().Value()
+	createdAt := token.CreatedAt()
+	expiresAt := token.ExpiresAt()
+
+	var parentID *string
+	var usedAt *time.Time
+
+	pID, ok := token.ParentID()
+	if ok {
+		id := pID.String()
+		parentID = &id
+	}
+
+	uAt, ok := token.UsedAt()
+	if ok {
+		usedAt = &uAt
+	}
+
+	model := refreshTokenModel{
+		ID:        id,
+		SessionID: sessionID,
+		ParentID:  parentID,
+		Hash:      hash,
+		CreatedAt: createdAt,
+		ExpiresAt: expiresAt,
+		UsedAt:    usedAt,
+	}
+
+	return model, nil
+}
+
+func mapRefreshTokenToEntity(model refreshTokenModel) (*session.RefreshToken, error) {
+	id, err := session.ParseRefreshTokenID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse refresh token id failed: %w", err)
+	}
+
+	sessionID, err := session.ParseSessionID(model.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("parse session id failed: %w", err)
+	}
+
+	hash, err := session.NewRefreshTokenHash(model.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("new refresh token hash failed: %w", err)
+	}
+
+	var parentID *session.RefreshTokenID
+	if model.ParentID != nil {
+		pID, err := session.ParseRefreshTokenID(*model.ParentID)
+		if err != nil {
+			return nil, fmt.Errorf("parse parent token id failed: %w", err)
+		}
+		parentID = &pID
+	}
+
+	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
+		ID:        id,
+		SessionID: sessionID,
+		Hash:      hash,
+		ParentID:  parentID,
+		CreatedAt: model.CreatedAt,
+		ExpiresAt: model.ExpiresAt,
+		UsedAt:    model.UsedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore refresh token failed: %w", err)
+	}
+
+	return token, nil
+}

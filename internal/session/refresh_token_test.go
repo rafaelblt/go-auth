@@ -22,7 +22,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				SessionID: SessionID{},
 				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
-				IssuedAt:  time.Now(),
+				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
 			},
 			expectErr: true,
@@ -33,7 +33,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				SessionID: NewSessionID(),
 				Hash:      RefreshTokenHash{},
 				ParentID:  nil,
-				IssuedAt:  time.Now(),
+				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
 			},
 			expectErr: true,
@@ -44,7 +44,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				SessionID: NewSessionID(),
 				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(RefreshTokenID{}),
-				IssuedAt:  time.Now(),
+				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
 			},
 			expectErr: true,
@@ -55,7 +55,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				SessionID: NewSessionID(),
 				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
-				IssuedAt:  time.Now().Add(time.Minute),
+				CreatedAt: time.Now().Add(time.Minute),
 				ExpiresAt: time.Now(),
 			},
 			expectErr: true,
@@ -66,7 +66,7 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				SessionID: NewSessionID(),
 				Hash:      RefreshTokenHash{value: []byte{1}},
 				ParentID:  shared.Ptr(NewRefreshTokenID()),
-				IssuedAt:  time.Now(),
+				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
 			},
 			expectErr: false,
@@ -92,11 +92,11 @@ func TestNewRefreshToken_CopyParentID(t *testing.T) {
 		SessionID: NewSessionID(),
 		Hash:      RefreshTokenHash{value: []byte{1}},
 		ParentID:  providedPID,
-		IssuedAt:  time.Now(),
+		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
 	})
 	require.NoError(t, err)
-	
+
 	pid, ok := token.ParentID()
 	require.True(t, ok)
 	assert.Equal(t, *providedPID, pid)

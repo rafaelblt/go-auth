@@ -7,7 +7,7 @@ CREATE TABLE refresh_tokens (
         REFERENCES refresh_tokens(id)
         ON DELETE SET NULL,
     hash BYTEA UNIQUE NOT NULL,
-    issued_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     used_at TIMESTAMPTZ NULL
 );
