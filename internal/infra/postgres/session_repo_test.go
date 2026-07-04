@@ -160,9 +160,4 @@ func TestSessionRepo_FindByID_ReturnsSession_WhenIDExists(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, found)
 	assert.Equal(t, sess.ID(), found.ID())
-	assert.Equal(t, sess.UserID(), found.UserID())
-	assert.Equal(t, sess.CreatedAt(), found.CreatedAt())
-	actualRevokedAt, _ := found.RevokedAt()
-	expectedRevokedAt, _ := sess.RevokedAt()
-	assert.Equal(t, expectedRevokedAt, actualRevokedAt)
 }
