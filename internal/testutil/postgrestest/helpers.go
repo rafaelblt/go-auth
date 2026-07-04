@@ -6,6 +6,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/require"
 )
@@ -56,4 +57,40 @@ func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
 	)
 
 	require.NoError(t, err, "session insert failed")
+}
+
+func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToken) {
+	t.Helper()
+
+	require.NotNil(t, db, "db nil")
+	require.NotNil(t, token, "refresh token nil")
+	require.NotZero(t, token, "refresh token zero")
+
+	var parentID *string
+	pID, ok := token.ParentID()
+	if ok {
+		parentID = shared.Ptr(pID.String())
+	}
+
+	var usedAt *time.Time
+	uAt, ok := token.UsedAt()
+	if ok {
+		usedAt = &uAt
+	}
+
+	sql := `INSERT INTO refresh_tokens
+			(id, session_id, parent_id, hash, created_at, expires_at, used_at)
+			VALUES
+			($1, $2, $3, $4, $5, $6, $7)`
+	_, err := db.Exec(t.Context(), sql,
+		token.ID().String(),
+		token.SessionID().String(),
+		parentID,
+		token.Hash().Value(),
+		token.CreatedAt(),
+		token.ExpiresAt(),
+		usedAt,
+	)
+
+	require.NoError(t, err, "refresh token insert failed")
 }
