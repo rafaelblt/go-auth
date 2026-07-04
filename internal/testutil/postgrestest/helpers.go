@@ -13,7 +13,7 @@ import (
 func InsertUser(t *testing.T, db postgres.DB, usr *user.User) {
 	t.Helper()
 
-	require.NotNil(t, usr, "db nil")
+	require.NotNil(t, db, "db nil")
 	require.NotNil(t, usr, "user nil")
 	require.NotZero(t, usr, "user zero")
 
@@ -35,7 +35,7 @@ func InsertUser(t *testing.T, db postgres.DB, usr *user.User) {
 func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
 	t.Helper()
 
-	require.NotNil(t, sess, "db nil")
+	require.NotNil(t, db, "db nil")
 	require.NotNil(t, sess, "session nil")
 	require.NotZero(t, sess, "session zero")
 
