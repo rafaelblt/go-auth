@@ -89,7 +89,7 @@ func RestoreRefreshToken(params RefreshTokenRestoreParams) (*RefreshToken, error
 		return nil, errors.New("parent id zero")
 	}
 	token := RefreshToken{
-		id:        NewRefreshTokenID(),
+		id:        params.ID,
 		sessionID: params.SessionID,
 		hash:      params.Hash,
 		parentID:  shared.ClonePtr(params.ParentID),
