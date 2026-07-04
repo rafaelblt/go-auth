@@ -1,15 +1,14 @@
 package postgres_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
-	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,60 +34,43 @@ func (helper *RefreshTokenRepoTestHelper) Repo() *postgres.RefreshTokenRepo {
 	return repo
 }
 
-func (helper *RefreshTokenRepoTestHelper) SaveSession(sess *session.Session) {
+func (helper *RefreshTokenRepoTestHelper) PersistentSession() *session.Session {
 	helper.t.Helper()
 
-	userRepo, err := postgres.NewUserRepo(helper.db)
-	require.NoError(helper.t, err)
+	usr := usertest.NewUser(helper.t, nil)
+	postgrestest.InsertUser(helper.t, helper.db, usr)
 
-	sessRepo, err := postgres.NewSessionRepo(helper.db)
-	require.NoError(helper.t, err)
-
-	usr := usertest.NewUser(helper.t, func(p *user.RestoreParams) {
-		p.ID = sess.UserID()
+	sess := sessiontest.NewSession(helper.t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
 	})
-	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
+	postgrestest.InsertSession(helper.t, helper.db, sess)
 
-	require.NoError(helper.t, sessRepo.Add(context.Background(), sess))
+	return sess
 }
 
-func (helper *RefreshTokenRepoTestHelper) CheckRefreshTokenIsSaved(token *session.RefreshToken) bool {
-	var result bool
+func (helper *RefreshTokenRepoTestHelper) PersistentRefreshToken() *session.RefreshToken {
+	helper.t.Helper()
 
-	var parentIDPtr *string
-	parentID, ok := token.ParentID()
-	if ok {
-		idString := parentID.String()
-		parentIDPtr = &idString
-	}
+	usr := usertest.NewUser(helper.t, nil)
+	postgrestest.InsertUser(helper.t, helper.db, usr)
 
-	var usedAtPtr *time.Time
-	usedAt, ok := token.UsedAt()
-	if ok {
-		usedAtPtr = &usedAt
-	}
+	sess := sessiontest.NewSession(helper.t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
+	postgrestest.InsertSession(helper.t, helper.db, sess)
 
-	err := helper.db.QueryRow(context.Background(),
-		`SELECT EXISTS(
-			SELECT 1 FROM refresh_tokens WHERE
-			id=$1 AND
-			session_id=$2 AND
-			parent_id IS NOT DISTINCT FROM $3 AND
-			hash=$4 AND
-			created_at=$5 AND
-			expires_at=$6 AND
-			used_at IS NOT DISTINCT FROM $7
-		)`,
-		token.ID().Value(),
-		token.SessionID().Value(),
-		parentIDPtr,
-		token.Hash().Value(),
-		token.CreatedAt(),
-		token.ExpiresAt(),
-		usedAtPtr,
-	).Scan(&result)
-	require.NoError(helper.t, err)
-	return result
+	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
+		p.SessionID = sess.ID()
+		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
+	})
+	postgrestest.InsertRefreshToken(helper.t, helper.db, token)
+
+	return token
+}
+
+func (helper *RefreshTokenRepoTestHelper) CheckRefreshTokenExists(token *session.RefreshToken) bool {
+	helper.t.Helper()
+	return postgrestest.CheckRefreshTokenExists(helper.t, helper.db, token)
 }
 
 // TESTS
@@ -110,20 +92,60 @@ func TestNewRefreshTokenRepo_WithValidDB(t *testing.T) {
 
 func TestRefreshTokenRepo_Add(t *testing.T) {
 	helper := NewRefreshTokenRepoTestHelper(t)
-
-	sess := sessiontest.NewSession(t, nil)
-	helper.SaveSession(sess)
-
+	sess := helper.PersistentSession()
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
 		p.SessionID = sess.ID()
 	})
 
 	repo := helper.Repo()
-	err := repo.Add(context.Background(), token)
+	err := repo.Add(t.Context(), token)
 
-	require.NoError(t, err)
-	require.True(t, helper.CheckRefreshTokenIsSaved(token))
+	assert.NoError(t, err)
+	assert.True(t, helper.CheckRefreshTokenExists(token))
 }
 
-// TODO: Update
-// TODO: FindByHash
+func TestRefreshTokenRepo_Update(t *testing.T) {
+	helper := NewRefreshTokenRepoTestHelper(t)
+	token := helper.PersistentRefreshToken()
+	require.NoError(t, token.Use(time.Now().UTC()))
+
+	repo := helper.Repo()
+	err := repo.Update(t.Context(), token)
+
+	require.NoError(t, err)
+	require.True(t, helper.CheckRefreshTokenExists(token))
+}
+
+func TestRefreshTokenRepo_Update_FailsWithTokenNonExistent(t *testing.T) {
+	helper := NewRefreshTokenRepoTestHelper(t)
+	token := sessiontest.NewRefreshToken(t, nil)
+
+	repo := helper.Repo()
+	err := repo.Update(t.Context(), token)
+
+	require.Error(t, err)
+}
+
+func TestRefreshTokenRepo_FindByHash_ReturnsNil_WhenIDNotExists(t *testing.T) {
+	helper := NewRefreshTokenRepoTestHelper(t)
+	repo := helper.Repo()
+
+	hash := sessiontest.MustRefreshTokenHash(helper.t, []byte{6, 7})
+	usr, err := repo.FindByHash(t.Context(), hash)
+
+	assert.NoError(t, err)
+	assert.Nil(t, usr)
+}
+
+func TestRefreshTokenRepo_FindByHash_ReturnsToken_WhenIDExists(t *testing.T) {
+	helper := NewRefreshTokenRepoTestHelper(t)
+	token := helper.PersistentRefreshToken()
+
+	repo := helper.Repo()
+	found, err := repo.FindByHash(t.Context(), token.Hash())
+
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, token.ID(), found.ID())
+	assert.True(t, token.Hash().Equal(found.Hash()), "token hash is different")
+}

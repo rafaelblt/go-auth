@@ -46,8 +46,8 @@ func (repo *RefreshTokenRepo) Update(ctx context.Context, token *session.Refresh
 	}
 
 	sql := `UPDATE refresh_tokens
-			SET parent_id = @parent_id
-			SET used_at = @used_at
+			SET parent_id = @parent_id,
+				used_at = @used_at
 			WHERE id = @id`
 	tag, err := repo.db.Exec(ctx, sql, pgx.StructArgs(model))
 

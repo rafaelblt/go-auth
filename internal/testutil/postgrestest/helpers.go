@@ -94,3 +94,42 @@ func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToke
 
 	require.NoError(t, err, "refresh token insert failed")
 }
+
+func CheckRefreshTokenExists(t *testing.T, db postgres.DB, token *session.RefreshToken) bool {
+	t.Helper()
+
+	require.NotNil(t, db, "db nil")
+	require.NotNil(t, token, "refresh token nil")
+	require.NotZero(t, token, "refresh token zero")
+	
+	var result bool
+
+	var parentID *string
+	pID, ok := token.ParentID()
+	if ok {
+		parentID = shared.Ptr(pID.String())
+	}
+
+	err := db.QueryRow(t.Context(),
+		`SELECT EXISTS(
+			SELECT 1 FROM refresh_tokens WHERE
+			id=$1 AND
+			session_id=$2 AND
+			parent_id IS NOT DISTINCT FROM $3 AND
+			hash=$4 AND
+			created_at=$5 AND
+			expires_at=$6 AND
+			used_at IS NOT DISTINCT FROM $7
+		)`,
+		token.ID().Value(),
+		token.SessionID().Value(),
+		parentID,
+		token.Hash().Value(),
+		token.CreatedAt(),
+		token.ExpiresAt(),
+		shared.PtrFromOk(token.UsedAt()),
+	).Scan(&result)
+	require.NoError(t, err, "db query row failed")
+	
+	return result
+}
