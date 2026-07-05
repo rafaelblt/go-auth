@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/user"
 )
 
@@ -48,20 +50,126 @@ type refreshTokenModel struct {
 	UsedAt    *time.Time `db:"used_at"`
 }
 
-func mapSessionToModel(sess *session.Session) (sessionModel, error) {
-	if sess == nil {
+func mapUserToModel(entity *user.User) (userModel, error) {
+	if entity == nil {
+		return userModel{}, errors.New("user nil")
+	}
+	if entity.IsZero() {
+		return userModel{}, errors.New("user zero")
+	}
+
+	model := userModel{
+		ID:        entity.ID().String(),
+		Username:  entity.Username().String(),
+		Status:    entity.Status().String(),
+		CreatedAt: entity.CreatedAt(),
+		UpdatedAt: entity.UpdatedAt(),
+	}
+
+	return model, nil
+}
+
+func mapUserToEntity(model userModel) (*user.User, error) {
+	id, err := user.ParseID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id failed: %w", err)
+	}
+	username, err := user.NewUsername(model.Username)
+	if err != nil {
+		return nil, fmt.Errorf("username creation failed: %w", err)
+	}
+	status, err := user.ParseStatus(model.Status)
+	if err != nil {
+		return nil, fmt.Errorf("parse user status failed: %w", err)
+	}
+
+	usr, err := user.RestoreUser(user.RestoreParams{
+		ID:        id,
+		Username:  username,
+		Status:    status,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore user failed: %w", err)
+	}
+
+	return usr, nil
+}
+
+func mapCredentialToModel(entity *credential.Credential) (credentialModel, error) {
+	if entity == nil {
+		return credentialModel{}, errors.New("credential nil")
+	}
+	if entity.IsZero() {
+		return credentialModel{}, errors.New("credential zero")
+	}
+
+	model := credentialModel{
+		ID:        entity.ID().String(),
+		UserID:    entity.UserID().String(),
+		Kind:      entity.Kind().String(),
+		Provider:  entity.Provider().String(),
+		Secret:    entity.Secret().Value(),
+		CreatedAt: entity.CreatedAt(),
+		UpdatedAt: entity.UpdatedAt(),
+	}
+
+	return model, nil
+}
+
+func mapCredentialToEntity(model credentialModel) (*credential.Credential, error) {
+	id, err := credential.ParseID(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("parse credential id failed: %w", err)
+	}
+	userID, err := user.ParseID(model.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id failed: %w", err)
+	}
+	kind, err := credential.ParseKind(model.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("parse credential kind failed: %w", err)
+	}
+	provider, err := credential.ParseProvider(model.Provider)
+	if err != nil {
+		return nil, fmt.Errorf("parse credential provider failed: %w", err)
+	}
+	secret, err := credential.NewSecret(model.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("new credential secret failed: %w", err)
+	}
+
+	cred, err := credential.RestoreCredential(credential.RestoreParams{
+		ID:        id,
+		UserID:    userID,
+		Kind:      kind,
+		Provider:  provider,
+		Secret:    secret,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore credential failed: %w", err)
+	}
+
+	return cred, nil
+}
+
+func mapSessionToModel(entity *session.Session) (sessionModel, error) {
+	if entity == nil {
 		return sessionModel{}, errors.New("session nil")
 	}
-	if sess.IsZero() {
+	if entity.IsZero() {
 		return sessionModel{}, errors.New("session zero")
 	}
 
-	id := sess.ID().String()
-	userID := sess.UserID().String()
-	createdAt := sess.CreatedAt()
+	id := entity.ID().String()
+	userID := entity.UserID().String()
+	createdAt := entity.CreatedAt()
 	var revokedAtPtr *time.Time
 
-	revokedAt, ok := sess.RevokedAt()
+	revokedAt, ok := entity.RevokedAt()
 	if ok {
 		revokedAtPtr = &revokedAt
 	}
@@ -99,32 +207,25 @@ func mapSessionToEntity(model sessionModel) (*session.Session, error) {
 	return sess, nil
 }
 
-func mapRefreshTokenToModel(token *session.RefreshToken) (refreshTokenModel, error) {
-	if token == nil {
+func mapRefreshTokenToModel(entity *session.RefreshToken) (refreshTokenModel, error) {
+	if entity == nil {
 		return refreshTokenModel{}, errors.New("refresh token nil")
 	}
-	if token.IsZero() {
+	if entity.IsZero() {
 		return refreshTokenModel{}, errors.New("refresh token zero")
 	}
 
-	id := token.ID().String()
-	sessionID := token.SessionID().String()
-	hash := token.Hash().Value()
-	createdAt := token.CreatedAt()
-	expiresAt := token.ExpiresAt()
+	id := entity.ID().String()
+	sessionID := entity.SessionID().String()
+	hash := entity.Hash().Value()
+	createdAt := entity.CreatedAt()
+	expiresAt := entity.ExpiresAt()
 
 	var parentID *string
-	var usedAt *time.Time
-
-	pID, ok := token.ParentID()
+	pID, ok := entity.ParentID()
 	if ok {
 		id := pID.String()
 		parentID = &id
-	}
-
-	uAt, ok := token.UsedAt()
-	if ok {
-		usedAt = &uAt
 	}
 
 	model := refreshTokenModel{
@@ -134,7 +235,7 @@ func mapRefreshTokenToModel(token *session.RefreshToken) (refreshTokenModel, err
 		Hash:      hash,
 		CreatedAt: createdAt,
 		ExpiresAt: expiresAt,
-		UsedAt:    usedAt,
+		UsedAt:    shared.PtrFromOk(entity.UsedAt()),
 	}
 
 	return model, nil
