@@ -95,13 +95,40 @@ func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToke
 	require.NoError(t, err, "refresh token insert failed")
 }
 
+func CheckSessionExists(t *testing.T, db postgres.DB, sess *session.Session) bool {
+	t.Helper()
+
+	require.NotNil(t, db, "db nil")
+	require.NotNil(t, sess, "session nil")
+	require.NotZero(t, sess, "session zero")
+
+	var result bool
+
+	err := db.QueryRow(t.Context(),
+		`SELECT EXISTS(
+			SELECT 1 FROM sessions WHERE
+			id=$1 AND
+			user_id=$2 AND
+			created_at=$3 AND
+			revoked_at IS NOT DISTINCT FROM $4
+		)`,
+		sess.ID().Value(),
+		sess.UserID().Value(),
+		sess.CreatedAt(),
+		shared.PtrFromOk(sess.RevokedAt()),
+	).Scan(&result)
+	require.NoError(t, err)
+
+	return result
+}
+
 func CheckRefreshTokenExists(t *testing.T, db postgres.DB, token *session.RefreshToken) bool {
 	t.Helper()
 
 	require.NotNil(t, db, "db nil")
 	require.NotNil(t, token, "refresh token nil")
 	require.NotZero(t, token, "refresh token zero")
-	
+
 	var result bool
 
 	var parentID *string

@@ -1,7 +1,6 @@
 package postgres_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -36,12 +35,14 @@ func (helper *SessionRepoTestHelper) Repo() *postgres.SessionRepo {
 	return repo
 }
 
-func (helper *SessionRepoTestHelper) AddUser(usr *user.User) {
+func (helper *SessionRepoTestHelper) PersistentUser() *user.User {
 	helper.t.Helper()
+	usr := usertest.NewUser(helper.t, nil)
 	postgrestest.InsertUser(helper.t, helper.db, usr)
+	return usr
 }
 
-func (helper *SessionRepoTestHelper) GetSession() *session.Session {
+func (helper *SessionRepoTestHelper) PersistentSession() *session.Session {
 	helper.t.Helper()
 
 	usr := usertest.NewUser(helper.t, nil)
@@ -57,30 +58,7 @@ func (helper *SessionRepoTestHelper) GetSession() *session.Session {
 
 func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) bool {
 	helper.t.Helper()
-
-	var result bool
-
-	var revokedAtPtr *time.Time
-	revokedAt, ok := sess.RevokedAt()
-	if ok {
-		revokedAtPtr = &revokedAt
-	}
-
-	err := helper.db.QueryRow(context.Background(),
-		`SELECT EXISTS(
-			SELECT 1 FROM sessions WHERE
-			id=$1 AND
-			user_id=$2 AND
-			created_at=$3 AND
-			revoked_at IS NOT DISTINCT FROM $4
-		)`,
-		sess.ID().Value(),
-		sess.UserID().Value(),
-		sess.CreatedAt(),
-		revokedAtPtr,
-	).Scan(&result)
-	require.NoError(helper.t, err)
-	return result
+	return postgrestest.CheckSessionExists(helper.t, helper.db, sess)
 }
 
 // TESTS
@@ -102,9 +80,7 @@ func TestNewSessionRepo_WithValidDB(t *testing.T) {
 
 func TestSessionRepo_Add(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
-
-	usr := usertest.NewUser(t, nil)
-	helper.AddUser(usr)
+	usr := helper.PersistentUser()
 	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
 		p.UserID = usr.ID()
 	})
@@ -118,8 +94,7 @@ func TestSessionRepo_Add(t *testing.T) {
 
 func TestSessionRepo_Update(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
-
-	sess := helper.GetSession()
+	sess := helper.PersistentSession()
 	sess.Revoke(time.Now().UTC())
 
 	repo := helper.Repo()
@@ -131,7 +106,6 @@ func TestSessionRepo_Update(t *testing.T) {
 
 func TestSessionRepo_Update_FailsWithSessionNonExistent(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
-
 	sess := sessiontest.NewSession(t, nil)
 
 	repo := helper.Repo()
@@ -152,7 +126,7 @@ func TestSessionRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
 
 func TestSessionRepo_FindByID_ReturnsSession_WhenIDExists(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
-	sess := helper.GetSession()
+	sess := helper.PersistentSession()
 
 	repo := helper.Repo()
 	found, err := repo.FindByID(t.Context(), sess.ID())
