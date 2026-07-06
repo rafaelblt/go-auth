@@ -11,11 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRefreshToken_ValidateParams(t *testing.T) {
+func TestNewRefreshToken(t *testing.T) {
 	testCases := []struct {
 		desc       string
 		params     session.RefreshTokenCreationParams
-		normalized string
 		expectErr  bool
 	}{
 		{
@@ -82,27 +81,44 @@ func TestNewRefreshToken_ValidateParams(t *testing.T) {
 				assert.Zero(t, token)
 				return
 			}
-			assert.NoError(t, err)
-			assert.NotZero(t, token)
+			require.NoError(t, err)
+			require.NotZero(t, token)
+			assert.NotZero(t, token.ID())
+			assert.Equal(t, tC.params.SessionID, token.SessionID())
+			assert.Equal(t, tC.params.Hash, token.Hash())
+			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
+			assert.Equal(t, tC.params.ExpiresAt, token.ExpiresAt())
+			usedAt, isUsed := token.UsedAt()
+			assert.False(t, isUsed)
+			assert.Zero(t, usedAt)
+			parentID, hasParent := token.ParentID()
+			if tC.params.ParentID == nil {
+				assert.False(t, hasParent)
+				assert.Zero(t, parentID)
+			} else {
+				assert.True(t, hasParent)
+				assert.Equal(t, *tC.params.ParentID, parentID)
+			}
 		})
 	}
 }
 
 func TestNewRefreshToken_ClonesParentID(t *testing.T) {
-	providedPID := shared.Ptr(session.NewRefreshTokenID())
+	provided := shared.Ptr(session.NewRefreshTokenID())
 	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: session.NewSessionID(),
 		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
-		ParentID:  providedPID,
+		ParentID:  provided,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
 	})
 	require.NoError(t, err)
 
-	*providedPID = session.NewRefreshTokenID()
+	*provided = session.NewRefreshTokenID()
+
 	retrieved, ok := token.ParentID()
 	assert.True(t, ok)
-	assert.NotEqual(t, providedPID.Value(), retrieved.Value())
+	assert.NotEqual(t, provided.Value(), retrieved.Value())
 }
 
 func TestRestoreRefreshToken(t *testing.T) {
@@ -303,58 +319,40 @@ func TestRefreshToken_Use(t *testing.T) {
 	}
 }
 
-func TestRefreshToken_IsUsed(t *testing.T) {
-	testCases := []struct {
-		desc   string
-		token  *session.RefreshToken
-		isUsed bool
-	}{
-		{
-			desc: "token already used",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.UsedAt = shared.Ptr(time.Now())
-			}),
-			isUsed: true,
-		},
-		{
-			desc: "token not used",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.UsedAt = nil
-			}),
-			isUsed: false,
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			assert.Equal(t, tC.token.IsUsed(), tC.isUsed)
-		})
-	}
+func TestRefreshToken_IsUsed_ReturnsTrue_WhenTokenIsUsed(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.UsedAt = shared.Ptr(time.Now())
+	})
+	assert.True(t, token.IsUsed())
 }
 
-func TestRefreshToken_HasParent(t *testing.T) {
-	testCases := []struct {
-		desc      string
-		token     *session.RefreshToken
-		hasParent bool
-	}{
-		{
-			desc: "token has parent",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ParentID = shared.Ptr(session.NewRefreshTokenID())
-			}),
-			hasParent: true,
-		},
-		{
-			desc: "token has not parent",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ParentID = nil
-			}),
-			hasParent: false,
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			assert.Equal(t, tC.token.HasParent(), tC.hasParent)
-		})
-	}
+func TestRefreshToken_IsUsed_ReturnsFalse_WhenTokenIsNotUsed(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.UsedAt = nil
+	})
+	assert.False(t, token.IsUsed())
+}
+
+func TestRefreshToken_HasParent_ReturnsTrue_WhenTokenHasParent(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.ParentID = shared.Ptr(session.NewRefreshTokenID())
+	})
+	assert.True(t, token.HasParent())
+}
+
+func TestRefreshToken_HasParent_ReturnsFalse_WhenTokenHasNotParent(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.ParentID = nil
+	})
+	assert.False(t, token.HasParent())
+}
+
+func TestRefreshToken_IsZero_ReturnsFalse_WhenTokenIsZero(t *testing.T) {
+	token := session.RefreshToken{}
+	assert.True(t, token.IsZero())
+}
+
+func TestRefreshToken_IsZero_ReturnsFalse_WhenTokenIsNotZero(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, nil)
+	assert.False(t, token.IsZero())
 }

@@ -220,6 +220,7 @@ func TestMapSessionToModel(t *testing.T) {
 			assert.Equal(t, tC.entity.ID().String(), model.ID)
 			assert.Equal(t, tC.entity.UserID().String(), model.UserID)
 			assert.Equal(t, tC.entity.CreatedAt(), model.CreatedAt)
+			assert.Equal(t, tC.entity.UpdatedAt(), model.UpdatedAt)
 			revokedAt, isRevoked := tC.entity.RevokedAt()
 			if isRevoked {
 				assert.Equal(t, revokedAt, *model.RevokedAt)
@@ -247,6 +248,7 @@ func TestMapSessionToEntity(t *testing.T) {
 				ID:        shared.NewEntityID().String(),
 				UserID:    shared.NewEntityID().String(),
 				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			},
 		},
 		{
@@ -255,6 +257,7 @@ func TestMapSessionToEntity(t *testing.T) {
 				ID:        shared.NewEntityID().String(),
 				UserID:    shared.NewEntityID().String(),
 				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 				RevokedAt: shared.Ptr(time.Now().UTC()),
 			},
 		},
@@ -271,6 +274,7 @@ func TestMapSessionToEntity(t *testing.T) {
 			assert.Equal(t, tC.model.ID, entity.ID().String())
 			assert.Equal(t, tC.model.UserID, entity.UserID().String())
 			assert.Equal(t, tC.model.CreatedAt, entity.CreatedAt())
+			assert.Equal(t, tC.model.UpdatedAt, entity.UpdatedAt())
 			revokedAt, isRevoked := entity.RevokedAt()
 			if tC.model.RevokedAt == nil {
 				assert.False(t, isRevoked)

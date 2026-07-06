@@ -27,9 +27,9 @@ func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	}
 
 	sql := `INSERT INTO sessions
-			(id, user_id, created_at, revoked_at)
+			(id, user_id, revoked_at, created_at, updated_at)
 			VALUES
-			(@id, @user_id, @created_at, @revoked_at)`
+			(@id, @user_id, @created_at, @updated_at, @revoked_at)`
 	_, err = repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
 
 	if err != nil {
@@ -46,7 +46,8 @@ func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) erro
 	}
 
 	sql := `UPDATE sessions
-			SET revoked_at = @revoked_at
+			SET revoked_at = @revoked_at,
+				updated_at = @updated_at
 			WHERE id = @id`
 	tag, err := repo.db.Exec(ctx, sql, pgx.StructArgs(model))
 

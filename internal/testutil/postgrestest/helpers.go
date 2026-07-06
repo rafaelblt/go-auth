@@ -2,7 +2,6 @@ package postgrestest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/session"
@@ -41,19 +40,15 @@ func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
 	require.NotZero(t, sess, "session zero")
 
 	sql := `INSERT INTO sessions
-			(id, user_id, created_at, revoked_at)
-			VALUES ($1, $2, $3, $4)`
+			(id, user_id, revoked_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5)`
 
-	var revokedAt *time.Time
-	r, ok := sess.RevokedAt()
-	if ok {
-		revokedAt = &r
-	}
 	_, err := db.Exec(t.Context(), sql,
 		sess.ID().Value(),
 		sess.UserID().String(),
+		shared.PtrFromOk(sess.RevokedAt()),
 		sess.CreatedAt(),
-		revokedAt,
+		sess.UpdatedAt(),
 	)
 
 	require.NoError(t, err, "session insert failed")
@@ -72,12 +67,6 @@ func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToke
 		parentID = shared.Ptr(pID.String())
 	}
 
-	var usedAt *time.Time
-	uAt, ok := token.UsedAt()
-	if ok {
-		usedAt = &uAt
-	}
-
 	sql := `INSERT INTO refresh_tokens
 			(id, session_id, parent_id, hash, created_at, expires_at, used_at)
 			VALUES
@@ -89,7 +78,7 @@ func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToke
 		token.Hash().Value(),
 		token.CreatedAt(),
 		token.ExpiresAt(),
-		usedAt,
+		shared.PtrFromOk(token.UsedAt()),
 	)
 
 	require.NoError(t, err, "refresh token insert failed")
@@ -157,6 +146,6 @@ func CheckRefreshTokenExists(t *testing.T, db postgres.DB, token *session.Refres
 		shared.PtrFromOk(token.UsedAt()),
 	).Scan(&result)
 	require.NoError(t, err, "db query row failed")
-	
+
 	return result
 }

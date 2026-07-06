@@ -27,8 +27,9 @@ func ParseSessionID(value string) (SessionID, error) {
 type Session struct {
 	id        SessionID
 	userID    user.ID
-	createdAt time.Time
 	revokedAt *time.Time
+	createdAt time.Time
+	updatedAt time.Time
 }
 
 type SessionCreationParams struct {
@@ -39,8 +40,9 @@ type SessionCreationParams struct {
 type SessionRestoreParams struct {
 	ID        SessionID
 	UserID    user.ID
-	CreatedAt time.Time
 	RevokedAt *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func NewSession(params SessionCreationParams) (*Session, error) {
@@ -51,6 +53,7 @@ func NewSession(params SessionCreationParams) (*Session, error) {
 		id:        NewSessionID(),
 		userID:    params.UserID,
 		createdAt: params.CreatedAt,
+		updatedAt: params.CreatedAt,
 	}
 	return &session, nil
 }
@@ -62,28 +65,29 @@ func RestoreSession(params SessionRestoreParams) (*Session, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("user id zero")
 	}
-	revokedAt := shared.ClonePtr(params.RevokedAt)
 	session := Session{
 		id:        params.ID,
 		userID:    params.UserID,
+		revokedAt: shared.ClonePtr(params.RevokedAt),
 		createdAt: params.CreatedAt,
-		revokedAt: revokedAt,
+		updatedAt: params.UpdatedAt,
 	}
 	return &session, nil
 }
 
-func (s Session) ID() SessionID        { return s.id }
-func (s Session) UserID() user.ID      { return s.userID }
-func (s Session) CreatedAt() time.Time { return s.createdAt }
+func (s *Session) ID() SessionID        { return s.id }
+func (s *Session) UserID() user.ID      { return s.userID }
+func (s *Session) CreatedAt() time.Time { return s.createdAt }
+func (s *Session) UpdatedAt() time.Time { return s.updatedAt }
 
-func (s Session) RevokedAt() (time.Time, bool) {
+func (s *Session) RevokedAt() (time.Time, bool) {
 	if s.revokedAt == nil {
 		return time.Time{}, false
 	}
 	return *s.revokedAt, true
 }
 
-func (s Session) IsZero() bool { return s.id.IsZero() }
+func (s *Session) IsZero() bool { return s.id.IsZero() }
 
 func (s *Session) IsRevoked() bool {
 	return s.revokedAt != nil
@@ -94,4 +98,5 @@ func (s *Session) Revoke(revokedAt time.Time) {
 		return
 	}
 	s.revokedAt = &revokedAt
+	s.updatedAt = revokedAt
 }

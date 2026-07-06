@@ -36,8 +36,9 @@ type credentialModel struct {
 type sessionModel struct {
 	ID        string     `db:"id"`
 	UserID    string     `db:"user_id"`
-	CreatedAt time.Time  `db:"created_at"`
 	RevokedAt *time.Time `db:"revoked_at"`
+	CreatedAt time.Time  `db:"created_at"`
+	UpdatedAt time.Time  `db:"updated_at"`
 }
 
 type refreshTokenModel struct {
@@ -164,21 +165,12 @@ func mapSessionToModel(entity *session.Session) (sessionModel, error) {
 		return sessionModel{}, errors.New("session zero")
 	}
 
-	id := entity.ID().String()
-	userID := entity.UserID().String()
-	createdAt := entity.CreatedAt()
-	var revokedAtPtr *time.Time
-
-	revokedAt, ok := entity.RevokedAt()
-	if ok {
-		revokedAtPtr = &revokedAt
-	}
-
 	model := sessionModel{
-		ID:        id,
-		UserID:    userID,
-		CreatedAt: createdAt,
-		RevokedAt: revokedAtPtr,
+		ID:        entity.ID().String(),
+		UserID:    entity.UserID().String(),
+		RevokedAt: shared.PtrFromOk(entity.RevokedAt()),
+		CreatedAt: entity.CreatedAt(),
+		UpdatedAt: entity.UpdatedAt(),
 	}
 
 	return model, nil
@@ -197,8 +189,9 @@ func mapSessionToEntity(model sessionModel) (*session.Session, error) {
 	sess, err := session.RestoreSession(session.SessionRestoreParams{
 		ID:        id,
 		UserID:    userID,
-		CreatedAt: model.CreatedAt,
 		RevokedAt: model.RevokedAt,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("restore session failed: %w", err)
