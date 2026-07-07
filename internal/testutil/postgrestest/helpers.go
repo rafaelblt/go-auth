@@ -3,6 +3,7 @@ package postgrestest
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -30,6 +31,30 @@ func InsertUser(t *testing.T, db postgres.DB, usr *user.User) {
 	)
 
 	require.NoError(t, err, "user insert failed")
+}
+
+func InsertCredential(t *testing.T, db postgres.DB, cred *credential.Credential) {
+	t.Helper()
+
+	require.NotNil(t, cred, "db nil")
+	require.NotNil(t, cred, "credential nil")
+	require.NotZero(t, cred, "credential zero")
+
+	sql := `INSERT INTO credentials
+			(id, user_id, kind, provider, secret, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err := db.Exec(t.Context(), sql,
+		cred.ID().Value(),
+		cred.UserID().Value(),
+		cred.Kind().String(),
+		cred.Provider().String(),
+		cred.Secret().Value(),
+		cred.CreatedAt(),
+		cred.UpdatedAt(),
+	)
+
+	require.NoError(t, err, "insert credential failed")
 }
 
 func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {
