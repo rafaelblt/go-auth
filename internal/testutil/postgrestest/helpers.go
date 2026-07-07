@@ -68,17 +68,18 @@ func InsertRefreshToken(t *testing.T, db postgres.DB, token *session.RefreshToke
 	}
 
 	sql := `INSERT INTO refresh_tokens
-			(id, session_id, parent_id, hash, created_at, expires_at, used_at)
+			(id, session_id, parent_id, hash, expires_at, used_at, created_at, updated_at)
 			VALUES
-			($1, $2, $3, $4, $5, $6, $7)`
+			($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := db.Exec(t.Context(), sql,
 		token.ID().String(),
 		token.SessionID().String(),
 		parentID,
 		token.Hash().Value(),
-		token.CreatedAt(),
 		token.ExpiresAt(),
 		shared.PtrFromOk(token.UsedAt()),
+		token.CreatedAt(),
+		token.UpdatedAt(),
 	)
 
 	require.NoError(t, err, "refresh token insert failed")
@@ -133,17 +134,19 @@ func CheckRefreshTokenExists(t *testing.T, db postgres.DB, token *session.Refres
 			session_id=$2 AND
 			parent_id IS NOT DISTINCT FROM $3 AND
 			hash=$4 AND
-			created_at=$5 AND
-			expires_at=$6 AND
-			used_at IS NOT DISTINCT FROM $7
+			expires_at=$5 AND
+			used_at IS NOT DISTINCT FROM $6 AND
+			created_at=$7 AND
+			updated_at=$8
 		)`,
 		token.ID().Value(),
 		token.SessionID().Value(),
 		parentID,
 		token.Hash().Value(),
-		token.CreatedAt(),
 		token.ExpiresAt(),
 		shared.PtrFromOk(token.UsedAt()),
+		token.CreatedAt(),
+		token.UpdatedAt(),
 	).Scan(&result)
 	require.NoError(t, err, "db query row failed")
 

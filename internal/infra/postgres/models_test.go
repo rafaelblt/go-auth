@@ -333,19 +333,15 @@ func TestMapRefreshTokenToModel(t *testing.T) {
 			assert.Equal(t, tC.entity.ID().String(), model.ID)
 			assert.Equal(t, tC.entity.SessionID().String(), model.SessionID)
 			assert.Equal(t, tC.entity.Hash().Value(), model.Hash)
-			assert.Equal(t, tC.entity.CreatedAt(), model.CreatedAt)
 			assert.Equal(t, tC.entity.ExpiresAt(), model.ExpiresAt)
+			assert.Equal(t, shared.PtrFromOk(tC.entity.UsedAt()), model.UsedAt)
+			assert.Equal(t, tC.entity.CreatedAt(), model.CreatedAt)
+			assert.Equal(t, tC.entity.UpdatedAt(), model.UpdatedAt)
 			parentID, hasParent := tC.entity.ParentID()
 			if hasParent {
 				assert.Equal(t, parentID.String(), *model.ParentID)
 			} else {
 				assert.Nil(t, model.ParentID)
-			}
-			usedAt, isUsed := tC.entity.UsedAt()
-			if isUsed {
-				assert.Equal(t, usedAt, *model.UsedAt)
-			} else {
-				assert.Nil(t, model.UsedAt)
 			}
 		})
 	}
@@ -379,9 +375,9 @@ func TestMapRefreshTokenToEntity(t *testing.T) {
 				SessionID: shared.NewEntityID().String(),
 				ParentID:  shared.Ptr(shared.NewEntityID().String()),
 				Hash:      []byte{2, 0, 3, 0},
+				UsedAt:    shared.Ptr(time.Now().UTC()),
 				CreatedAt: time.Now().UTC(),
 				ExpiresAt: time.Now().UTC(),
-				UsedAt:    shared.Ptr(time.Now().UTC()),
 			},
 		},
 	}
@@ -393,23 +389,19 @@ func TestMapRefreshTokenToEntity(t *testing.T) {
 				assert.Nil(t, entity)
 				return
 			}
-			require.False(t, entity.IsZero(), "refresh token is zero")
+			require.False(t, entity.IsZero())
 			assert.Equal(t, tC.model.ID, entity.ID().String())
 			assert.Equal(t, tC.model.SessionID, entity.SessionID().String())
 			assert.Equal(t, tC.model.Hash, entity.Hash().Value())
-			assert.Equal(t, tC.model.CreatedAt, entity.CreatedAt())
 			assert.Equal(t, tC.model.ExpiresAt, entity.ExpiresAt())
+			assert.Equal(t, tC.model.UsedAt, shared.PtrFromOk(entity.UsedAt()))
+			assert.Equal(t, tC.model.CreatedAt, entity.CreatedAt())
+			assert.Equal(t, tC.model.UpdatedAt, entity.UpdatedAt())
 			parentID, hasParent := entity.ParentID()
 			if tC.model.ParentID == nil {
 				assert.False(t, hasParent)
 			} else {
 				assert.Equal(t, *tC.model.ParentID, parentID.String())
-			}
-			usedAt, isUsed := entity.UsedAt()
-			if tC.model.UsedAt == nil {
-				assert.False(t, isUsed)
-			} else {
-				assert.Equal(t, *tC.model.UsedAt, usedAt)
 			}
 		})
 	}

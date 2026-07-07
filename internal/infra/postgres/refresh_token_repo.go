@@ -27,9 +27,9 @@ func (repo *RefreshTokenRepo) Add(ctx context.Context, token *session.RefreshTok
 	}
 
 	sql := `INSERT INTO refresh_tokens
-			(id, session_id, parent_id, hash, created_at, expires_at, used_at)
+			(id, session_id, parent_id, hash, expires_at, used_at, created_at, updated_at)
 			VALUES
-			(@id, @session_id, @parent_id, @hash, @created_at, @expires_at, @used_at)`
+			(@id, @session_id, @parent_id, @hash, @expires_at, @used_at, @created_at, @updated_at)`
 	_, err = repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
 
 	if err != nil {
@@ -47,7 +47,8 @@ func (repo *RefreshTokenRepo) Update(ctx context.Context, token *session.Refresh
 
 	sql := `UPDATE refresh_tokens
 			SET parent_id = @parent_id,
-				used_at = @used_at
+				used_at = @used_at,
+				updated_at = @updated_at
 			WHERE id = @id`
 	tag, err := repo.db.Exec(ctx, sql, pgx.StructArgs(model))
 

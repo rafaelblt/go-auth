@@ -13,9 +13,9 @@ import (
 
 func TestNewRefreshToken(t *testing.T) {
 	testCases := []struct {
-		desc       string
-		params     session.RefreshTokenCreationParams
-		expectErr  bool
+		desc      string
+		params    session.RefreshTokenCreationParams
+		expectErr bool
 	}{
 		{
 			desc: "session id zero",
@@ -86,19 +86,11 @@ func TestNewRefreshToken(t *testing.T) {
 			assert.NotZero(t, token.ID())
 			assert.Equal(t, tC.params.SessionID, token.SessionID())
 			assert.Equal(t, tC.params.Hash, token.Hash())
-			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
+			assert.Equal(t, tC.params.ParentID, shared.PtrFromOk(token.ParentID()))
 			assert.Equal(t, tC.params.ExpiresAt, token.ExpiresAt())
-			usedAt, isUsed := token.UsedAt()
-			assert.False(t, isUsed)
-			assert.Zero(t, usedAt)
-			parentID, hasParent := token.ParentID()
-			if tC.params.ParentID == nil {
-				assert.False(t, hasParent)
-				assert.Zero(t, parentID)
-			} else {
-				assert.True(t, hasParent)
-				assert.Equal(t, *tC.params.ParentID, parentID)
-			}
+			assert.Nil(t, shared.PtrFromOk(token.UsedAt()))
+			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
+			assert.Equal(t, tC.params.CreatedAt, token.UpdatedAt())
 		})
 	}
 }
@@ -218,62 +210,51 @@ func TestRestoreRefreshToken(t *testing.T) {
 			assert.Equal(t, tC.params.ID, token.ID())
 			assert.Equal(t, tC.params.SessionID, token.SessionID())
 			assert.Equal(t, tC.params.Hash, token.Hash())
-			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
+			assert.Equal(t, tC.params.ParentID, shared.PtrFromOk(token.ParentID()))
 			assert.Equal(t, tC.params.ExpiresAt, token.ExpiresAt())
-			parentID, ok := token.ParentID()
-			if tC.params.ParentID == nil {
-				assert.False(t, ok)
-				assert.Zero(t, parentID)
-			} else {
-				assert.True(t, ok)
-				assert.Equal(t, *tC.params.ParentID, parentID)
-			}
-			usedAt, ok := token.UsedAt()
-			if tC.params.UsedAt == nil {
-				assert.False(t, ok)
-				assert.Zero(t, usedAt)
-			} else {
-				assert.True(t, ok)
-				assert.Equal(t, *tC.params.UsedAt, usedAt)
-			}
+			assert.Equal(t, tC.params.UsedAt, shared.PtrFromOk(token.UsedAt()))
+			assert.Equal(t, tC.params.CreatedAt, token.CreatedAt())
+			assert.Equal(t, tC.params.UpdatedAt, token.UpdatedAt())
 		})
 	}
 }
 
 func TestRestoreRefreshToken_ClonesParentID(t *testing.T) {
-	providedPID := shared.Ptr(session.NewRefreshTokenID())
+	provided := shared.Ptr(session.NewRefreshTokenID())
 	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
 		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
-		ParentID:  providedPID,
+		ParentID:  provided,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
 	})
 	require.NoError(t, err)
 
-	*providedPID = session.NewRefreshTokenID()
+	*provided = session.NewRefreshTokenID()
+
 	retrieved, ok := token.ParentID()
 	assert.True(t, ok)
-	assert.NotEqual(t, providedPID.Value(), retrieved.Value())
+	assert.NotEqual(t, provided.Value(), retrieved.Value())
 }
 
 func TestRestoreRefreshToken_ClonesUsedAt(t *testing.T) {
-	providedUsedAt := shared.Ptr(time.Now())
+	provided := shared.Ptr(time.Now())
 	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
 		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
-		UsedAt:    providedUsedAt,
+		UsedAt:    provided,
 	})
 	require.NoError(t, err)
 
-	*providedUsedAt = time.Now().Add(time.Hour)
+	*provided = time.Now().Add(time.Hour)
+
 	retrieved, ok := token.UsedAt()
 	assert.True(t, ok)
-	assert.False(t, providedUsedAt.Equal(retrieved))
+	assert.False(t, provided.Equal(retrieved))
 }
 
 func TestRefreshToken_Use(t *testing.T) {
@@ -315,6 +296,12 @@ func TestRefreshToken_Use(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			err := tC.token.Use(usedAt)
 			assert.ErrorIs(t, err, tC.expectedErr)
+			if tC.expectedErr == nil {
+				retrievedUsedAt, isUsed := tC.token.UsedAt()
+				assert.True(t, isUsed)
+				assert.Equal(t, usedAt, retrievedUsedAt)
+				assert.Equal(t, usedAt, tC.token.UpdatedAt())
+			}
 		})
 	}
 }

@@ -46,9 +46,10 @@ type refreshTokenModel struct {
 	SessionID string     `db:"session_id"`
 	ParentID  *string    `db:"parent_id"`
 	Hash      []byte     `db:"hash"`
-	CreatedAt time.Time  `db:"created_at"`
 	ExpiresAt time.Time  `db:"expires_at"`
 	UsedAt    *time.Time `db:"used_at"`
+	CreatedAt time.Time  `db:"created_at"`
+	UpdatedAt time.Time  `db:"updated_at"`
 }
 
 func mapUserToModel(entity *user.User) (userModel, error) {
@@ -208,12 +209,6 @@ func mapRefreshTokenToModel(entity *session.RefreshToken) (refreshTokenModel, er
 		return refreshTokenModel{}, errors.New("refresh token zero")
 	}
 
-	id := entity.ID().String()
-	sessionID := entity.SessionID().String()
-	hash := entity.Hash().Value()
-	createdAt := entity.CreatedAt()
-	expiresAt := entity.ExpiresAt()
-
 	var parentID *string
 	pID, ok := entity.ParentID()
 	if ok {
@@ -222,13 +217,14 @@ func mapRefreshTokenToModel(entity *session.RefreshToken) (refreshTokenModel, er
 	}
 
 	model := refreshTokenModel{
-		ID:        id,
-		SessionID: sessionID,
+		ID:        entity.ID().String(),
+		SessionID: entity.SessionID().String(),
 		ParentID:  parentID,
-		Hash:      hash,
-		CreatedAt: createdAt,
-		ExpiresAt: expiresAt,
+		Hash:      entity.Hash().Value(),
+		ExpiresAt: entity.ExpiresAt(),
 		UsedAt:    shared.PtrFromOk(entity.UsedAt()),
+		CreatedAt: entity.CreatedAt(),
+		UpdatedAt: entity.UpdatedAt(),
 	}
 
 	return model, nil
@@ -264,9 +260,10 @@ func mapRefreshTokenToEntity(model refreshTokenModel) (*session.RefreshToken, er
 		SessionID: sessionID,
 		Hash:      hash,
 		ParentID:  parentID,
-		CreatedAt: model.CreatedAt,
 		ExpiresAt: model.ExpiresAt,
 		UsedAt:    model.UsedAt,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("restore refresh token failed: %w", err)
