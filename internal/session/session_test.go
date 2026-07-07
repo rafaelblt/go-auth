@@ -45,11 +45,9 @@ func TestNewSession(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tC.params.UserID, sess.UserID())
+			assert.Nil(t, shared.PtrFromOk(sess.RevokedAt()))
 			assert.Equal(t, tC.params.CreatedAt, sess.CreatedAt())
 			assert.Equal(t, tC.params.CreatedAt, sess.UpdatedAt())
-			revokedAt, isRevoked := sess.RevokedAt()
-			assert.False(t, isRevoked)
-			assert.Zero(t, revokedAt)
 		})
 	}
 }
@@ -111,15 +109,9 @@ func TestRestoreSession(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tC.params.ID, sess.ID())
 			assert.Equal(t, tC.params.UserID, sess.UserID())
+			assert.Equal(t, tC.params.RevokedAt, shared.PtrFromOk(sess.RevokedAt()))
 			assert.Equal(t, tC.params.CreatedAt, sess.CreatedAt())
 			assert.Equal(t, tC.params.UpdatedAt, sess.UpdatedAt())
-			revokedAt, isRevoked := sess.RevokedAt()
-			if tC.params.RevokedAt == nil {
-				assert.False(t, isRevoked)
-			} else {
-				assert.True(t, isRevoked)
-				assert.Equal(t, *tC.params.RevokedAt, revokedAt)
-			}
 		})
 	}
 }
