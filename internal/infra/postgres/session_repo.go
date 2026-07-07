@@ -29,7 +29,7 @@ func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	sql := `INSERT INTO sessions
 			(id, user_id, revoked_at, created_at, updated_at)
 			VALUES
-			(@id, @user_id, @created_at, @updated_at, @revoked_at)`
+			(@id, @user_id, @revoked_at, @created_at, @updated_at)`
 	_, err = repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
 
 	if err != nil {
