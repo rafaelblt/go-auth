@@ -68,7 +68,7 @@ func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, credential.P
 	return usr, plain
 }
 
-func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, string) {
+func (f *Fixtures) CreateSession(t *testing.T) *session.Session {
 	t.Helper()
 
 	usr := usertest.NewUser(t, nil)
@@ -78,6 +78,29 @@ func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, stri
 		p.UserID = usr.ID()
 	})
 	f.SaveSession(t, sess)
+
+	return sess
+}
+
+func (f *Fixtures) CreateSessionRevoked(t *testing.T) *session.Session {
+	t.Helper()
+
+	usr := usertest.NewUser(t, nil)
+	f.SaveUser(t, usr)
+
+	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+		p.RevokedAt = shared.Ptr(time.Now().UTC())
+	})
+	f.SaveSession(t, sess)
+
+	return sess
+}
+
+func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, string) {
+	t.Helper()
+
+	sess := f.CreateSession(t)
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
@@ -93,13 +116,7 @@ func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, stri
 func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToken, string) {
 	t.Helper()
 
-	usr := usertest.NewUser(t, nil)
-	f.SaveUser(t, usr)
-
-	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
-		p.UserID = usr.ID()
-	})
-	f.SaveSession(t, sess)
+	sess := f.CreateSession(t)
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
@@ -115,13 +132,7 @@ func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToke
 func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshToken, string) {
 	t.Helper()
 
-	usr := usertest.NewUser(t, nil)
-	f.SaveUser(t, usr)
-
-	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
-		p.UserID = usr.ID()
-	})
-	f.SaveSession(t, sess)
+	sess := f.CreateSession(t)
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
@@ -129,6 +140,22 @@ func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.Refresh
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 		p.UsedAt = shared.Ptr(time.Now().UTC())
+	})
+	f.SaveRefreshToken(t, token)
+
+	return token, raw
+}
+
+func (f *Fixtures) CreateRefreshTokenWithSessionRevoked(t *testing.T) (*session.RefreshToken, string) {
+	t.Helper()
+
+	sess := f.CreateSessionRevoked(t)
+
+	raw, hash := f.generateRefreshTokenAndHash(t)
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.SessionID = sess.ID()
+		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 	})
 	f.SaveRefreshToken(t, token)
 
