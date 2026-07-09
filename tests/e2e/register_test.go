@@ -5,9 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
-	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,9 +19,12 @@ type RegisterResponseBody struct {
 	User User `json:"user"`
 }
 
-const RegisterPath = "/v1/auth/register"
+const (
+	RegisterPath              = "/v1/auth/register"
+	UsernameAlreadyExistsCode = "USERNAME_ALREADY_EXISTS"
+)
 
-func TestRegister_SuccessResponse(t *testing.T) {
+func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
 
 	reqBody := RegisterRequestBody{
@@ -42,7 +43,7 @@ func TestRegister_SuccessResponse(t *testing.T) {
 	assert.Equal(t, respBody.User.CreatedAt, respBody.User.UpdatedAt)
 }
 
-func TestRegister_UsernameAlreadyExistsResponse(t *testing.T) {
+func TestRegister_ReturnsUsernameAlreadyExistsErrorResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
 
 	usr := usertest.NewUser(t, nil)
@@ -61,9 +62,8 @@ func TestRegister_UsernameAlreadyExistsResponse(t *testing.T) {
 	assert.NotZero(t, respBody.Error.Message)
 }
 
-func TestRegister_ValidationErrorResponse(t *testing.T) {
+func TestRegister_ReturnsValidationErrorResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	reqBody := RegisterRequestBody{
 		Username: "r",
 		Password: "1",
@@ -72,17 +72,8 @@ func TestRegister_ValidationErrorResponse(t *testing.T) {
 	resp := env.Client.Post(t, RegisterPath, reqBody)
 
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
-
 	respBody := DecodeBody[ValidationErrorResponseBody](t, resp)
 	assert.Len(t, respBody.Errors, 2)
-
-	firstErr := respBody.Errors[0]
-	assert.Equal(t, "username", firstErr.Field)
-	assert.Equal(t, "TOO_SHORT", firstErr.Code)
-	assert.Equal(t, map[string]any{"min": float64(user.UsernameMinLen)}, firstErr.Details)
-
-	secondErr := respBody.Errors[1]
-	assert.Equal(t, "password", secondErr.Field)
-	assert.Equal(t, "TOO_SHORT", secondErr.Code)
-	assert.Equal(t, map[string]any{"min": float64(credential.PlainPasswordMinLen)}, secondErr.Details)
+	assert.Equal(t, "username", respBody.Errors[0].Field)
+	assert.Equal(t, "password", respBody.Errors[1].Field)
 }

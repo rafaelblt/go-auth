@@ -1,15 +1,24 @@
 package e2e
 
 import (
-	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"testing"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
+	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,43 +29,23 @@ type Fixtures struct {
 }
 
 func (f *Fixtures) SaveUser(t *testing.T, usr *user.User) {
-	require.NotNil(t, usr, "user nil")
-	require.NotZero(t, usr, "user zero")
-
-	sql := `INSERT INTO users
-			(id, username, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5)`
-
-	_, err := f.pool.Exec(context.Background(), sql,
-		usr.ID().Value(),
-		usr.Username().String(),
-		usr.Status().String(),
-		usr.CreatedAt(),
-		usr.UpdatedAt(),
-	)
-
-	require.NoError(t, err)
+	t.Helper()
+	postgrestest.InsertUser(t, f.pool, usr)
 }
 
 func (f *Fixtures) SaveCredential(t *testing.T, cred *credential.Credential) {
-	require.NotNil(t, cred, "credential nil")
-	require.False(t, cred.IsZero(), "credential zero")
+	t.Helper()
+	postgrestest.InsertCredential(t, f.pool, cred)
+}
 
-	sql := `INSERT INTO credentials
-			(id, user_id, kind, provider, secret, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`
+func (f *Fixtures) SaveSession(t *testing.T, sess *session.Session) {
+	t.Helper()
+	postgrestest.InsertSession(t, f.pool, sess)
+}
 
-	_, err := f.pool.Exec(context.Background(), sql,
-		cred.ID().Value(),
-		cred.UserID().Value(),
-		cred.Kind().String(),
-		cred.Provider().String(),
-		cred.Secret().Value(),
-		cred.CreatedAt(),
-		cred.UpdatedAt(),
-	)
-
-	require.NoError(t, err, "insert credential failed")
+func (f *Fixtures) SaveRefreshToken(t *testing.T, token *session.RefreshToken) {
+	t.Helper()
+	postgrestest.InsertRefreshToken(t, f.pool, token)
 }
 
 func (f *Fixtures) GetUserAndPassword(t *testing.T) (*user.User, credential.PlainPassword) {
@@ -79,4 +68,98 @@ func (f *Fixtures) GetUserAndPassword(t *testing.T) (*user.User, credential.Plai
 	f.SaveCredential(t, cred)
 
 	return usr, plain
+}
+
+func (f *Fixtures) GetRefreshToken(t *testing.T) (*session.RefreshToken, string) {
+	t.Helper()
+
+	usr := usertest.NewUser(t, nil)
+	f.SaveUser(t, usr)
+
+	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
+	f.SaveSession(t, sess)
+
+	raw, hash := f.generateRefreshTokenAndHash(t)
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.SessionID = sess.ID()
+		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
+	})
+	f.SaveRefreshToken(t, token)
+
+	return token, raw
+}
+
+func (f *Fixtures) GetRefreshTokenExpired(t *testing.T) (*session.RefreshToken, string) {
+	t.Helper()
+
+	usr := usertest.NewUser(t, nil)
+	f.SaveUser(t, usr)
+
+	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
+	f.SaveSession(t, sess)
+
+	raw, hash := f.generateRefreshTokenAndHash(t)
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.SessionID = sess.ID()
+		p.ExpiresAt = time.Now().UTC()
+	})
+	f.SaveRefreshToken(t, token)
+
+	return token, raw
+}
+
+func (f *Fixtures) GetRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshToken, string) {
+	t.Helper()
+
+	usr := usertest.NewUser(t, nil)
+	f.SaveUser(t, usr)
+
+	sess := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+	})
+	f.SaveSession(t, sess)
+
+	raw, hash := f.generateRefreshTokenAndHash(t)
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.SessionID = sess.ID()
+		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
+		p.UsedAt = shared.Ptr(time.Now().UTC())
+	})
+	f.SaveRefreshToken(t, token)
+
+	return token, raw
+}
+
+func (f *Fixtures) RequireSessionIsRevoked(t *testing.T, id session.SessionID) {
+	t.Helper()
+
+	row := f.pool.QueryRow(t.Context(),
+		`SELECT revoked_at FROM sessions WHERE id=$1`,
+		id.Value(),
+	)
+
+	var revokedAt *time.Time
+	err := row.Scan(&revokedAt)
+	require.NotErrorIs(t, pgx.ErrNoRows, err, "session id not exists")
+	require.NoError(t, err, "row scan failed")
+
+	assert.NotNil(t, revokedAt, "session is not revoked")
+}
+
+func (f *Fixtures) generateRefreshTokenAndHash(t *testing.T) (string, []byte) {
+	token := make([]byte, 16)
+
+	_, err := rand.Read(token)
+	require.NoError(t, err, "rand read failed")
+
+	sum := sha256.Sum256(token)
+
+	return base64.RawURLEncoding.EncodeToString(token), sum[:]
 }

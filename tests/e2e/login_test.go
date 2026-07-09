@@ -23,11 +23,9 @@ const (
 	InvalidCredentialsCode = "INVALID_CREDENTIALS"
 )
 
-func TestLogin_SuccessResponse(t *testing.T) {
+func TestLogin_ReturnsSuccessResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	usr, pwd := env.Fixtures.GetUserAndPassword(t)
-
 	reqBody := LoginRequestBody{
 		Username: usr.Username().String(),
 		Password: pwd.Value(),
@@ -41,9 +39,8 @@ func TestLogin_SuccessResponse(t *testing.T) {
 	assert.NotZero(t, respBody.RefreshToken)
 }
 
-func TestLogin_InvalidCredentialsResponse_WhenUsernameNotExists(t *testing.T) {
+func TestLogin_ReturnsInvalidCredentialsResponse_WhenUsernameNotExists(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	reqBody := LoginRequestBody{
 		Username: "rafaelblt",
 		Password: "12345678",
@@ -57,11 +54,9 @@ func TestLogin_InvalidCredentialsResponse_WhenUsernameNotExists(t *testing.T) {
 	assert.NotZero(t, respBody.Error.Message)
 }
 
-func TestLogin_InvalidCredentialsResponse_WhenPasswordIsIncorrect(t *testing.T) {
+func TestLogin_ReturnsInvalidCredentialsResponse_WhenPasswordIsIncorrect(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	usr, pwd := env.Fixtures.GetUserAndPassword(t)
-
 	reqBody := LoginRequestBody{
 		Username: usr.Username().String(),
 		Password: pwd.Value() + "X", // incorrect
