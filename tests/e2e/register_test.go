@@ -58,7 +58,7 @@ func TestRegister_ReturnsUsernameAlreadyExistsErrorResponse(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, resp.StatusCode)
 	respBody := DecodeBody[ErrorResponseBody](t, resp)
-	assert.Equal(t, "USERNAME_ALREADY_EXISTS", respBody.Error.Code)
+	assert.Equal(t, UsernameAlreadyExistsCode, respBody.Error.Code)
 	assert.NotZero(t, respBody.Error.Message)
 }
 
