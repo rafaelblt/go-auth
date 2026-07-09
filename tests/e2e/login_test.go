@@ -25,7 +25,7 @@ const (
 
 func TestLogin_ReturnsSuccessResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
-	usr, pwd := env.Fixtures.GetUserAndPassword(t)
+	usr, pwd := env.Fixtures.CreateUserAndPassword(t)
 	reqBody := LoginRequestBody{
 		Username: usr.Username().String(),
 		Password: pwd.Value(),
@@ -56,7 +56,7 @@ func TestLogin_ReturnsInvalidCredentialsResponse_WhenUsernameNotExists(t *testin
 
 func TestLogin_ReturnsInvalidCredentialsResponse_WhenPasswordIsIncorrect(t *testing.T) {
 	env := testApp.NewEnv(t)
-	usr, pwd := env.Fixtures.GetUserAndPassword(t)
+	usr, pwd := env.Fixtures.CreateUserAndPassword(t)
 	reqBody := LoginRequestBody{
 		Username: usr.Username().String(),
 		Password: pwd.Value() + "X", // incorrect

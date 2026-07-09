@@ -46,7 +46,7 @@ func (f *Fixtures) SaveRefreshToken(t *testing.T, token *session.RefreshToken) {
 	postgrestest.InsertRefreshToken(t, f.pool, token)
 }
 
-func (f *Fixtures) GetUserAndPassword(t *testing.T) (*user.User, credential.PlainPassword) {
+func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, credential.PlainPassword) {
 	usr := usertest.NewUser(t, nil)
 	f.SaveUser(t, usr)
 
@@ -68,7 +68,7 @@ func (f *Fixtures) GetUserAndPassword(t *testing.T) (*user.User, credential.Plai
 	return usr, plain
 }
 
-func (f *Fixtures) GetRefreshToken(t *testing.T) (*session.RefreshToken, string) {
+func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, string) {
 	t.Helper()
 
 	usr := usertest.NewUser(t, nil)
@@ -90,7 +90,7 @@ func (f *Fixtures) GetRefreshToken(t *testing.T) (*session.RefreshToken, string)
 	return token, raw
 }
 
-func (f *Fixtures) GetRefreshTokenExpired(t *testing.T) (*session.RefreshToken, string) {
+func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToken, string) {
 	t.Helper()
 
 	usr := usertest.NewUser(t, nil)
@@ -112,7 +112,7 @@ func (f *Fixtures) GetRefreshTokenExpired(t *testing.T) (*session.RefreshToken, 
 	return token, raw
 }
 
-func (f *Fixtures) GetRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshToken, string) {
+func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshToken, string) {
 	t.Helper()
 
 	usr := usertest.NewUser(t, nil)
