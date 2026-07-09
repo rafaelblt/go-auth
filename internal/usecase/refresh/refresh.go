@@ -31,24 +31,28 @@ type Output struct {
 	RefreshToken usecase.RefreshTokenDTO
 }
 
-var ErrTokenInvalid = usecase.NewError(
-	"TOKEN_INVALID",
-	usecase.ErrorKindUnauthorized, ///////
+var ErrTokenInvalid = usecase.NewErrorWithReason(
+	"INVALID_TOKEN",
+	usecase.ErrorKindUnauthorized,
+	"invalid token",
 )
 
-var ErrTokenExpired = usecase.NewError(
-	"TOKEN_EXPIRED",
-	usecase.ErrorKindUnauthorized, ///////
+var ErrTokenExpired = usecase.NewErrorWithReason(
+	"INVALID_TOKEN",
+	usecase.ErrorKindUnauthorized,
+	"token expired",
 )
 
-var ErrTokenAlreadyUsed = usecase.NewError(
-	"TOKEN_ALREADY_USED",
-	usecase.ErrorKindUnauthorized, ///////
+var ErrTokenAlreadyUsed = usecase.NewErrorWithReason(
+	"INVALID_TOKEN",
+	usecase.ErrorKindUnauthorized,
+	"token already used",
 )
 
-var ErrSessionRevoked = usecase.NewError(
-	"SESSION_REVOKED",
-	usecase.ErrorKindUnauthorized, ///////
+var ErrSessionRevoked = usecase.NewErrorWithReason(
+	"INVALID_TOKEN",
+	usecase.ErrorKindUnauthorized,
+	"session revoked",
 )
 
 type accessIssued = port.AccessTokenIssued
