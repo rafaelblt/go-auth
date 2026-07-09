@@ -91,5 +91,5 @@ func TestRefresh_RevokesSession_WhenTokenIsAlreadyUsed(t *testing.T) {
 	resp := env.Client.Post(t, RefreshPath, reqBody)
 
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-	env.Fixtures.RequireSessionIsRevoked(t, token.SessionID())
+	env.Asserts.RequireSessionIsRevoked(t, token.SessionID())
 }

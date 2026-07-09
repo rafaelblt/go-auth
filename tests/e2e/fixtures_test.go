@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/credential"
@@ -18,7 +17,6 @@ import (
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -135,22 +133,6 @@ func (f *Fixtures) GetRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshTok
 	f.SaveRefreshToken(t, token)
 
 	return token, raw
-}
-
-func (f *Fixtures) RequireSessionIsRevoked(t *testing.T, id session.SessionID) {
-	t.Helper()
-
-	row := f.pool.QueryRow(t.Context(),
-		`SELECT revoked_at FROM sessions WHERE id=$1`,
-		id.Value(),
-	)
-
-	var revokedAt *time.Time
-	err := row.Scan(&revokedAt)
-	require.NotErrorIs(t, pgx.ErrNoRows, err, "session id not exists")
-	require.NoError(t, err, "row scan failed")
-
-	assert.NotNil(t, revokedAt, "session is not revoked")
 }
 
 func (f *Fixtures) generateRefreshTokenAndHash(t *testing.T) (string, []byte) {
