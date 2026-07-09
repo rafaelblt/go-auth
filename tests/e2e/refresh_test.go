@@ -25,7 +25,6 @@ const (
 func TestRefresh_ReturnsSuccessResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
 	_, raw := env.Fixtures.CreateRefreshToken(t)
-
 	reqBody := RefreshRequestBody{
 		RefreshToken: raw,
 	}
@@ -40,7 +39,6 @@ func TestRefresh_ReturnsSuccessResponse(t *testing.T) {
 
 func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsInvalid(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	reqBody := RefreshRequestBody{
 		RefreshToken: "invalid",
 	}
@@ -55,9 +53,20 @@ func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsInvalid(t *testing.T) {
 
 func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsExpired(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	_, raw := env.Fixtures.CreateRefreshTokenExpired(t)
 
+	reqBody := RefreshRequestBody{RefreshToken: raw}
+
+	resp := env.Client.Post(t, RefreshPath, reqBody)
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, InvalidTokenCode, respBody.Error.Code)
+	assert.NotZero(t, respBody.Error.Message)
+}
+
+func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsAlreadyUsed(t *testing.T) {
+	env := testApp.NewEnv(t)
+	_, raw := env.Fixtures.CreateRefreshTokenAlreadyUsed(t)
 	reqBody := RefreshRequestBody{RefreshToken: raw}
 
 	resp := env.Client.Post(t, RefreshPath, reqBody)
@@ -68,11 +77,9 @@ func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsExpired(t *testing.T) {
 	assert.NotZero(t, respBody.Error.Message)
 }
 
-func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsAlreadyUsed(t *testing.T) {
+func TestRefresh_ReturnsInvalidTokenResponse_WhenSessionIsRevoked(t *testing.T) {
 	env := testApp.NewEnv(t)
-
 	_, raw := env.Fixtures.CreateRefreshTokenAlreadyUsed(t)
-
 	reqBody := RefreshRequestBody{RefreshToken: raw}
 
 	resp := env.Client.Post(t, RefreshPath, reqBody)
