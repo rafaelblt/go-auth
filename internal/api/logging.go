@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +21,6 @@ func (wr *writerRecorder) WriteHeader(code int) {
 	wr.ResponseWriter.WriteHeader(code)
 }
 
-
 func loggerFrom(ctx context.Context) *slog.Logger {
 	if l, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
 		return l
@@ -31,6 +30,7 @@ func loggerFrom(ctx context.Context) *slog.Logger {
 
 func logging(next http.Handler, w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.NewString()
+	start := time.Now().UTC()
 
 	logger := slog.With(
 		slog.String("request_id", requestID),
@@ -45,6 +45,8 @@ func logging(next http.Handler, w http.ResponseWriter, r *http.Request) {
 	wr := writerRecorder{w, http.StatusOK}
 	next.ServeHTTP(&wr, r.WithContext(ctx))
 
-	msg := "request finished %d (%s)"
-	logger.Info(fmt.Sprintf(msg, wr.status, http.StatusText(wr.status)))
+	end := time.Now().UTC()
+	logger.Info("request finished",
+		slog.Int("status", wr.status),
+		slog.Duration("duration", end.Sub(start)))
 }
