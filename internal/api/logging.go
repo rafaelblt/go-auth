@@ -31,11 +31,9 @@ func loggerFrom(ctx context.Context) *slog.Logger {
 
 func logging(next http.Handler, w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.NewString()
-	traceID := uuid.NewString()
 
 	logger := slog.With(
 		slog.String("request_id", requestID),
-		slog.String("trace_id", traceID),
 		slog.String("method", r.Method),
 		slog.String("path", r.URL.Path),
 		slog.String("ip", r.RemoteAddr),
