@@ -39,7 +39,7 @@ func TestRegisterDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 	assert.Zero(t, in)
 }
 
-func TestRegisterEncoder(t *testing.T) {
+func TestRegisterEncoder_WritesSuccessResponse(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	output := register.Output{
 		User: usecase.UserDTO{
