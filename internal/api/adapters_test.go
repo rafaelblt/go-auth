@@ -40,6 +40,9 @@ func NewFakeUseCase() *FakeUseCase {
 }
 
 func (uc *FakeUseCase) Execute(ctx context.Context, in FakeInput) (FakeOutput, error) {
+	uc.contexts = append(uc.contexts, ctx)
+	uc.inputs = append(uc.inputs, in)
+
 	if uc.err != nil {
 		return FakeOutput{}, uc.err
 	}
