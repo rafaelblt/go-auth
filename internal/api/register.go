@@ -21,37 +21,28 @@ type registerUseCase interface {
 	Execute(context.Context, register.Input) (register.Output, error)
 }
 
-type registerHandler struct {
-	uc registerUseCase
-}
-
-func newRegisterHandler(uc registerUseCase) registerHandler {
-	return registerHandler{uc}
-}
-
-func (handler registerHandler) Handle(request *http.Request) response {
-	ctx := request.Context()
-
-	var reqBody registerRequestBody
-	if err := json.NewDecoder(request.Body).Decode(&reqBody); err != nil {
-		return invalidJSONBodyError()
+func registerDecoder(r *http.Request) (register.Input, error) {
+	var body registerRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return register.Input{}, err
 	}
+	in := register.Input{
+		Username: body.Username,
+		Password: body.Password,
+	}
+	return in, nil
+}
 
-	output, err := handler.uc.Execute(ctx, register.Input{
-		Username: reqBody.Username,
-		Password: reqBody.Password,
-	})
+func registerEncoder(w http.ResponseWriter, out register.Output) error {
+	usr := mapUserDTO(out.User)
+	body := registerResponseBody{User: usr}
+
+	buf, err := json.Marshal(body)
 	if err != nil {
-		resp := translateError(ctx, err)
-		return resp
+		return err
 	}
 
-	user := mapUserDTO(output.User)
-
-	response := response{
-		StatusCode: http.StatusOK,
-		Body:       registerResponseBody{User: user},
-	}
-
-	return response
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(buf)
+	return err
 }

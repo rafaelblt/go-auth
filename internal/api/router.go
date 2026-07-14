@@ -28,12 +28,12 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 		return nil, errors.New("refresh nil")
 	}
 
-	register := newRegisterHandler(cfg.Dependencies.Register)
+	register := adaptUseCase(cfg.Dependencies.Register, registerDecoder, registerEncoder)
 	login := newLoginHandler(cfg.Dependencies.Login)
 	refresh := newRefreshHandler(cfg.Dependencies.Refresh)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/auth/register", adaptHandler(register))
+	mux.HandleFunc("POST /v1/auth/register", register)
 	mux.HandleFunc("POST /v1/auth/login", adaptHandler(login))
 	mux.HandleFunc("POST /v1/auth/refresh", adaptHandler(refresh))
 
