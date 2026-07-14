@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,5 +46,39 @@ func adaptMiddleware(m middleware) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			m(next, w, r)
 		})
+	}
+}
+
+type useCase[Input, Output any] interface {
+	Execute(context.Context, Input) (Output, error)
+}
+
+type decoder[Input any] = func(r *http.Request) (Input, error)
+type encoder[Output any] = func(w http.ResponseWriter, out Output) error
+
+func adaptUseCase[In, Out any](
+	uc useCase[In, Out],
+	decoder decoder[In],
+	encoder encoder[Out],
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		input, err := decoder(r)
+		if err != nil {
+			writeInvalidJSONBodyError(ctx, w)
+			return
+		}
+
+		output, err := uc.Execute(ctx, input)
+		if err != nil {
+			translateErrorFromUseCase(ctx, w, err)
+			return
+		}
+
+		err = encoder(w, output)
+		if err != nil {
+			writeInternalServerError(ctx, w)
+		}
 	}
 }
