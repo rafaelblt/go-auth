@@ -22,41 +22,33 @@ type loginUseCase interface {
 	Execute(context.Context, login.Input) (login.Output, error)
 }
 
-type loginHandler struct {
-	uc loginUseCase
+func loginDecoder(r *http.Request) (login.Input, error) {
+	var body loginRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return login.Input{}, err
+	}
+	in := login.Input{
+		Username: body.Username,
+		Password: body.Password,
+	}
+	return in, nil
 }
 
-func newLoginHandler(uc loginUseCase) loginHandler {
-	return loginHandler{uc}
-}
+func loginEncoder(w http.ResponseWriter, out login.Output) error {
+	accessToken := mapAccessTokenDTO(out.AccessToken)
+	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
 
-func (handler loginHandler) Handle(request *http.Request) response {
-	ctx := request.Context()
-
-	var reqBody loginRequestBody
-	if err := json.NewDecoder(request.Body).Decode(&reqBody); err != nil {
-		return invalidJSONBodyError()
+	body := loginResponseBody{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}
 
-	output, err := handler.uc.Execute(ctx, login.Input{
-		Username: reqBody.Username,
-		Password: reqBody.Password,
-	})
+	buf, err := json.Marshal(body)
 	if err != nil {
-		resp := translateError(ctx, err)
-		return resp
+		return err
 	}
 
-	accessToken := mapAccessTokenDTO(output.AccessToken)
-	refreshToken := mapRefreshTokenDTO(output.RefreshToken)
-
-	response := response{
-		StatusCode: http.StatusOK,
-		Body: loginResponseBody{
-			AccessToken: accessToken,
-			RefreshToken: refreshToken,
-		},
-	}
-
-	return response
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(buf)
+	return err
 }
