@@ -73,3 +73,21 @@ func translateValidationError(verr validation.ValidationError) response {
 	}
 	return resp
 }
+
+func translateErrorFromUseCase(ctx context.Context, w http.ResponseWriter, err error) {
+	var uerr usecase.UseCaseError
+	if errors.As(err, &uerr) {
+		writeUseCaseError(ctx, w, uerr)
+		return
+	}
+
+	var verr validation.ValidationError
+	if errors.As(err, &verr) {
+		writeValidationError(ctx, w, verr)
+		return
+	}
+
+	logger := loggerFrom(ctx)
+	logger.Error("unexpected error for translation", "error", err)
+	writeInternalServerError(ctx, w)
+}
