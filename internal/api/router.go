@@ -1,6 +1,7 @@
 package api
 
 import (
+	"slices"
 	"context"
 	"errors"
 	"net/http"
@@ -51,8 +52,8 @@ func chainMiddlewares(cfg Config, handler http.Handler) http.Handler {
 	}
 	middlewares = append(middlewares, adaptMiddleware(recovery))
 
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i](handler)
+	for _, middleware := range slices.Backward(middlewares) {
+		handler = middleware(handler)
 	}
 
 	return handler
