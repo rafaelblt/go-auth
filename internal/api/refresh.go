@@ -21,39 +21,32 @@ type refreshUseCase interface {
 	Execute(context.Context, refresh.Input) (refresh.Output, error)
 }
 
-type refreshHandler struct {
-	uc refreshUseCase
+func refreshDecoder(r *http.Request) (refresh.Input, error) {
+	var body refreshRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return refresh.Input{}, err
+	}
+	in := refresh.Input{
+		RefreshToken: body.RefreshToken,
+	}
+	return in, nil
 }
 
-func newRefreshHandler(uc refreshUseCase) *refreshHandler {
-	return &refreshHandler{uc}
-}
+func refreshEncoder(w http.ResponseWriter, out refresh.Output) error {
+	accessToken := mapAccessTokenDTO(out.AccessToken)
+	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
 
-func (handler *refreshHandler) Handle(request *http.Request) response {
-	ctx := request.Context()
-
-	var reqBody refreshRequestBody
-	if err := json.NewDecoder(request.Body).Decode(&reqBody); err != nil {
-		return invalidJSONBodyError()
+	body := refreshResponseBody{
+		AccessToken: accessToken,
+		RefreshToken: refreshToken,
 	}
 
-	output, err := handler.uc.Execute(ctx, refresh.Input{
-		RefreshToken: reqBody.RefreshToken,
-	})
+	buf, err := json.Marshal(body)
 	if err != nil {
-		return translateError(ctx, err)
+		return err
 	}
 
-	accessToken := mapAccessTokenDTO(output.AccessToken)
-	refreshToken := mapRefreshTokenDTO(output.RefreshToken)
-
-	response := response{
-		StatusCode: http.StatusOK,
-		Body: refreshResponseBody{
-			AccessToken: accessToken,
-			RefreshToken: refreshToken,
-		},
-	}
-
-	return response
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(buf)
+	return err
 }

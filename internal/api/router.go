@@ -30,12 +30,12 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 
 	register := adaptUseCase(cfg.Dependencies.Register, registerDecoder, registerEncoder)
 	login := adaptUseCase(cfg.Dependencies.Login, loginDecoder, loginEncoder)
-	refresh := newRefreshHandler(cfg.Dependencies.Refresh)
+	refresh := adaptUseCase(cfg.Dependencies.Refresh, refreshDecoder, refreshEncoder)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/auth/register", register)
 	mux.HandleFunc("POST /v1/auth/login", login)
-	mux.HandleFunc("POST /v1/auth/refresh", adaptHandler(refresh))
+	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 
 	chain := chainMiddlewares(cfg, mux)
 
