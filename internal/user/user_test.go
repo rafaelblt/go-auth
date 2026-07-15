@@ -93,6 +93,17 @@ func TestRestoreUser(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			desc: "status zero",
+			params: user.RestoreParams{
+				ID:        user.NewID(),
+				Username:  username,
+				Status:    user.Status{},
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
+			},
+			expectErr: true,
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

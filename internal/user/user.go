@@ -29,7 +29,7 @@ type RestoreParams struct {
 func NewUser(params CreationParams) (*User, error) {
 	id := NewID()
 	if params.Username.IsZero() {
-		return nil, errors.New("user username cannot be zero")
+		return nil, errors.New("username zero")
 	}
 	user := &User{
 		id:        id,
@@ -43,10 +43,13 @@ func NewUser(params CreationParams) (*User, error) {
 
 func RestoreUser(params RestoreParams) (*User, error) {
 	if params.ID.IsZero() {
-		return nil, errors.New("user id cannot be zero")
+		return nil, errors.New("user id zero")
 	}
 	if params.Username.IsZero() {
-		return nil, errors.New("username cannot be zero")
+		return nil, errors.New("username zero")
+	}
+	if params.Status.IsZero() {
+		return nil, errors.New("status zero")
 	}
 	return &User{
 		id:        params.ID,
