@@ -32,4 +32,47 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-// TODO: ParseProvider()
+func TestParseProvider(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			desc:     "custom provider",
+			value:    "rafaelblt.com",
+			expected: "rafaelblt.com",
+			wantErr:  false,
+		},
+		{
+			desc:     "custom provider with uppercase and spaces",
+			value:    "   GITHUB.COM    ",
+			expected: "github.com",
+			wantErr:  false,
+		},
+		{
+			desc:     "local provider",
+			value:    ProviderLocal.String(),
+			expected: ProviderLocal.String(),
+			wantErr:  false,
+		},
+		{
+			desc:     "empty provider",
+			value:    "",
+			wantErr:  true,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			provider, err := ParseProvider(tC.value)
+			if tC.wantErr {
+				assert.Error(t, err)
+				assert.Zero(t, provider)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tC.expected, provider.String())
+		})
+	}
+}
