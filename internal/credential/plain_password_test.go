@@ -65,3 +65,19 @@ func TestNewPlainPassword(t *testing.T) {
 		})
 	}
 }
+
+func TestPlainPassword_IsZero(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		pwd      PlainPassword
+		expected bool
+	}{
+		{desc: "zero", pwd: PlainPassword{}, expected: true},
+		{desc: "not zero", pwd: PlainPassword{"value"}, expected: false},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expected, tC.pwd.IsZero())
+		})
+	}
+}
