@@ -1,10 +1,8 @@
-package credential_test
+package credential
 
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +18,7 @@ func TestNewSecret(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			secret, err := credential.NewSecret(tC.value)
+			secret, err := NewSecret(tC.value)
 			if tC.wantErr {
 				assert.Error(t, err)
 				assert.Zero(t, secret)
@@ -36,19 +34,11 @@ func TestNewSecret(t *testing.T) {
 func TestSecret_IsZero(t *testing.T) {
 	testCases := []struct {
 		desc   string
-		secret credential.Secret
+		secret Secret
 		expect bool
 	}{
-		{
-			desc:   "not zero",
-			secret: credentialtest.MustSecret(t, "secret"),
-			expect: false,
-		},
-		{
-			desc:   "zero",
-			secret: credential.Secret{},
-			expect: true,
-		},
+		{desc: "not zero", secret: Secret{"value"}, expect: false},
+		{desc: "zero", secret: Secret{}, expect: true},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
