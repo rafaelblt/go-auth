@@ -23,19 +23,19 @@ func TestKind_String(t *testing.T) {
 
 func TestKind_IsZero(t *testing.T) {
 	testCases := []struct {
-		status Kind
+		desc string
+		kind Kind
 		expect bool
 	}{
-		{status: KindPassword, expect: false},
-		{status: Kind{}, expect: true},
+		{desc: "not zero", kind: KindPassword, expect: false},
+		{desc: "zero", kind: Kind{}, expect: true},
 	}
 	for _, tC := range testCases {
-		t.Run(tC.status.String(), func(t *testing.T) {
-			assert.Equal(t, tC.expect, tC.status.IsZero())
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expect, tC.kind.IsZero())
 		})
 	}
 }
-
 
 func TestParseKind(t *testing.T) {
 	testCases := []struct {
