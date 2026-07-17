@@ -76,3 +76,19 @@ func TestParseProvider(t *testing.T) {
 		})
 	}
 }
+
+func TestProvider_IsZero(t *testing.T) {
+	testCases := []struct {
+		desc string
+		kind Provider
+		expect bool
+	}{
+		{desc: "not zero", kind: ProviderLocal, expect: false},
+		{desc: "zero", kind: Provider{}, expect: true},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expect, tC.kind.IsZero())
+		})
+	}
+}
