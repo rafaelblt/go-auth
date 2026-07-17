@@ -83,8 +83,9 @@ func TestProvider_IsZero(t *testing.T) {
 		kind Provider
 		expect bool
 	}{
-		{desc: "not zero", kind: ProviderLocal, expect: false},
-		{desc: "zero", kind: Provider{}, expect: true},
+		{desc: "local provider", kind: ProviderLocal, expect: false},
+		{desc: "custom provider", kind: Provider{"custom"}, expect: false},
+		{desc: "zero provider", kind: Provider{}, expect: true},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
