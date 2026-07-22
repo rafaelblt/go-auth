@@ -43,6 +43,14 @@ func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 	assert.Equal(t, respBody.User.CreatedAt, respBody.User.UpdatedAt)
 }
 
+func TestRegister_ReturnsMethodNotAllowed(t *testing.T) {
+	env := testApp.NewEnv(t)
+
+	resp := env.Client.Get(t, RegisterPath)
+
+	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+}
+
 func TestRegister_ReturnsUsernameAlreadyExistsErrorResponse(t *testing.T) {
 	env := testApp.NewEnv(t)
 

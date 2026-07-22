@@ -39,6 +39,14 @@ func TestLogin_ReturnsSuccessResponse(t *testing.T) {
 	assert.NotZero(t, respBody.RefreshToken)
 }
 
+func TestLogin_ReturnsMethodNotAllowed(t *testing.T) {
+	env := testApp.NewEnv(t)
+
+	resp := env.Client.Get(t, LoginPath)
+
+	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+}
+
 func TestLogin_ReturnsInvalidCredentialsResponse_WhenUsernameNotExists(t *testing.T) {
 	env := testApp.NewEnv(t)
 	reqBody := LoginRequestBody{

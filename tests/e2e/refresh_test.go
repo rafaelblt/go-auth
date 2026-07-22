@@ -37,6 +37,14 @@ func TestRefresh_ReturnsSuccessResponse(t *testing.T) {
 	assert.NotZero(t, respBody.RefreshToken)
 }
 
+func TestRefresh_ReturnsMethodNotAllowed(t *testing.T) {
+	env := testApp.NewEnv(t)
+
+	resp := env.Client.Get(t, RefreshPath)
+
+	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+}
+
 func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsInvalid(t *testing.T) {
 	env := testApp.NewEnv(t)
 	reqBody := RefreshRequestBody{
