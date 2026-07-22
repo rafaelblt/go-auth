@@ -39,7 +39,7 @@ func TestLoginDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 	assert.Zero(t, in)
 }
 
-func TestLoginEncoder_WritesSuccessResponse(t *testing.T) {
+func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	output := login.Output{
 		AccessToken: usecase.AccessTokenDTO{
@@ -52,11 +52,11 @@ func TestLoginEncoder_WritesSuccessResponse(t *testing.T) {
 		},
 	}
 
-	loginEncoder(recorder, output)
+	resp := loginEncoder(output)
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
-	var actualBody loginResponseBody
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &actualBody))
+	require.IsType(t, loginResponseBody{}, resp.Body)
+	actualBody := resp.Body.(loginResponseBody)
 	expectedBody := loginResponseBody{
 		AccessToken: accessToken{
 			Value:     output.AccessToken.Value,

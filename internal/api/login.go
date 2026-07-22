@@ -34,7 +34,7 @@ func loginDecoder(r *http.Request) (login.Input, error) {
 	return in, nil
 }
 
-func loginEncoder(w http.ResponseWriter, out login.Output) error {
+func loginEncoder(out login.Output) response {
 	accessToken := mapAccessTokenDTO(out.AccessToken)
 	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
 
@@ -42,13 +42,15 @@ func loginEncoder(w http.ResponseWriter, out login.Output) error {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return err
+	resp := response{
+		StatusCode: http.StatusOK,
+		Body:       body,
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(buf)
-	return err
+	return resp
 }
+
+func loginSuccessLog(ctx context.Context, out login.Output) {
+	loggerFrom(ctx).Info("success login") // TODO: add user id?
+}
+

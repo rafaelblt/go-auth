@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/validation"
@@ -12,30 +11,31 @@ import (
 func translateError(ctx context.Context, err error) response {
 	var uerr usecase.UseCaseError
 	if errors.As(err, &uerr) {
-		return translateUseCaseError(uerr)
+		return translateUseCaseError(ctx, uerr)
 	}
 
 	var verr validation.ValidationError
 	if errors.As(err, &verr) {
-		return translateValidationError(verr)
+		return translateValidationError(ctx, verr)
 	}
 
-	logger := loggerFrom(ctx)
-	logger.Error("unexpected error for translation", "error", err)
+	loggerFrom(ctx).Error("unexpected error for translation", "error", err)
 	return internalServerError()
 }
 
-func translateUseCaseError(uerr usecase.UseCaseError) response {
-	var status int
-	var msg string
+func translateUseCaseError(ctx context.Context, uerr usecase.UseCaseError) response {
+	logger := loggerFrom(ctx)
 
-	switch uerr.Kind() {
-	case usecase.ErrorKindConflict:
-		status = http.StatusConflict
-		msg = "A conflict error occurred."
-	case usecase.ErrorKindUnauthorized:
-		status = http.StatusUnauthorized
-		msg = "Not authorized."
+	status, ok := kindStatusCatalog[uerr.Kind()]
+	if !ok {
+		logger.Error("error kind not found in status catalog", "kind", uerr.Kind())
+		return internalServerError()
+	}
+
+	msg, ok := kindMessageCatalog[uerr.Kind()]
+	if !ok {
+		logger.Warn("error kind not found in message catalog, using fallback", "kind", uerr.Kind())
+		msg = "An error occurred." // fallback
 	}
 
 	body := errorBody{Error: errorData{
@@ -49,8 +49,9 @@ func translateUseCaseError(uerr usecase.UseCaseError) response {
 	return resp
 }
 
-func translateValidationError(verr validation.ValidationError) response {
+func translateValidationError(ctx context.Context, verr validation.ValidationError) response {
 	fieldErrs := make([]fieldErrorData, len(verr.Errors()))
+	pairsToLog := make([]string, len(verr.Errors()))
 
 	for i, ferr := range verr.Errors() {
 		issue := ferr.Issue()
@@ -64,30 +65,10 @@ func translateValidationError(verr validation.ValidationError) response {
 			Details: issue.Details(),
 		}
 		fieldErrs[i] = fieldErr
+		pairsToLog[i] = field + " " + issue.Code()
 	}
 
+	loggerFrom(ctx).Info("validation error", "pairs", pairsToLog)
 	body := validationErrorBody{Errors: fieldErrs}
-	resp := response{
-		StatusCode: http.StatusUnprocessableEntity,
-		Body:       body,
-	}
-	return resp
-}
-
-func translateErrorFromUseCase(ctx context.Context, w http.ResponseWriter, err error) {
-	var uerr usecase.UseCaseError
-	if errors.As(err, &uerr) {
-		writeUseCaseError(ctx, w, uerr)
-		return
-	}
-
-	var verr validation.ValidationError
-	if errors.As(err, &verr) {
-		writeValidationError(ctx, w, verr)
-		return
-	}
-
-	logger := loggerFrom(ctx)
-	logger.Error("unexpected error for translation", "error", err)
-	writeInternalServerError(ctx, w)
+	return validationError(body)
 }

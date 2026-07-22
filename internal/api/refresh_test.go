@@ -37,8 +37,7 @@ func TestRefreshDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 	assert.Zero(t, in)
 }
 
-func TestRefreshEncoder_WritesSuccessResponse(t *testing.T) {
-	recorder := httptest.NewRecorder()
+func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 	output := refresh.Output{
 		AccessToken: usecase.AccessTokenDTO{
 			Value:     "raw access token value",
@@ -50,11 +49,11 @@ func TestRefreshEncoder_WritesSuccessResponse(t *testing.T) {
 		},
 	}
 
-	refreshEncoder(recorder, output)
+	resp := refreshEncoder(output)
 
-	assert.Equal(t, http.StatusOK, recorder.Code)
-	var actualBody refreshResponseBody
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &actualBody))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	require.IsType(t, refreshResponseBody{}, resp.Body)
+	actualBody := resp.Body.(refreshResponseBody)
 	expectedBody := refreshResponseBody{
 		AccessToken: accessToken{
 			Value:     output.AccessToken.Value,

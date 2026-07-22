@@ -21,7 +21,6 @@ type validationErrorBody struct {
 	Errors fieldErrors `json:"errors"`
 }
 
-type validationErrors map[string]fieldErrors
 type fieldErrors = []fieldErrorData
 
 type fieldErrorData struct {
@@ -30,21 +29,7 @@ type fieldErrorData struct {
 	Details map[string]any `json:"details"`
 }
 
-// Built Errors
-
-var internalServerErrorBody = errorBody{
-	Error: errorData{
-		Code:    "INTERNAL_SERVER_ERROR",
-		Message: "An internal error occurred.",
-	},
-}
-
-var invalidJSONBodyErrorBody = errorBody{
-	Error: errorData{
-		Code:    "INVALID_BODY",
-		Message: "...", // TODO
-	},
-}
+// Functions
 
 func validationError(body validationErrorBody) response {
 	return response{
@@ -56,13 +41,19 @@ func validationError(body validationErrorBody) response {
 func internalServerError() response {
 	return response{
 		StatusCode: http.StatusInternalServerError,
-		Body:       internalServerErrorBody,
+		Body: errorBody{Error: errorData{
+			Code:    "INTERNAL_SERVER_ERROR",
+			Message: "An internal error occurred.",
+		}},
 	}
 }
 
 func invalidJSONBodyError() response {
 	return response{
 		StatusCode: http.StatusBadRequest,
-		Body:       invalidJSONBodyErrorBody,
+		Body: errorBody{Error: errorData{
+			Code:    "INVALID_JSON_BODY",
+			Message: "Request body is not valid JSON.",
+		}},
 	}
 }

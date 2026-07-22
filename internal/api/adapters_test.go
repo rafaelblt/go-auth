@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -49,12 +48,23 @@ func (uc *FakeUseCase) Execute(ctx context.Context, in FakeInput) (FakeOutput, e
 	return FakeOutput{OutValue: in.InValue}, nil
 }
 
-func (uc *FakeUseCase) Contexts() []context.Context {
-	return uc.contexts
+// Fake Success Logger
+
+type FakeSuccessLogger struct {
+	contexts []context.Context
+	outputs  []FakeOutput
 }
 
-func (uc *FakeUseCase) Inputs() []FakeInput {
-	return uc.inputs
+func NewFakeSuccessLogger() *FakeSuccessLogger {
+	return &FakeSuccessLogger{
+		contexts: make([]context.Context, 0),
+		outputs:  make([]FakeOutput, 0),
+	}
+}
+
+func (l *FakeSuccessLogger) Log(ctx context.Context, out FakeOutput) {
+	l.contexts = append(l.contexts, ctx)
+	l.outputs = append(l.outputs, out)
 }
 
 // Fake Request & Response Body
@@ -67,31 +77,92 @@ type FakeResponseBody struct {
 	RespValue string `json:"resp_value"`
 }
 
+// Fake Decoder
+
+type FakeDecoder struct {
+	err      error
+	requests []*http.Request
+}
+
+func NewFakeDecoder() *FakeDecoder {
+	return &FakeDecoder{requests: make([]*http.Request, 0)}
+}
+
+func (d *FakeDecoder) Decode(r *http.Request) (FakeInput, error) {
+	d.requests = append(d.requests, r)
+
+	if d.err != nil {
+		return FakeInput{}, d.err
+	}
+
+	var body FakeRequestBody
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return FakeInput{}, err
+	}
+
+	in := FakeInput{InValue: body.ReqValue}
+	return in, nil
+}
+
+// Fake Encoder
+
+type FakeEncoder struct {
+	statusCode int
+	outputs    []FakeOutput
+}
+
+func NewFakeEncoder() *FakeEncoder {
+	return &FakeEncoder{
+		statusCode: http.StatusIMUsed,
+		outputs:    make([]FakeOutput, 0),
+	}
+}
+
+func (e *FakeEncoder) Encode(out FakeOutput) response {
+	e.outputs = append(e.outputs, out)
+	body := FakeResponseBody{RespValue: out.OutValue}
+	return response{StatusCode: e.statusCode, Body: body}
+}
+
 // Test Helper
 
 type TestAdapterUseCaseHelper struct {
-	t           *testing.T
-	code        int
-	decoderErr  error
-	encoderErr  error
-	FakeUseCase *FakeUseCase
+	t                 *testing.T
+	fakeUseCase       *FakeUseCase
+	fakeDecoder       *FakeDecoder
+	fakeEncoder       *FakeEncoder
+	fakeSuccessLogger *FakeSuccessLogger
 }
 
 func NewTestAdapterUseCaseHelper(t *testing.T) *TestAdapterUseCaseHelper {
 	return &TestAdapterUseCaseHelper{
-		t:           t,
-		FakeUseCase: NewFakeUseCase(),
-		code:        http.StatusIMUsed,
+		t:                 t,
+		fakeUseCase:       NewFakeUseCase(),
+		fakeDecoder:       NewFakeDecoder(),
+		fakeEncoder:       NewFakeEncoder(),
+		fakeSuccessLogger: NewFakeSuccessLogger(),
 	}
 }
 
 func (h *TestAdapterUseCaseHelper) ExpectedStatusCode() int {
-	return h.code
+	return h.fakeEncoder.statusCode
 }
 
 func (h *TestAdapterUseCaseHelper) NewHandler() http.HandlerFunc {
 	h.t.Helper()
-	return adaptUseCase(h.FakeUseCase, h.FakeDecoder, h.FakeEncoder)
+	return adaptUseCase(useCaseAdapterParams[FakeInput, FakeOutput]{
+		UseCase:    h.fakeUseCase,
+		Decoder:    h.fakeDecoder.Decode,
+		Encoder:    h.fakeEncoder.Encode,
+		SuccessLog: h.fakeSuccessLogger.Log,
+	})
+}
+
+func (h *TestAdapterUseCaseHelper) Handle(w http.ResponseWriter, r *http.Request) {
+	h.t.Helper()
+	handler := h.NewHandler()
+	handler(w, r)
 }
 
 func (h *TestAdapterUseCaseHelper) NewRequest(value string) *http.Request {
@@ -126,82 +197,54 @@ func (h *TestAdapterUseCaseHelper) DecodeErrorBody(r *httptest.ResponseRecorder)
 	return body
 }
 
+func (h *TestAdapterUseCaseHelper) ContextsProvidedToUseCase() []context.Context {
+	return h.fakeUseCase.contexts
+}
+
+func (h *TestAdapterUseCaseHelper) InputsProvidedToUseCase() []FakeInput {
+	return h.fakeUseCase.inputs
+}
+
+func (h *TestAdapterUseCaseHelper) RequestsProvidedToDecoder() []*http.Request {
+	return h.fakeDecoder.requests
+}
+
+func (h *TestAdapterUseCaseHelper) OutputsProvidedToDecoder() []FakeOutput {
+	return h.fakeEncoder.outputs
+}
+
 func (h *TestAdapterUseCaseHelper) SetErrorInUseCase(err error) {
-	h.FakeUseCase.err = err
-}
-
-func (h *TestAdapterUseCaseHelper) SetErrorInFakeDecoder(err error) {
-	h.decoderErr = err
-}
-
-func (h *TestAdapterUseCaseHelper) SetErrorInFakeEncoder(err error) {
-	h.encoderErr = err
-}
-
-func (h *TestAdapterUseCaseHelper) FakeDecoder(r *http.Request) (FakeInput, error) {
-	if h.decoderErr != nil {
-		return FakeInput{}, h.decoderErr
-	}
-
-	var body FakeRequestBody
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		return FakeInput{}, err
-	}
-
-	in := FakeInput{InValue: body.ReqValue}
-	return in, nil
-}
-
-func (h *TestAdapterUseCaseHelper) FakeEncoder(w http.ResponseWriter, out FakeOutput) error {
-	if h.encoderErr != nil {
-		return h.encoderErr
-	}
-
-	body := FakeResponseBody{RespValue: out.OutValue}
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	w.WriteHeader(h.code)
-	w.Write(buf)
-	return nil
+	h.fakeUseCase.err = err
 }
 
 // Tests
 
 func TestAdaptUseCase_ExecutesUseCaseWithInput(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
-	recorder := httptest.NewRecorder()
 	value := "valueststest"
 
-	handler(recorder, helper.NewRequest(value))
+	helper.Handle(httptest.NewRecorder(), helper.NewRequest(value))
 
-	input := testutil.Only(t, helper.FakeUseCase.Inputs())
+	input := testutil.Only(t, helper.InputsProvidedToUseCase())
 	assert.Equal(t, value, input.InValue)
 }
 
 func TestAdaptUseCase_ExecutesUseCaseWithContext(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
-	recorder := httptest.NewRecorder()
-
 	req := helper.NewRequest("value for tests in test file")
-	handler(recorder, req)
 
-	context := testutil.Only(t, helper.FakeUseCase.Contexts())
-	assert.Equal(t, req.Context(), context)
+	helper.Handle(httptest.NewRecorder(), req)
+
+	ctx := testutil.Only(t, helper.ContextsProvidedToUseCase())
+	assert.Equal(t, req.Context(), ctx)
 }
 
 func TestAdaptUseCase_WritesSuccessResponse(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
 	recorder := httptest.NewRecorder()
 	value := "1 + 1 = 3"
 
-	handler(recorder, helper.NewRequest(value))
+	helper.Handle(recorder, helper.NewRequest(value))
 
 	require.Equal(t, helper.ExpectedStatusCode(), recorder.Code)
 	resp := helper.DecodeSuccessBody(recorder)
@@ -210,47 +253,49 @@ func TestAdaptUseCase_WritesSuccessResponse(t *testing.T) {
 
 func TestAdaptUseCase_TranslatesError_WhenUseCaseFails(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
 	recorder := httptest.NewRecorder()
 
 	err := usecase.NewError("ERROR_CODE", usecase.ErrorKindConflict)
 	helper.SetErrorInUseCase(err)
 
-	handler(recorder, helper.NewRequest("req value"))
+	helper.Handle(recorder, helper.NewRequest("req value"))
 
-	require.Equal(t, http.StatusConflict, recorder.Code)
-	resp := helper.DecodeErrorBody(recorder)
-	assert.Equal(t, err.Code(), resp.Error.Code)
+	expectedResp := translateError(context.Background(), err)
+	assert.Equal(t, expectedResp.StatusCode, recorder.Code)
+	actualBody := helper.DecodeErrorBody(recorder)
+	assert.Equal(t, expectedResp.Body, actualBody)
 }
 
-func TestAdaptUseCase_WritesInvalidJSONBodyError_WhenDecoderFails(t *testing.T) {
+func TestAdaptUseCase_WritesInvalidJSONBodyError_WhenDecoderReturnsError(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
 	recorder := httptest.NewRecorder()
 
-	err := errors.New("random unexpected error")
-	helper.SetErrorInFakeDecoder(err)
+	req, err := http.NewRequest("POST", "url", strings.NewReader("invalid json"))
+	require.NoError(t, err)
 
-	handler(recorder, helper.NewRequest("valuable"))
+	helper.Handle(recorder, req)
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
-	resp := helper.DecodeErrorBody(recorder)
-	assert.Equal(t, invalidJSONBodyErrorBody.Error.Code, resp.Error.Code)
-	assert.Equal(t, invalidJSONBodyErrorBody.Error.Message, resp.Error.Message)
+	body := helper.DecodeErrorBody(recorder)
+	assert.Equal(t, invalidJSONBodyError().Body, body)
 }
 
-func TestAdaptUseCase_WritesInternalServerError_WhenEncoderFails(t *testing.T) {
+func TestAdaptUseCase_UseSuccessLog_WithContext(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
-	handler := helper.NewHandler()
-	recorder := httptest.NewRecorder()
+	req := helper.NewRequest("zero value in golang")
 
-	err := errors.New("random unexpected error")
-	helper.SetErrorInFakeEncoder(err)
+	helper.Handle(httptest.NewRecorder(), req)
 
-	handler(recorder, helper.NewRequest("valuable"))
+	ctx := testutil.Only(t, helper.fakeSuccessLogger.contexts)
+	assert.Equal(t, req.Context(), ctx)
+}
 
-	require.Equal(t, http.StatusInternalServerError, recorder.Code)
-	resp := helper.DecodeErrorBody(recorder)
-	assert.Equal(t, internalServerErrorBody.Error.Code, resp.Error.Code)
-	assert.Equal(t, internalServerErrorBody.Error.Message, resp.Error.Message)
+func TestAdaptUseCase_UseSuccessLog_WithOutput(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	value := "zero value in golang"
+
+	helper.Handle(httptest.NewRecorder(), helper.NewRequest(value))
+
+	output := testutil.Only(t, helper.fakeSuccessLogger.outputs)
+	assert.Equal(t, value, output.OutValue)
 }

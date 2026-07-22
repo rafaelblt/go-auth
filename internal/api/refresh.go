@@ -32,21 +32,22 @@ func refreshDecoder(r *http.Request) (refresh.Input, error) {
 	return in, nil
 }
 
-func refreshEncoder(w http.ResponseWriter, out refresh.Output) error {
+func refreshEncoder(out refresh.Output) response {
 	accessToken := mapAccessTokenDTO(out.AccessToken)
 	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
 
 	body := refreshResponseBody{
-		AccessToken: accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return err
+	resp := response{
+		StatusCode: http.StatusOK,
+		Body:       body,
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(buf)
-	return err
+	return resp
+}
+
+func refreshSuccessLog(ctx context.Context, out refresh.Output) {
+	loggerFrom(ctx).Info("success refresh") // TODO: add user id?
 }

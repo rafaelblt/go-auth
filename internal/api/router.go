@@ -1,10 +1,14 @@
 package api
 
 import (
-	"slices"
 	"context"
 	"errors"
 	"net/http"
+	"slices"
+
+	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
 )
 
 type Config struct {
@@ -29,9 +33,24 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 		return nil, errors.New("refresh nil")
 	}
 
-	register := adaptUseCase(cfg.Dependencies.Register, registerDecoder, registerEncoder)
-	login := adaptUseCase(cfg.Dependencies.Login, loginDecoder, loginEncoder)
-	refresh := adaptUseCase(cfg.Dependencies.Refresh, refreshDecoder, refreshEncoder)
+	register := adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
+		UseCase:    cfg.Dependencies.Register,
+		Decoder:    registerDecoder,
+		Encoder:    registerEncoder,
+		SuccessLog: registerSuccessLog,
+	})
+	login := adaptUseCase(useCaseAdapterParams[login.Input, login.Output]{
+		UseCase:    cfg.Dependencies.Login,
+		Decoder:    loginDecoder,
+		Encoder:    loginEncoder,
+		SuccessLog: loginSuccessLog,
+	})
+	refresh := adaptUseCase(useCaseAdapterParams[refresh.Input, refresh.Output]{
+		UseCase:    cfg.Dependencies.Refresh,
+		Decoder:    refreshDecoder,
+		Encoder:    refreshEncoder,
+		SuccessLog: refreshSuccessLog,
+	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/auth/register", register)

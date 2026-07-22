@@ -39,8 +39,7 @@ func TestRegisterDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 	assert.Zero(t, in)
 }
 
-func TestRegisterEncoder_WritesSuccessResponse(t *testing.T) {
-	recorder := httptest.NewRecorder()
+func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
 	output := register.Output{
 		User: usecase.UserDTO{
 			ID:        "da0-gk-0akg=0-1q",
@@ -51,11 +50,11 @@ func TestRegisterEncoder_WritesSuccessResponse(t *testing.T) {
 		},
 	}
 
-	registerEncoder(recorder, output)
+	resp := registerEncoder(output)
 
-	assert.Equal(t, http.StatusOK, recorder.Code)
-	var actualBody registerResponseBody
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &actualBody))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	require.IsType(t, registerResponseBody{}, resp.Body)
+	actualBody := resp.Body.(registerResponseBody)
 	expectedBody := registerResponseBody{
 		User: user{
 			ID:        output.User.ID,

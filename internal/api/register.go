@@ -33,16 +33,13 @@ func registerDecoder(r *http.Request) (register.Input, error) {
 	return in, nil
 }
 
-func registerEncoder(w http.ResponseWriter, out register.Output) error {
+func registerEncoder(out register.Output) response {
 	usr := mapUserDTO(out.User)
 	body := registerResponseBody{User: usr}
+	resp := response{StatusCode: http.StatusOK, Body: body}
+	return resp
+}
 
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(buf)
-	return err
+func registerSuccessLog(ctx context.Context, out register.Output) {
+	loggerFrom(ctx).Info("success register", "user_id", out.User.ID)
 }
