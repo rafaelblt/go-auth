@@ -94,12 +94,12 @@ func RestoreCredential(params RestoreParams) (*Credential, error) {
 	return cred, nil
 }
 
-func (c Credential) ID() ID               { return c.id }
-func (c Credential) UserID() user.ID      { return c.userID }
-func (c Credential) Kind() Kind           { return c.kind }
-func (c Credential) Provider() Provider   { return c.provider }
-func (c Credential) Secret() Secret       { return c.secret }
-func (c Credential) CreatedAt() time.Time { return c.createdAt }
-func (c Credential) UpdatedAt() time.Time { return c.updatedAt }
+func (c *Credential) ID() ID               { return c.id }
+func (c *Credential) UserID() user.ID      { return c.userID }
+func (c *Credential) Kind() Kind           { return c.kind }
+func (c *Credential) Provider() Provider   { return c.provider }
+func (c *Credential) Secret() Secret       { return c.secret }
+func (c *Credential) CreatedAt() time.Time { return c.createdAt }
+func (c *Credential) UpdatedAt() time.Time { return c.updatedAt }
 
-func (c Credential) IsZero() bool { return c.id.IsZero() }
+func (c *Credential) IsZero() bool { return c.id.IsZero() }

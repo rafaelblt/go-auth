@@ -60,12 +60,12 @@ func RestoreUser(params RestoreParams) (*User, error) {
 	}, nil
 }
 
-func (u User) ID() ID               { return u.id }
-func (u User) Username() Username   { return u.username }
-func (u User) Status() Status       { return u.status }
-func (u User) CreatedAt() time.Time { return u.createdAt }
-func (u User) UpdatedAt() time.Time { return u.updatedAt }
-func (u User) IsZero() bool         { return u.id.IsZero() }
+func (u *User) ID() ID               { return u.id }
+func (u *User) Username() Username   { return u.username }
+func (u *User) Status() Status       { return u.status }
+func (u *User) CreatedAt() time.Time { return u.createdAt }
+func (u *User) UpdatedAt() time.Time { return u.updatedAt }
+func (u *User) IsZero() bool         { return u.id.IsZero() }
 
 func (u *User) ChangeUsername(newUsername Username, updatedAt time.Time) error {
 	if newUsername.IsZero() {
