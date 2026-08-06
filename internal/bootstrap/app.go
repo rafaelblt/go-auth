@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type App struct {
 	router http.Handler
+	cfg    Config
 	addr   string
 	deps   infraDeps
 }
@@ -46,6 +49,9 @@ func NewApp(ctx context.Context, cfg Config) (*App, error) {
 }
 
 func (app *App) Run(ctx context.Context) error {
+	stopBackground := app.startBackground(ctx)
+	defer stopBackground()
+
 	server := &http.Server{
 		Addr:              app.addr,
 		Handler:           app.router,
@@ -67,9 +73,35 @@ func (app *App) Run(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		return server.Shutdown(shutdownCtx)
+	}
+}
+
+func (app *App) startBackground(ctx context.Context) (stop func()) {
+	ctx, cancel := context.WithCancel(ctx)
+
+	tasks := []periodicTask{
+		{
+			name:     "jwt_keyring_rotation",
+			interval: 7 * 24 * time.Hour,
+			timeout:  3 * time.Second,
+			run:      app.deps.Ed25519Keyring.Rotate,
+		},
+	}
+
+	var wg sync.WaitGroup
+	for _, t := range tasks {
+		wg.Go(func() {
+			runPeriodic(ctx, slog.Default(), t)
+		})
+	}
+
+	return func() {
+		cancel()
+		wg.Wait()
 	}
 }
 
