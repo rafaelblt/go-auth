@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/rafaelblt/go-auth/internal/bootstrap/env"
 )
-
-const EnvDatabaseURL = "DATABASE_URL"
 
 type Config struct {
 	Address         string
@@ -26,17 +25,29 @@ func LoadConfig() (Config, error) {
 	}
 
 	cfg := Config{}
+	errs := make([]error, 0)
 
-	dbURL, ok := os.LookupEnv(EnvDatabaseURL)
-	if !ok {
-		return Config{}, fmt.Errorf("the env var '%s' is required", EnvDatabaseURL)
+	cfg.DatabaseURL, errs = resolveEnv(EnvDatabaseURL, errs)
+	cfg.Address, errs = resolveEnv(EnvAddress, errs)
+	cfg.BcryptCost, errs = resolveEnv(EnvBcryptCost, errs)
+	cfg.RefreshTokenTTL, errs = resolveEnv(EnvRefreshTokenTTL, errs)
+	cfg.AccessTokenTTL, errs = resolveEnv(EnvAccessTokenTTL, errs)
+
+	if len(errs) > 0 {
+		e := fmt.Errorf("failed to load environment variables: %w", errors.Join(errs...))
+		return Config{}, e
 	}
-	cfg.DatabaseURL = dbURL
-
-	cfg.BcryptCost = 8
-	cfg.RefreshTokenTTL = time.Hour * 24 * 7
 
 	return cfg, nil
+}
+
+func resolveEnv[T any](env env.EnvVar[T], errs []error) (T, []error) {
+	value, err := env.Resolve()
+	if err != nil {
+		e := fmt.Errorf("'%s': %w", env.Key, err)
+		errs = append(errs, e)
+	}
+	return value, errs
 }
 
 func (c Config) Validate() error {
