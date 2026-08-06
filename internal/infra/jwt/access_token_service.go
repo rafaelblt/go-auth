@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -22,8 +23,8 @@ type AccessTokenService struct {
 }
 
 type Signer interface {
-	sign(claims) (string, error)
-	parse(string) (claims, error)
+	Sign(jwt.RegisteredClaims) (string, error)
+	Parse(string) (jwt.RegisteredClaims, error)
 }
 
 type AccessTokenServiceConfig struct {
@@ -56,12 +57,12 @@ func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.Access
 		return port.AccessTokenIssued{}, errors.New("user id zero")
 	}
 
-	expiresAt := s.clock.Now().Add(s.expiration)
-
-	token, err := s.signer.sign(claims{
+	claims := jwt.RegisteredClaims{
 		Subject:   payload.UserID.Value().String(),
-		ExpiresAt: expiresAt,
-	})
+		ExpiresAt: jwt.NewNumericDate(s.clock.Now().Add(s.expiration)),
+	}
+
+	token, err := s.signer.Sign(claims)
 	if err != nil {
 		return port.AccessTokenIssued{}, fmt.Errorf("signer sign failed: %w", err)
 	}
@@ -73,20 +74,23 @@ func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.Access
 
 	issued := port.AccessTokenIssued{
 		Token:     accessToken,
-		ExpiresAt: expiresAt,
+		ExpiresAt: claims.ExpiresAt.Time,
 	}
 	return issued, nil
 }
 
 func (s *AccessTokenService) Validate(raw string) (port.AccessTokenClaims, error) {
-	claims, err := s.signer.parse(raw)
+	claims, err := s.signer.Parse(raw)
 	switch {
 	case err == nil:
 		// continue
-	case errors.Is(err, errTokenInvalid):
+	case errors.Is(err, ErrTokenInvalid):
 		return port.AccessTokenClaims{}, session.ErrTokenInvalid
-	case errors.Is(err, errTokenExpired):
+	case errors.Is(err, ErrTokenExpired):
 		return port.AccessTokenClaims{}, session.ErrTokenExpired
+	default:
+		e := fmt.Errorf("unexpected error from signer parse: %w", err)
+		return port.AccessTokenClaims{}, e
 	}
 
 	userID, err := user.ParseID(claims.Subject)

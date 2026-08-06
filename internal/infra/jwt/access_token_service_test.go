@@ -1,40 +1,135 @@
 package jwt
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func service(t *testing.T) *AccessTokenService {
+// TEST HELPER
+
+type ServiceTestHelper struct {
+	t          *testing.T
+	FakeClock  *porttest.FakeClock
+	FakeSigner *FakeSigner
+	Expiration time.Duration
+}
+
+func NewServiceTestHelper(t *testing.T) *ServiceTestHelper {
+	helper := ServiceTestHelper{
+		t:          t,
+		FakeClock:  porttest.NewFakeClock(),
+		FakeSigner: NewFakeSigner(),
+		Expiration: time.Minute,
+	}
+	return &helper
+}
+
+func (sth *ServiceTestHelper) Service() *AccessTokenService {
 	return &AccessTokenService{
-		signer:     edSigner(t),
-		clock:      porttest.NewFakeClock(),
-		expiration: time.Minute,
+		signer:     sth.FakeSigner,
+		clock:      sth.FakeClock,
+		expiration: sth.Expiration,
 	}
 }
 
+func (sth *ServiceTestHelper) ValidPayload() port.AccessTokenPayload {
+	return port.AccessTokenPayload{UserID: user.NewID()}
+}
+
+// FAKE SIGNER
+
+type FakeSigner struct {
+	defaultToken  string
+	defaultClaims jwt.RegisteredClaims
+	signedClaims  []jwt.RegisteredClaims
+	parsedTokens  []string
+	signErr       error
+	parseErr      error
+}
+
+func NewFakeSigner() *FakeSigner {
+	s := FakeSigner{
+		defaultToken:  "default fake signed token",
+		defaultClaims: jwt.RegisteredClaims{Subject: user.NewID().String()},
+		signedClaims:  make([]jwt.RegisteredClaims, 0),
+		parsedTokens:  make([]string, 0),
+	}
+	return &s
+}
+
+func (fs *FakeSigner) Sign(claims jwt.RegisteredClaims) (string, error) {
+	fs.signedClaims = append(fs.signedClaims, claims)
+	if fs.signErr != nil {
+		return "", fs.signErr
+	}
+	return fs.defaultToken, nil
+}
+
+func (fs *FakeSigner) Parse(token string) (jwt.RegisteredClaims, error) {
+	fs.parsedTokens = append(fs.parsedTokens, token)
+	if fs.parseErr != nil {
+		return jwt.RegisteredClaims{}, fs.parseErr
+	}
+	return fs.defaultClaims, nil
+}
+
+func (fs *FakeSigner) DefaultSignedToken() string {
+	return fs.defaultToken
+}
+
+func (fs *FakeSigner) DefaultParsedClaims() jwt.RegisteredClaims {
+	return fs.defaultClaims
+}
+
+func (fs *FakeSigner) SignedClaims() []jwt.RegisteredClaims {
+	return fs.signedClaims
+}
+
+func (fs *FakeSigner) ParsedTokens() []string {
+	return fs.parsedTokens
+}
+
+func (fs *FakeSigner) SetSignError(err error) {
+	fs.signErr = err
+}
+
+func (fs *FakeSigner) SetParseError(err error) {
+	fs.parseErr = err
+}
+
+// TESTS
+
 func TestNewAccessTokenService(t *testing.T) {
+	cfg := AccessTokenServiceConfig{
+		Signer:     NewFakeSigner(),
+		Clock:      porttest.NewFakeClock(),
+		Expiration: time.Hour,
+	}
+
+	service, err := NewAccessTokenService(cfg)
+
+	require.NoError(t, err)
+	require.NotZero(t, service)
+	assert.Equal(t, cfg.Signer, service.signer)
+	assert.Equal(t, cfg.Clock, service.clock)
+	assert.Equal(t, cfg.Expiration, service.expiration)
+}
+
+func TestNewAccessTokenService_ReturnsError_WhenConfigIsInvalid(t *testing.T) {
 	testCases := []struct {
 		desc      string
 		cfg       AccessTokenServiceConfig
-		expectErr bool
 	}{
-		{
-			desc: "config valid",
-			cfg: AccessTokenServiceConfig{
-				Signer:     edSigner(t),
-				Clock:      porttest.NewFakeClock(),
-				Expiration: 10 * time.Minute,
-			},
-			expectErr: false,
-		},
 		{
 			desc: "signer nil",
 			cfg: AccessTokenServiceConfig{
@@ -42,110 +137,127 @@ func TestNewAccessTokenService(t *testing.T) {
 				Clock:      porttest.NewFakeClock(),
 				Expiration: time.Minute,
 			},
-			expectErr: true,
 		},
 		{
 			desc: "clock nil",
 			cfg: AccessTokenServiceConfig{
-				Signer:     edSigner(t),
+				Signer:     NewFakeSigner(),
 				Clock:      nil,
 				Expiration: time.Minute,
 			},
-			expectErr: true,
 		},
 		{
 			desc: "expiration too short",
 			cfg: AccessTokenServiceConfig{
-				Signer:     edSigner(t),
+				Signer:     NewFakeSigner(),
 				Clock:      porttest.NewFakeClock(),
 				Expiration: minExpiration - 1,
 			},
-			expectErr: true,
 		},
 		{
 			desc: "expiration too long",
 			cfg: AccessTokenServiceConfig{
-				Signer:     edSigner(t),
+				Signer:     NewFakeSigner(),
 				Clock:      porttest.NewFakeClock(),
 				Expiration: maxExpiration + 1,
 			},
-			expectErr: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			service, err := NewAccessTokenService(tC.cfg)
-			if tC.expectErr {
-				require.Error(t, err)
-				require.Zero(t, service)
-				return
-			}
-			require.NoError(t, err)
-			require.NotZero(t, service)
-			assert.Equal(t, tC.cfg.Signer, service.signer)
-			assert.Equal(t, tC.cfg.Clock, service.clock)
-			assert.Equal(t, tC.cfg.Expiration, service.expiration)
+			assert.Zero(t, service)
+			assert.Error(t, err)
 		})
 	}
 }
 
-func TestAccessTokenService_Issue_ReturnsToken(t *testing.T) {
-	service := service(t)
-	payload := port.AccessTokenPayload{
-		UserID: user.NewID(),
-	}
+func TestAccessTokenService_Issue_ReturnsSignedTokenAndExpiresAt(t *testing.T) {
+	helper := NewServiceTestHelper(t)
 
-	issued, err := service.Issue(payload)
+	issued, err := helper.Service().Issue(helper.ValidPayload())
 
 	require.NoError(t, err)
 	require.NotZero(t, issued)
-	assert.NotZero(t, issued.Token)
-	assert.NotZero(t, issued.ExpiresAt)
+	assert.Equal(t, helper.FakeSigner.DefaultSignedToken(), issued.Token.Value())
+	assert.Equal(t, 
+		helper.FakeClock.Now().Add(helper.Expiration).Truncate(time.Second),
+		issued.ExpiresAt)
+}
+
+func TestAccessTokenService_Issue_SignsTheTokenWithClaims(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	payload := helper.ValidPayload()
+
+	helper.Service().Issue(payload)
+
+	claims := testutil.Only(t, helper.FakeSigner.SignedClaims())
+	assert.Equal(t, payload.UserID.String(), claims.Subject)
+	assert.Equal(t,
+		helper.FakeClock.Now().Add(helper.Expiration).Truncate(time.Second),
+		claims.ExpiresAt.Time)
 }
 
 func TestAccessTokenService_Issue_ReturnsError_WhenUserIDIsZero(t *testing.T) {
-	service := service(t)
+	helper := NewServiceTestHelper(t)
 	payload := port.AccessTokenPayload{UserID: user.ID{}}
 
-	issued, err := service.Issue(payload)
+	issued, err := helper.Service().Issue(payload)
 
-	assert.Error(t, err)
 	assert.Zero(t, issued)
+	assert.Error(t, err)
 }
 
-func TestAccessTokenService_Validate_ReturnsClaimsForValidToken(t *testing.T) {
-	service := service(t)
+func TestAccessTokenService_Issue_ReturnsError_WhenSignerFails(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	expectedErr := errors.New("unexpected error for test")
+	helper.FakeSigner.SetSignError(expectedErr)
 
-	payload := port.AccessTokenPayload{UserID: user.NewID()}
-	valid, err := service.Issue(payload)
-	require.NoError(t, err)
+	issued, err := helper.Service().Issue(helper.ValidPayload())
+	
+	assert.Zero(t, issued)
+	assert.ErrorIs(t, err, expectedErr)
+}
 
-	claims, err := service.Validate(valid.Token.Value())
+func TestAccessTokenService_Validate_ReturnsClaims(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	expected := helper.FakeSigner.DefaultParsedClaims()
+
+	claims, err := helper.Service().Validate("token")
 
 	require.NoError(t, err)
 	require.NotZero(t, claims)
-	assert.Equal(t, payload.UserID, claims.UserID)
+	assert.Equal(t, expected.Subject, claims.UserID.String())
 }
 
-func TestAccessTokenService_Validate_ReturnsError_WhenTokenIsInvalid(t *testing.T) {
-	service := service(t)
+func TestAccessTokenService_Validate_ReturnsErrTokenInvalid(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	helper.FakeSigner.SetParseError(ErrTokenInvalid)
 
-	claims, err := service.Validate("invalid")
+	claims, err := helper.Service().Validate("invalid")
 
+	assert.Zero(t, claims)
 	assert.ErrorIs(t, err, session.ErrTokenInvalid)
-	assert.Zero(t, claims)
 }
 
-func TestAccessTokenService_Validate_ReturnsError_WhenTokenIsExpired(t *testing.T) {
-	service := service(t)
-	service.expiration = 1 * time.Microsecond
+func TestAccessTokenService_Validate_ReturnsErrTokenExpired(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	helper.FakeSigner.SetParseError(ErrTokenExpired)
 
-	payload := port.AccessTokenPayload{UserID: user.NewID()}
-	issued, err := service.Issue(payload)
-	require.NoError(t, err)
+	claims, err := helper.Service().Validate("expired")
 
-	claims, err := service.Validate(issued.Token.Value())
-
+	assert.Zero(t, claims)
 	assert.ErrorIs(t, err, session.ErrTokenExpired)
-	assert.Zero(t, claims)
 }
+
+func TestAccessTokenService_Validate_ReturnsError_WhenSignerFails(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	expectedErr := errors.New("unexpected error for test")
+	helper.FakeSigner.SetParseError(expectedErr)
+
+	claims, err := helper.Service().Validate("token")
+
+	assert.Zero(t, claims)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
