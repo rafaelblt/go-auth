@@ -2,8 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
 	"time"
 
@@ -11,6 +9,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/infra/bcrypt"
 	"github.com/rafaelblt/go-auth/internal/infra/jwt"
+	"github.com/rafaelblt/go-auth/internal/infra/jwt/ed25519"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/infra/refreshtoken"
 	"github.com/rafaelblt/go-auth/internal/port"
@@ -26,77 +25,94 @@ type infraDeps struct {
 	Sessions              *postgres.SessionRepo
 	RefreshTokens         *postgres.RefreshTokenRepo
 	PasswordHasher        *bcrypt.Hasher
+	Ed25519KeyStore       *ed25519.KeyStoreInMemory
+	Ed25519Keyring        *ed25519.Keyring
+	Ed25519Signer         *ed25519.Signer
 	AccessTokenService    *jwt.AccessTokenService
 	RefreshTokenGenerator *refreshtoken.Generator
 	RefreshTokenResolver  *refreshtoken.Resolver
 }
 
 func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
+	deps := infraDeps{}
+
 	clock := infra.NewSystemClock()
+	deps.Clock = clock
 
 	pool, err := buildPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.pool = pool
 
 	uow, err := buildUnitOfWork(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.UnitOfWork = uow
 
 	users, err := buildUserRepo(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.Users = users
 
 	creds, err := buildCredentialRepo(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.Credentials = creds
 
 	sessions, err := buildSessionRepo(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.Sessions = sessions
 
 	refreshTokens, err := buildRefreshTokenRepo(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.RefreshTokens = refreshTokens
 
 	hasher, err := buildPasswordHasher(cfg.BcryptCost)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.PasswordHasher = hasher
 
-	accessTokens, err := buildAccessTokenService(clock, cfg.AccessTokenTTL)
+	keystore := ed25519.NewKeyStoreInMemory()
+	deps.Ed25519KeyStore = keystore
+
+	keyring, err := buildEd25519Keyring(ctx, keystore)
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.Ed25519Keyring = keyring
+
+	signer, err := buildEd25519Signer(keyring, clock)
+	if err != nil {
+		return infraDeps{}, err
+	}
+	deps.Ed25519Signer = signer
+
+	accessTokens, err := buildAccessTokenService(signer, clock, cfg.AccessTokenTTL)
+	if err != nil {
+		return infraDeps{}, err
+	}
+	deps.AccessTokenService = accessTokens
 
 	refreshGenerator, err := buildRefreshTokenGenerator()
 	if err != nil {
 		return infraDeps{}, err
 	}
+	deps.RefreshTokenGenerator = refreshGenerator
 
 	refreshResolver, err := buildRefreshTokenResolver(refreshTokens)
 	if err != nil {
 		return infraDeps{}, err
 	}
-
-	deps := infraDeps{
-		pool:                  pool,
-		Clock:                 clock,
-		UnitOfWork:            uow,
-		Users:                 users,
-		Credentials:           creds,
-		Sessions:              sessions,
-		RefreshTokens:         refreshTokens,
-		PasswordHasher:        hasher,
-		AccessTokenService:    accessTokens,
-		RefreshTokenGenerator: refreshGenerator,
-		RefreshTokenResolver:  refreshResolver,
-	}
+	deps.RefreshTokenResolver = refreshResolver
 
 	return deps, nil
 }
@@ -157,20 +173,28 @@ func buildPasswordHasher(cost int) (*bcrypt.Hasher, error) {
 	return hasher, nil
 }
 
-func buildAccessTokenService(clock port.Clock, exp time.Duration) (*jwt.AccessTokenService, error) {
-	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+func buildEd25519Keyring(ctx context.Context, keyStore ed25519.KeyStore) (*ed25519.Keyring, error) {
+	keyring, err := ed25519.NewKeyring(ctx, ed25519.KeyringConfig{
+		KeyStore: keyStore,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("ed25519 generate key failed: %w", err)
+		return nil, fmt.Errorf("new ed25519 keyring failed: %w", err)
 	}
+	return keyring, nil
+}
 
-	signer, err := jwt.NewEd25519(jwt.Ed25519Config{
-		PrivateKey: privateKey,
-		Clock:      clock,
+func buildEd25519Signer(keyring *ed25519.Keyring, clock port.Clock) (*ed25519.Signer, error) {
+	signer, err := ed25519.NewSigner(ed25519.SignerConfig{
+		Keyring: keyring,
+		Clock:   clock,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new ed25519 signer failed: %w", err)
 	}
+	return signer, nil
+}
 
+func buildAccessTokenService(signer jwt.Signer, clock port.Clock, exp time.Duration) (*jwt.AccessTokenService, error) {
 	service, err := jwt.NewAccessTokenService(jwt.AccessTokenServiceConfig{
 		Signer:     signer,
 		Clock:      clock,
@@ -179,7 +203,6 @@ func buildAccessTokenService(clock port.Clock, exp time.Duration) (*jwt.AccessTo
 	if err != nil {
 		return nil, fmt.Errorf("new access token service failed: %w", err)
 	}
-
 	return service, nil
 }
 
