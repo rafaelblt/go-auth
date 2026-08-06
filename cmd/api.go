@@ -36,10 +36,17 @@ func run() error {
 		db.Close(ctx)
 	}()
 
+	os.Setenv("DATABASE_URL", db.ConnectionString())
+	os.Setenv("ADDRESS", "localhost:8080")
+	logger.Info("loading config...")
+	cfg, err := bootstrap.LoadConfig()
+	if err != nil {
+		logger.Error("config load failed", "error", err)
+		return err
+	}
+
 	logger.Info("building app...")
-	app, err := bootstrap.NewApp(ctx, bootstrap.Config{
-		DatabaseURL: db.ConnectionString(),
-	})
+	app, err := bootstrap.NewApp(ctx, cfg)
 	if err != nil {
 		logger.Error("app build failed", "error", err)
 		return err
@@ -47,5 +54,11 @@ func run() error {
 	defer app.Close()
 
 	logger.Info("running app...")
-	return app.Run(ctx)
+	err = app.Run(ctx)
+	if err != nil {
+		logger.Error("stopping app...", "error", err)
+		return err
+	}
+	logger.Info("stopping app...")
+	return nil
 }
