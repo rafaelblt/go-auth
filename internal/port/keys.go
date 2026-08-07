@@ -1,9 +1,7 @@
 package port
 
-import "context"
-
 type PublicKeyProvider interface {
-	PublicKeys(ctx context.Context) []PublicKey
+	PublicKeys() []PublicKey
 }
 
 type PublicKey struct {
