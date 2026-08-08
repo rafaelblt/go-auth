@@ -8,11 +8,12 @@ import (
 	"github.com/rafaelblt/go-auth/internal/api"
 )
 
-func newRouter(ctx context.Context, uc usecases) (http.Handler, error) {
+func newRouter(ctx context.Context, deps dependencies) (http.Handler, error) {
 	cfg := api.Config{Dependencies: api.Dependencies{
-		Register: uc.Register,
-		Login:    uc.Login,
-		Refresh:  uc.Refresh,
+		Register:          deps.UseCases.Register,
+		Login:             deps.UseCases.Login,
+		Refresh:           deps.UseCases.Refresh,
+		PublicKeyProvider: deps.Infra.Ed25519Keyring,
 	}}
 
 	router, err := api.NewRouter(ctx, cfg)

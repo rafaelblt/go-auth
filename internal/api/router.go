@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -17,9 +18,10 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Register registerUseCase
-	Login    loginUseCase
-	Refresh  refreshUseCase
+	Register          registerUseCase
+	Login             loginUseCase
+	Refresh           refreshUseCase
+	PublicKeyProvider port.PublicKeyProvider
 }
 
 func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
@@ -31,6 +33,9 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	}
 	if cfg.Dependencies.Refresh == nil {
 		return nil, errors.New("refresh nil")
+	}
+	if cfg.Dependencies.PublicKeyProvider == nil {
+		return nil, errors.New("public key provider nil")
 	}
 
 	register := adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
@@ -56,6 +61,7 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/register", register)
 	mux.HandleFunc("POST /v1/auth/login", login)
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
+	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
 	chain := chainMiddlewares(cfg, mux)
 

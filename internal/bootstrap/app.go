@@ -10,11 +10,16 @@ import (
 	"time"
 )
 
+type dependencies struct {
+	Infra    infraDeps
+	UseCases usecases
+}
+
 type App struct {
 	router http.Handler
 	cfg    Config
 	addr   string
-	deps   infraDeps
+	deps   dependencies
 }
 
 func NewApp(ctx context.Context, cfg Config) (*App, error) {
@@ -23,20 +28,22 @@ func NewApp(ctx context.Context, cfg Config) (*App, error) {
 		return nil, fmt.Errorf("config invalid: %w", err)
 	}
 
-	deps, err := newInfra(ctx, cfg)
+	infra, err := newInfra(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	uc, err := newUsecases(cfg, deps)
+	uc, err := newUsecases(cfg, infra)
 	if err != nil {
-		deps.pool.Close()
+		infra.pool.Close()
 		return nil, err
 	}
 
-	router, err := newRouter(ctx, uc)
+	deps := dependencies{Infra: infra, UseCases: uc}
+
+	router, err := newRouter(ctx, deps)
 	if err != nil {
-		deps.pool.Close()
+		infra.pool.Close()
 		return nil, err
 	}
 
@@ -88,7 +95,7 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 			name:     "jwt_keyring_rotation",
 			interval: 7 * 24 * time.Hour,
 			timeout:  3 * time.Second,
-			run:      app.deps.Ed25519Keyring.Rotate,
+			run:      app.deps.Infra.Ed25519Keyring.Rotate,
 		},
 	}
 
@@ -106,6 +113,6 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 }
 
 func (app *App) Close() error {
-	app.deps.pool.Close()
+	app.deps.Infra.pool.Close()
 	return nil
 }
