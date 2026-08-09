@@ -95,7 +95,7 @@ func (d *FakeDecoder) Decode(r *http.Request) (FakeInput, error) {
 		return FakeInput{}, d.err
 	}
 
-	var body FakeRequestBody
+	var body FakeRequestBody 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return FakeInput{}, err
