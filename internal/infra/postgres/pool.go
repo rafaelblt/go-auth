@@ -33,7 +33,7 @@ func NewPool(ctx context.Context, conn string) (*pgxpool.Pool, error) {
 
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		return nil, err
+		return nil, fmt.Errorf("ping: %w", err)
 	}
 
 	return pool, nil
