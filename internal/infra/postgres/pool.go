@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,6 +13,10 @@ import (
 )
 
 func NewPool(ctx context.Context, conn string) (*pgxpool.Pool, error) {
+	if strings.TrimSpace(conn) == "" {
+		return nil, errors.New("connection string empty")
+	}
+
 	cfg, err := pgxpool.ParseConfig(conn)
 	if err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
