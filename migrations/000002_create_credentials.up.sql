@@ -3,8 +3,8 @@ CREATE TABLE credentials (
     user_id UUID NOT NULL
         REFERENCES users(id)
         ON DELETE CASCADE,
-    kind VARCHAR(10) NOT NULL,
-    provider VARCHAR(10) NOT NULL,
+    kind TEXT NOT NULL,
+    provider TEXT NOT NULL,
     secret TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
