@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/infra"
 	"github.com/rafaelblt/go-auth/internal/infra/bcrypt"
 	"github.com/rafaelblt/go-auth/internal/infra/jwt"
@@ -33,13 +34,13 @@ type infraDeps struct {
 	RefreshTokenResolver  *refreshtoken.Resolver
 }
 
-func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
+func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
 	deps := infraDeps{}
 
 	clock := infra.NewSystemClock()
 	deps.Clock = clock
 
-	pool, err := buildPool(ctx, cfg.DatabaseURL)
+	pool, err := buildPool(ctx, cfg.DatabaseURL())
 	if err != nil {
 		return infraDeps{}, err
 	}
@@ -75,7 +76,7 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 	}
 	deps.RefreshTokens = refreshTokens
 
-	hasher, err := buildPasswordHasher(cfg.BcryptCost)
+	hasher, err := buildPasswordHasher(cfg.BcryptCost())
 	if err != nil {
 		return infraDeps{}, err
 	}
@@ -96,7 +97,7 @@ func newInfra(ctx context.Context, cfg Config) (infraDeps, error) {
 	}
 	deps.Ed25519Signer = signer
 
-	accessTokens, err := buildAccessTokenService(signer, clock, cfg.AccessTokenTTL)
+	accessTokens, err := buildAccessTokenService(signer, clock, cfg.AccessTokenTTL())
 	if err != nil {
 		return infraDeps{}, err
 	}

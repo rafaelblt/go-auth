@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"fmt"
 
+	"github.com/rafaelblt/go-auth/internal/config"
+
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -14,7 +16,7 @@ type usecases struct {
 	Refresh  *refresh.Refresh
 }
 
-func newUsecases(cfg Config, deps infraDeps) (usecases, error) {
+func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 	regst, err := buildRegister(deps)
 	if err != nil {
 		return usecases{}, err
@@ -51,7 +53,7 @@ func buildRegister(deps infraDeps) (register.Register, error) {
 	return uc, nil
 }
 
-func buildLogin(cfg Config, deps infraDeps) (login.Login, error) {
+func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
 	uc, err := login.New(login.Config{
 		UserReader:            deps.Users,
 		CredentialReader:      deps.Credentials,
@@ -60,7 +62,7 @@ func buildLogin(cfg Config, deps infraDeps) (login.Login, error) {
 		RefreshTokenGenerator: deps.RefreshTokenGenerator,
 		UnitOfWork:            deps.UnitOfWork,
 		Clock:                 deps.Clock,
-		RefreshTokenTTL:       cfg.RefreshTokenTTL,
+		RefreshTokenTTL:       cfg.RefreshTokenTTL(),
 	})
 	if err != nil {
 		return login.Login{}, fmt.Errorf("login creation failed: %w", err)
@@ -68,7 +70,7 @@ func buildLogin(cfg Config, deps infraDeps) (login.Login, error) {
 	return uc, nil
 }
 
-func buildRefresh(cfg Config, deps infraDeps) (*refresh.Refresh, error) {
+func buildRefresh(cfg config.Config, deps infraDeps) (*refresh.Refresh, error) {
 	uc, err := refresh.New(refresh.Config{
 		SessionReader:         deps.Sessions,
 		AccessTokenIssuer:     deps.AccessTokenService,
@@ -76,7 +78,7 @@ func buildRefresh(cfg Config, deps infraDeps) (*refresh.Refresh, error) {
 		RefreshTokenGenerator: deps.RefreshTokenGenerator,
 		UnitOfWork:            deps.UnitOfWork,
 		Clock:                 deps.Clock,
-		RefreshTokenTTL:       cfg.RefreshTokenTTL,
+		RefreshTokenTTL:       cfg.RefreshTokenTTL(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("refresh creation failed: %w", err)

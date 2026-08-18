@@ -6,10 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/rafaelblt/go-auth/internal/bootstrap"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/config"
 )
 
 func main() {
@@ -19,27 +18,14 @@ func main() {
 }
 
 func run() error {
+	logger := slog.Default()
+	logger.Info("starting app setup...")
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	logger := slog.Default()
-
-	logger.Info("creating test database...")
-	db, err := testutil.NewDatabase(ctx)
-	if err != nil {
-		logger.Error("failed to create test database", "error", err)
-		return err
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		db.Close(ctx)
-	}()
-
-	os.Setenv("DATABASE_URL", db.ConnectionString())
-	os.Setenv("ADDRESS", "localhost:8080")
 	logger.Info("loading config...")
-	cfg, err := bootstrap.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.Error("config load failed", "error", err)
 		return err

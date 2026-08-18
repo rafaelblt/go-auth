@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/bootstrap"
+	"github.com/rafaelblt/go-auth/internal/config"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 )
 
@@ -22,13 +24,17 @@ func TestMain(m *testing.M) {
 	}
 	defer db.Close(ctx)
 
-	cfg := bootstrap.Config{
+	cfg, err := config.NewConfig(config.ConfigParams{
 		Address:         "localhost:8080",
 		DatabaseURL:     db.ConnectionString(),
-		BcryptCost:      6,
-		AccessTokenTTL:  time.Minute * 30,
-		RefreshTokenTTL: time.Hour * 24,
+		BcryptCost:      shared.Ptr(6),
+		AccessTokenTTL:  shared.Ptr(time.Minute * 30),
+		RefreshTokenTTL: shared.Ptr(time.Hour * 24),
+	})
+	if err != nil {
+		log.Fatalf("new config failed: %s", err)
 	}
+
 	app, err := bootstrap.NewApp(ctx, cfg)
 	if err != nil {
 		log.Fatalf("new app failed: %s", err)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rafaelblt/go-auth/internal/bootstrap"
+	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -23,7 +23,7 @@ import (
 
 type Fixtures struct {
 	pool *pgxpool.Pool
-	cfg  bootstrap.Config
+	cfg  config.Config
 }
 
 func (f *Fixtures) SaveUser(t *testing.T, usr *user.User) {
@@ -52,7 +52,7 @@ func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, credential.P
 
 	plain := credentialtest.MustPlainPassword(t, "as-0dfo-01@$JU90512nsd")
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(plain.Value()), f.cfg.BcryptCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(plain.Value()), f.cfg.BcryptCost())
 	require.NoError(t, err, "bcrypt generate from password failed")
 
 	secret := credentialtest.MustSecret(t, string(hash))

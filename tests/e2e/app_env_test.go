@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rafaelblt/go-auth/internal/bootstrap"
+	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -24,12 +24,12 @@ type TestEnv struct {
 	Asserts  *Asserts
 }
 
-func NewTestApp(ctx context.Context, cfg bootstrap.Config) *TestApp {
-	cli, err := testutil.NewHTTPClient("http://" + cfg.Address)
+func NewTestApp(ctx context.Context, cfg config.Config) *TestApp {
+	cli, err := testutil.NewHTTPClient("http://" + cfg.Address())
 	if err != nil {
 		log.Fatalf("new http client failed: %s", err)
 	}
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL())
 	if err != nil {
 		log.Fatalf("new pgxpool failed: %s", err)
 	}

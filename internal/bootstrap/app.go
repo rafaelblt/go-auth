@@ -3,11 +3,12 @@ package bootstrap
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/rafaelblt/go-auth/internal/config"
 )
 
 type dependencies struct {
@@ -17,15 +18,14 @@ type dependencies struct {
 
 type App struct {
 	router http.Handler
-	cfg    Config
+	cfg    config.Config
 	addr   string
 	deps   dependencies
 }
 
-func NewApp(ctx context.Context, cfg Config) (*App, error) {
-	err := cfg.Validate()
-	if err != nil {
-		return nil, fmt.Errorf("config invalid: %w", err)
+func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
+	if cfg.IsZero() {
+		return nil, errors.New("config invalid: not built")
 	}
 
 	infra, err := newInfra(ctx, cfg)
@@ -49,7 +49,7 @@ func NewApp(ctx context.Context, cfg Config) (*App, error) {
 
 	app := App{
 		router: router,
-		addr:   cfg.Address,
+		addr:   cfg.Address(),
 		deps:   deps,
 	}
 	return &app, nil

@@ -1,4 +1,4 @@
-package env
+package config
 
 import (
 	"testing"
@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStringParser(t *testing.T) {
-	value, err := StringParser("hello")
+func TestStringEnvParser(t *testing.T) {
+	value, err := stringEnvParser("hello")
 
 	require.NoError(t, err)
 	assert.Equal(t, "hello", value)
 }
 
-func TestIntParser(t *testing.T) {
+func TestIntEnvParser(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		value    string
@@ -40,7 +40,7 @@ func TestIntParser(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			value, err := IntParser(tC.value)
+			value, err := intEnvParser(tC.value)
 
 			require.NoError(t, err)
 			assert.Equal(t, tC.expected, value)
@@ -48,14 +48,14 @@ func TestIntParser(t *testing.T) {
 	}
 }
 
-func TestIntParser_ReturnsError(t *testing.T) {
-	value, err := IntParser("invalid")
+func TestIntEnvParser_ReturnsError(t *testing.T) {
+	value, err := intEnvParser("invalid")
 
 	assert.Error(t, err)
 	assert.Zero(t, value)
 }
 
-func TestDurationParser(t *testing.T) {
+func TestDurationEnvParser(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		value    string
@@ -95,7 +95,7 @@ func TestDurationParser(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			value, err := DurationParser(tC.value)
+			value, err := durationEnvParser(tC.value)
 
 			require.NoError(t, err)
 			assert.Equal(t, tC.expected, value)
@@ -103,8 +103,8 @@ func TestDurationParser(t *testing.T) {
 	}
 }
 
-func TestDurationParser_ReturnsError(t *testing.T) {
-	value, err := DurationParser("invalid")
+func TestDurationEnvParser_ReturnsError(t *testing.T) {
+	value, err := durationEnvParser("invalid")
 
 	assert.Error(t, err)
 	assert.Zero(t, value)

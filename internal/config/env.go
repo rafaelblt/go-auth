@@ -1,11 +1,11 @@
-package env
+package config
 
 import (
 	"fmt"
 	"os"
 )
 
-type EnvVar[T any] struct {
+type env[T any] struct {
 	Key      string
 	Required bool
 	Default  T
@@ -13,14 +13,14 @@ type EnvVar[T any] struct {
 	Presets  map[string]T
 }
 
-func (ev EnvVar[T]) Resolve() (T, error) {
+func (ev env[T]) Resolve() (T, error) {
 	ev.validate()
 	var zero T
 
 	value, ok := ev.lookup()
 	if !ok {
 		if ev.Required {
-			return zero, ErrRequired
+			return zero, errEnvRequired
 		} else {
 			return ev.Default, nil
 		}
@@ -39,17 +39,17 @@ func (ev EnvVar[T]) Resolve() (T, error) {
 	return parsed, nil
 }
 
-func (ev EnvVar[T]) validate() {
+func (ev env[T]) validate() {
 	if ev.Parser == nil {
 		panic(fmt.Sprintf("the environment variable '%s' doesnt have a parser", ev.Key))
 	}
 }
 
-func (ev EnvVar[T]) lookup() (string, bool) {
+func (ev env[T]) lookup() (string, bool) {
 	return os.LookupEnv(ev.Key)
 }
 
-func (ev EnvVar[T]) checkPreset(value string) (T, bool) {
+func (ev env[T]) checkPreset(value string) (T, bool) {
 	if ev.Presets != nil {
 		preset, ok := ev.Presets[value]
 		if ok {
