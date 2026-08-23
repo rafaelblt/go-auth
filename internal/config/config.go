@@ -9,6 +9,7 @@ import (
 type Config struct {
 	address         string
 	databaseURL     string
+	autoMigrate     bool
 	bcryptCost      int
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
@@ -17,6 +18,7 @@ type Config struct {
 type ConfigParams struct {
 	Address         string
 	DatabaseURL     string
+	AutoMigrate     bool
 	BcryptCost      *int
 	AccessTokenTTL  *time.Duration
 	RefreshTokenTTL *time.Duration
@@ -64,6 +66,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 	cfg := Config{
 		address:         params.Address,
 		databaseURL:     params.DatabaseURL,
+		autoMigrate:     params.AutoMigrate,
 		bcryptCost:      bcryptCost,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
@@ -76,6 +79,7 @@ func LoadConfig() (Config, error) {
 
 	databaseURL, errs := resolveEnv(envDatabaseURL, errs)
 	address, errs := resolveEnv(envAddress, errs)
+	autoMigrate, errs := resolveEnv(envAutoMigrate, errs)
 	bcryptCost, errs := resolveEnv(envBcryptCost, errs)
 	refreshTokenTTL, errs := resolveEnv(envRefreshTokenTTL, errs)
 	accessTokenTTL, errs := resolveEnv(envAccessTokenTTL, errs)
@@ -88,6 +92,7 @@ func LoadConfig() (Config, error) {
 	cfg, err := NewConfig(ConfigParams{
 		Address:         address,
 		DatabaseURL:     databaseURL,
+		AutoMigrate:     autoMigrate,
 		BcryptCost:      &bcryptCost,
 		AccessTokenTTL:  &accessTokenTTL,
 		RefreshTokenTTL: &refreshTokenTTL,
@@ -108,8 +113,6 @@ func resolveEnv[T any](ev env[T], errs []error) (T, []error) {
 	return value, errs
 }
 
-// IsZero reports whether the Config was never built, a Config coming from
-// NewConfig or LoadConfig always has every field set.
 func (c Config) IsZero() bool {
 	return c == Config{}
 }
@@ -120,6 +123,10 @@ func (c Config) Address() string {
 
 func (c Config) DatabaseURL() string {
 	return c.databaseURL
+}
+
+func (c Config) AutoMigrate() bool {
+	return c.autoMigrate
 }
 
 func (c Config) BcryptCost() int {

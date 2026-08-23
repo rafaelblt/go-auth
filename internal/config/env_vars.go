@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	defaultAutoMigrate     = false
 	defaultBcryptCost      = 12
 	defaultAccessTokenTTL  = 30 * time.Minute
 	defaultRefreshTokenTTL = 7 * 24 * time.Hour
@@ -20,6 +21,12 @@ var envAddress = env[string]{
 	Key:      "ADDRESS",
 	Required: true,
 	Parser:   stringEnvParser,
+}
+
+var envAutoMigrate = env[bool]{
+	Key:     "AUTO_MIGRATE",
+	Default: defaultAutoMigrate,
+	Parser:  boolEnvParser,
 }
 
 var envBcryptCost = env[int]{

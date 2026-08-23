@@ -13,12 +13,14 @@ import (
 func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	address := "add ress vlaue"
 	databaseURL := "db url vlaue"
+	autoMigrate := true
 	bcryptCost := 8
 	accessTokenTTL := 22 * time.Minute
 	refreshTokenTTL := 2 * 24 * time.Hour
 
 	t.Setenv(envAddress.Key, address)
 	t.Setenv(envDatabaseURL.Key, databaseURL)
+	t.Setenv(envAutoMigrate.Key, strconv.FormatBool(autoMigrate))
 	t.Setenv(envBcryptCost.Key, strconv.Itoa(bcryptCost))
 	t.Setenv(envAccessTokenTTL.Key, accessTokenTTL.String())
 	t.Setenv(envRefreshTokenTTL.Key, refreshTokenTTL.String())
@@ -28,6 +30,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, address, cfg.Address())
 	assert.Equal(t, databaseURL, cfg.DatabaseURL())
+	assert.Equal(t, autoMigrate, cfg.AutoMigrate())
 	assert.Equal(t, bcryptCost, cfg.BcryptCost())
 	assert.Equal(t, accessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, refreshTokenTTL, cfg.RefreshTokenTTL())
@@ -40,6 +43,7 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 	cfg, err := LoadConfig()
 
 	require.NoError(t, err)
+	assert.Equal(t, defaultAutoMigrate, cfg.AutoMigrate())
 	assert.Equal(t, defaultBcryptCost, cfg.BcryptCost())
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
@@ -57,6 +61,10 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 		{
 			desc:   "database url empty",
 			setup: func(t *testing.T) { t.Setenv(envDatabaseURL.Key, "") },
+		},
+		{
+			desc:   "auto migrate not bool",
+			setup: func(t *testing.T) { t.Setenv(envAutoMigrate.Key, "yes") },
 		},
 		{
 			desc:   "bcrypt cost not int",
@@ -88,6 +96,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	params := ConfigParams{
 		Address:         "add ress vlaue",
 		DatabaseURL:     "db url vlaue",
+		AutoMigrate:     true,
 		BcryptCost:      shared.Ptr(8),
 		AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 		RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
@@ -99,6 +108,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	assert.False(t, cfg.IsZero())
 	assert.Equal(t, params.Address, cfg.Address())
 	assert.Equal(t, params.DatabaseURL, cfg.DatabaseURL())
+	assert.Equal(t, params.AutoMigrate, cfg.AutoMigrate())
 	assert.Equal(t, *params.BcryptCost, cfg.BcryptCost())
 	assert.Equal(t, *params.AccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, *params.RefreshTokenTTL, cfg.RefreshTokenTTL())
@@ -113,6 +123,7 @@ func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 	cfg, err := NewConfig(params)
 
 	require.NoError(t, err)
+	assert.Equal(t, defaultAutoMigrate, cfg.AutoMigrate())
 	assert.Equal(t, defaultBcryptCost, cfg.BcryptCost())
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
