@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,4 +25,15 @@ func durationEnvParser(val string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid duration value %q: %w", val, err)
 	}
 	return d, nil
+}
+
+func boolEnvParser(val string) (bool, error) {
+	switch strings.ToLower(val) {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid bool value %q", val)
+	}
 }

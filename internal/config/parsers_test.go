@@ -109,3 +109,58 @@ func TestDurationEnvParser_ReturnsError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Zero(t, value)
 }
+
+func TestBoolEnvParser(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected bool
+	}{
+		{
+			desc:     "lowercase true",
+			value:    "true",
+			expected: true,
+		},
+		{
+			desc:     "lowercase false",
+			value:    "false",
+			expected: false,
+		},
+		{
+			desc:     "uppercase true",
+			value:    "TRUE",
+			expected: true,
+		},
+		{
+			desc:     "uppercase false",
+			value:    "FALSE",
+			expected: false,
+		},
+		{
+			desc:     "mixed case true",
+			value:    "truE",
+			expected: true,
+		},
+		{
+			desc:     "mixed case false",
+			value:    "falSe",
+			expected: false,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := boolEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestBoolEnvParser_ReturnsError(t *testing.T) {
+	value, err := boolEnvParser("invalid")
+
+	assert.Error(t, err)
+	assert.Zero(t, value)
+}
