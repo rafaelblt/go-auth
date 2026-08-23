@@ -7,8 +7,17 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
+	"github.com/rafaelblt/go-auth/internal/migrate"
 	"github.com/rafaelblt/go-auth/migrations"
 )
+
+func autoMigrate(dbURL string) error {
+	err := migrate.RunMigrations(dbURL)
+	if err != nil {
+		return fmt.Errorf("run migration failed: %w", err)
+	}
+	return nil
+}
 
 func verifySchema(ctx context.Context, db postgres.DB) error {
 	latest, err := migrations.Latest()

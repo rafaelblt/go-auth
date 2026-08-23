@@ -33,6 +33,12 @@ func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
 		return nil, err
 	}
 
+	if cfg.AutoMigrate() {
+		if err = autoMigrate(cfg.DatabaseURL()); err != nil {
+			return nil, err
+		}
+	}
+
 	err = verifySchema(ctx, infra.pool)
 	if err != nil {
 		return nil, err
