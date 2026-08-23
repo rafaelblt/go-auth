@@ -33,6 +33,11 @@ func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
 		return nil, err
 	}
 
+	err = verifySchema(ctx, infra.pool)
+	if err != nil {
+		return nil, err
+	}
+
 	uc, err := newUsecases(cfg, infra)
 	if err != nil {
 		infra.pool.Close()
