@@ -1,0 +1,47 @@
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: goauth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pguser
+      POSTGRES_PASSWORD: pgpassword
+      POSTGRES_DB: pgname
+    ports:
+      - "5432:5432"
+    volumes:
+      - goauth_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pguser -d pgname"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - goauth_net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: goauth-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://pguser:pgpassword@postgres:5432/pgname?sslmode=disable
+      ADDRESS: "0.0.0.0:8080"
+      AUTO_MIGRATE: "true"
+    ports:
+      - "8080:8080"
+    networks:
+      - goauth_net
+
+volumes:
+  goauth_pg_data:
+
+networks:
+  goauth_net:
+    driver: bridge
