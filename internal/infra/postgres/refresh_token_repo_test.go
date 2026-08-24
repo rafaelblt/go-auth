@@ -21,7 +21,7 @@ type RefreshTokenRepoTestHelper struct {
 }
 
 func NewRefreshTokenRepoTestHelper(t *testing.T) *RefreshTokenRepoTestHelper {
-	db := poolFactory.Acquire(t)
+	db := poolFactory.AcquireWithMigrations(t)
 	return &RefreshTokenRepoTestHelper{t, db}
 }
 

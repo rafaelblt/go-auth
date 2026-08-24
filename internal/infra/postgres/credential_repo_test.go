@@ -21,7 +21,7 @@ type CredentialRepoTestHelper struct {
 }
 
 func NewCredentialRepoTestHelper(t *testing.T) CredentialRepoTestHelper {
-	db := poolFactory.Acquire(t)
+	db := poolFactory.AcquireWithMigrations(t)
 	return CredentialRepoTestHelper{t, db}
 }
 

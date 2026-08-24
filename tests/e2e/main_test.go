@@ -10,7 +10,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/migratetest"
 )
 
 var testApp *TestApp
@@ -18,7 +18,7 @@ var testApp *TestApp
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	db, err := testutil.NewDatabase(ctx)
+	db, err := migratetest.NewDatabaseWithMigrations(ctx)
 	if err != nil {
 		log.Fatalf("new test database failed: %s", err)
 	}

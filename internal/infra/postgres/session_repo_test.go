@@ -22,7 +22,7 @@ type SessionRepoTestHelper struct {
 }
 
 func NewSessionRepoTestHelper(t *testing.T) *SessionRepoTestHelper {
-	db := poolFactory.Acquire(t)
+	db := poolFactory.AcquireWithMigrations(t)
 	return &SessionRepoTestHelper{t, db}
 }
 

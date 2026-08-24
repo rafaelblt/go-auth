@@ -7,7 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
+	"github.com/rafaelblt/go-auth/internal/migrate"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 type PoolFactory struct {
@@ -30,14 +32,23 @@ func NewPoolFactory(ctx context.Context) (*PoolFactory, error) {
 func (pf *PoolFactory) Acquire(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
-	ResetDB(ctx, pf.pool)
+	err := ResetDB(ctx, pf.pool)
+	require.NoError(t, err, "reset db failed")
 	return pf.pool
+}
+
+func (pf *PoolFactory) AcquireWithMigrations(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	pool := pf.Acquire(t)
+	err := migrate.RunMigrations(pf.db.ConnectionString())
+	require.NoError(t, err, "run migrations failed")
+	return pool
 }
 
 func (pf *PoolFactory) Close(ctx context.Context) error {
 	pf.pool.Close()
 	if err := pf.db.Close(ctx); err != nil {
-		return fmt.Errorf("failed to close database: %w", err) 
+		return fmt.Errorf("failed to close database: %w", err)
 	}
 	return nil
 }

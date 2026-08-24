@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,10 +56,7 @@ func (ta *TestApp) NewEnv(t *testing.T) TestEnv {
 }
 
 func (ta *TestApp) ResetDB(ctx context.Context, pool *pgxpool.Pool) error {
-	_, err := pool.Exec(ctx, `
-        TRUNCATE TABLE users, credentials
-        RESTART IDENTITY CASCADE
-    `)
+	err := postgrestest.TruncateTables(ctx, pool)
 	if err != nil {
 		return fmt.Errorf("truncate tables failed: %w", err)
 	}

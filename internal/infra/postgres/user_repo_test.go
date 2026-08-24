@@ -17,7 +17,7 @@ type UserRepoTestHelper struct {
 }
 
 func NewUserRepoTestHelper(t *testing.T) UserRepoTestHelper {
-	db := poolFactory.Acquire(t)
+	db := poolFactory.AcquireWithMigrations(t)
 	return UserRepoTestHelper{t, db}
 }
 

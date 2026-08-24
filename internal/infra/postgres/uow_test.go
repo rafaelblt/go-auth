@@ -32,7 +32,7 @@ func TestNewUnitOfWork_WithValidTxBeginner(t *testing.T) {
 
 func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	ctx := context.Background()
-	pool := poolFactory.Acquire(t)
+	pool := poolFactory.AcquireWithMigrations(t)
 	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
@@ -51,7 +51,7 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 
 func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	ctx := context.Background()
-	pool := poolFactory.Acquire(t)
+	pool := poolFactory.AcquireWithMigrations(t)
 	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
@@ -73,7 +73,7 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 }
 
 func TestUnitOfWork_Do_WithSessionWriter(t *testing.T) {
-	pool := poolFactory.Acquire(t)
+	pool := poolFactory.AcquireWithMigrations(t)
 	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
@@ -96,7 +96,7 @@ func TestUnitOfWork_Do_WithSessionWriter(t *testing.T) {
 }
 
 func TestUnitOfWork_Do_WithRefreshTokenWriter(t *testing.T) {
-	pool := poolFactory.Acquire(t)
+	pool := poolFactory.AcquireWithMigrations(t)
 	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
