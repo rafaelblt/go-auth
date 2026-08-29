@@ -14,49 +14,45 @@ func TestNewUsername(t *testing.T) {
 		desc        string
 		input       string
 		normalized  string
-		expectedErr []error
+		expectedErr validation.Issues
 	}{
 		{
 			desc:        "valid case",
 			input:       "blatantss",
 			normalized:  "blatantss",
-			expectedErr: []error{},
 		},
 		{
 			desc:        "input with uppercase",
 			input:       "BlatantSS",
 			normalized:  "blatantss",
-			expectedErr: []error{},
 		},
 		{
 			desc:        "input with leading white space",
 			input:       "  spiderman",
 			normalized:  "spiderman",
-			expectedErr: []error{},
 		},
 		{
 			desc:        "input with trailing white space",
 			input:       "venom  ",
 			normalized:  "venom",
-			expectedErr: []error{},
 		},
 		{
 			desc:        "empty value",
 			input:       "",
 			normalized:  "",
-			expectedErr: []error{validation.IssueTooShort(UsernameMinLen)},
+			expectedErr: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", UsernameMinLen-1),
 			normalized:  "",
-			expectedErr: []error{validation.IssueTooShort(UsernameMinLen)},
+			expectedErr: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", UsernameMaxLen+1),
 			normalized:  "",
-			expectedErr: []error{validation.IssueTooLong(UsernameMaxLen)},
+			expectedErr: validation.Issues{validation.IssueTooLong(UsernameMaxLen)},
 		},
 	}
 	for _, tC := range testCases {

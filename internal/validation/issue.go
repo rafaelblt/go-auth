@@ -4,14 +4,17 @@ import (
 	"strings"
 )
 
-const (
-	CodeTooLong  = "TOO_LONG"
-	CodeTooShort = "TOO_SHORT"
-)
+type Issue struct {
+	code    string
+	details map[string]any
+}
 
-type Issue interface {
-	Code() string
-	Details() map[string]any
+func (iss Issue) Code() string {
+	return iss.code
+}
+
+func (iss Issue) Details() map[string]any {
+	return iss.details
 }
 
 type Issues []Issue

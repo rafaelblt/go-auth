@@ -14,22 +14,22 @@ func TestNewPlainPassword(t *testing.T) {
 		desc        string
 		input       string
 		normalized  string
-		expectedErr []error
+		expectedErr validation.Issues
 	}{
 		{
 			desc:        "empty input",
 			input:       "",
-			expectedErr: []error{validation.IssueTooShort(PlainPasswordMinLen)},
+			expectedErr: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too short",
 			input:       strings.Repeat("a", PlainPasswordMinLen-1),
-			expectedErr: []error{validation.IssueTooShort(PlainPasswordMinLen)},
+			expectedErr: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
 			desc:        "input too long",
 			input:       strings.Repeat("a", PlainPasswordMaxLen+1),
-			expectedErr: []error{validation.IssueTooLong(PlainPasswordMaxLen)},
+			expectedErr: validation.Issues{validation.IssueTooLong(PlainPasswordMaxLen)},
 		},
 		{
 			desc:       "valid input",
