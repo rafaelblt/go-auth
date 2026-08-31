@@ -88,3 +88,20 @@ func TestIssues_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestIssues_IsEmpty(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		issues   Issues
+		expected bool
+	}{
+		{desc: "empty", issues: Issues{}, expected: true},
+		{desc: "single issue", issues: Issues{IssueTooShort(3)}, expected: false},
+		{desc: "multiple issues", issues: Issues{IssueTooShort(3), IssueTooLong(32)}, expected: false},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expected, tC.issues.IsEmpty())
+		})
+	}
+}

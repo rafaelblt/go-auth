@@ -28,3 +28,7 @@ func (iss Issues) Error() string {
 
 	return strings.Join(msgs, "; ")
 }
+
+func (issues Issues) IsEmpty() bool {
+	return len(issues) == 0
+}
