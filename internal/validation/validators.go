@@ -21,11 +21,17 @@ func Validate[T any](value T, validators ...Validator[T]) Issues {
 	return result
 }
 
-func Length(min, max int) Validator[string] {
+func MinLength(min int) Validator[string] {
 	return func(value string) *Issue {
 		if utf8.RuneCountInString(value) < min {
 			return shared.Ptr(IssueTooShort(min))
 		}
+		return nil
+	}
+}
+
+func MaxLength(max int) Validator[string] {
+	return func(value string) *Issue {
 		if utf8.RuneCountInString(value) > max {
 			return shared.Ptr(IssueTooLong(max))
 		}

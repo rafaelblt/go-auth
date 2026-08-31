@@ -92,37 +92,51 @@ func TestValidate_WithNonStringType(t *testing.T) {
 	assert.Equal(t, code, iss.Code())
 }
 
-func TestLength(t *testing.T) {
+func TestMinLength(t *testing.T) {
 	testCases := []struct {
-		desc            string
-		min             int
-		max             int
-		value           string
-		expectedCode    string
-		expectedDetails map[string]any
+		desc     string
+		min      int
+		value    string
+		expected *Issue
 	}{
-		{desc: "shorter than min", min: 3, max: 32, value: "ab", expectedCode: CodeTooShort, expectedDetails: map[string]any{"min": 3}},
-		{desc: "empty value with positive min", min: 3, max: 32, value: "", expectedCode: CodeTooShort, expectedDetails: map[string]any{"min": 3}},
-		{desc: "longer than max", min: 3, max: 5, value: "abcdef", expectedCode: CodeTooLong, expectedDetails: map[string]any{"max": 5}},
-		{desc: "at min boundary", min: 3, max: 5, value: "abc"},
-		{desc: "at max boundary", min: 3, max: 5, value: "abcde"},
-		{desc: "between boundaries", min: 3, max: 5, value: "abcd"},
-		{desc: "empty value with zero min", min: 0, max: 5, value: ""},
-		{desc: "multibyte runes counted as runes", min: 3, max: 3, value: "ção"},
-		{desc: "multibyte runes above max", min: 1, max: 2, value: "ção", expectedCode: CodeTooLong, expectedDetails: map[string]any{"max": 2}},
+		{desc: "shorter than min", min: 3, value: "ab", expected: shared.Ptr(IssueTooShort(3))},
+		{desc: "empty value with positive min", min: 3, value: "", expected: shared.Ptr(IssueTooShort(3))},
+		{desc: "at min boundary", min: 3, value: "abc"},
+		{desc: "above min", min: 3, value: "abcd"},
+		{desc: "empty value with zero min", min: 0, value: ""},
+		{desc: "multibyte runes counted as runes", min: 3, value: "ção"},
+		{desc: "multibyte runes below min", min: 4, value: "ção", expected: shared.Ptr(IssueTooShort(4))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			iss := Length(tC.min, tC.max)(tC.value)
+			iss := MinLength(tC.min)(tC.value)
 
-			if tC.expectedCode == "" {
-				assert.Nil(t, iss)
-				return
-			}
+			assert.Equal(t, tC.expected, iss)
+		})
+	}
+}
 
-			require.NotNil(t, iss)
-			assert.Equal(t, tC.expectedCode, iss.Code())
-			assert.Equal(t, tC.expectedDetails, iss.Details())
+func TestMaxLength(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		max      int
+		value    string
+		expected *Issue
+	}{
+		{desc: "longer than max", max: 5, value: "abcdef", expected: shared.Ptr(IssueTooLong(5))},
+		{desc: "at max boundary", max: 5, value: "abcde"},
+		{desc: "below max", max: 5, value: "abcd"},
+		{desc: "empty value", max: 5, value: ""},
+		{desc: "empty value with zero max", max: 0, value: ""},
+		{desc: "any value with zero max", max: 0, value: "a", expected: shared.Ptr(IssueTooLong(0))},
+		{desc: "multibyte runes counted as runes", max: 3, value: "ção"},
+		{desc: "multibyte runes above max", max: 2, value: "ção", expected: shared.Ptr(IssueTooLong(2))},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			iss := MaxLength(tC.max)(tC.value)
+
+			assert.Equal(t, tC.expected, iss)
 		})
 	}
 }
