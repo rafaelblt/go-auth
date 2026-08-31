@@ -44,9 +44,19 @@ func TestIssueTooShort(t *testing.T) {
 	}
 }
 
+func TestIssueInvalidChars(t *testing.T) {
+	iss := IssueInvalidChars()
+
+	assert.Equal(t, CodeInvalidCharacters, iss.Code())
+	assert.Equal(t, map[string]any{}, iss.Details())
+	assert.NotNil(t, iss.Details())
+}
+
 func TestIssuers_AreEqualForSameArgs(t *testing.T) {
 	assert.Equal(t, IssueTooLong(32), IssueTooLong(32))
 	assert.Equal(t, IssueTooShort(3), IssueTooShort(3))
 	assert.NotEqual(t, IssueTooLong(32), IssueTooLong(10))
 	assert.NotEqual(t, IssueTooLong(3), IssueTooShort(3))
+	assert.Equal(t, IssueInvalidChars(), IssueInvalidChars())
+	assert.NotEqual(t, IssueInvalidChars(), IssueTooShort(3))
 }
