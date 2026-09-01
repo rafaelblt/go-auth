@@ -29,6 +29,16 @@ func (iss Issues) Error() string {
 	return strings.Join(msgs, "; ")
 }
 
+func (iss Issues) String() string {
+	msgs := make([]string, len(iss))
+
+	for i, issue := range iss {
+		msgs[i] = issue.Code()
+	}
+
+	return strings.Join(msgs, "; ")
+}
+
 func (issues Issues) IsEmpty() bool {
 	return len(issues) == 0
 }

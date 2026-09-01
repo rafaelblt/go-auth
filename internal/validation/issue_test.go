@@ -89,6 +89,36 @@ func TestIssues_Error(t *testing.T) {
 	}
 }
 
+func TestIssues_String(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		issues   Issues
+		expected string
+	}{
+		{
+			desc:     "empty",
+			issues:   Issues{},
+			expected: "",
+		},
+		{
+			desc:     "single issue",
+			issues:   Issues{IssueTooShort(3)},
+			expected: CodeTooShort,
+		},
+		{
+			desc:     "multiple issues",
+			issues:   Issues{IssueTooShort(3), IssueTooLong(32)},
+			expected: CodeTooShort + "; " + CodeTooLong,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expected, tC.issues.String())
+		})
+	}
+}
+
+
 func TestIssues_IsEmpty(t *testing.T) {
 	testCases := []struct {
 		desc     string
