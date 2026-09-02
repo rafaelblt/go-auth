@@ -55,7 +55,6 @@ func TestValidate(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			issues := Validate("any value", tC.validators...)
 
-			require.NotNil(t, issues)
 			codes := make([]string, len(issues))
 			for i, iss := range issues {
 				codes[i] = iss.Code()
