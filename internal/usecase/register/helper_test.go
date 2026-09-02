@@ -52,14 +52,14 @@ func (helper TestHelper) ValidInput() register.Input {
 
 func (helper TestHelper) ValidUsername() user.Username {
 	helper.t.Helper()
-	username, err := user.NewUsername("username")
-	require.NoError(helper.t, err)
+	username, issues := user.NewUsername("username")
+	require.Truef(helper.t, issues.IsEmpty(), "invalid username: %s", issues)
 	return username
 }
 
 func (helper TestHelper) ValidPlainPassword() credential.PlainPassword {
 	helper.t.Helper()
-	pwd, err := credential.NewPlainPassword("12345678")
-	require.NoError(helper.t, err)
+	pwd, issues := credential.NewPlainPassword("12345678")
+	require.Truef(helper.t, issues.IsEmpty(), "invalid plain password: %s", issues)
 	return pwd
 }

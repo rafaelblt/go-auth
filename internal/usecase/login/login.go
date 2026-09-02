@@ -38,12 +38,12 @@ var ErrInvalidCredentials = usecase.NewError(
 )
 
 func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
-	username, err := user.NewUsername(input.Username)
-	if err != nil {
+	username, issues := user.NewUsername(input.Username)
+	if !issues.IsEmpty() {
 		return Output{}, ErrInvalidCredentials
 	}
-	password, err := credential.NewPlainPassword(input.Password)
-	if err != nil {
+	password, issues := credential.NewPlainPassword(input.Password)
+	if !issues.IsEmpty() {
 		return Output{}, ErrInvalidCredentials
 	}
 

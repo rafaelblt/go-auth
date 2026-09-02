@@ -15,7 +15,7 @@ const (
 	PlainPasswordMinLen = 4
 )
 
-func NewPlainPassword(value string) (PlainPassword, error) {
+func NewPlainPassword(value string) (PlainPassword, validation.Issues) {
 	normalized := normalizePlainPassword(value)
 
 	issues := make(validation.Issues, 0)
@@ -26,7 +26,7 @@ func NewPlainPassword(value string) (PlainPassword, error) {
 		issues = append(issues, validation.IssueTooLong(PlainPasswordMaxLen))
 	}
 
-	if len(issues) > 0 {
+	if !issues.IsEmpty() {
 		return PlainPassword{}, issues
 	}
 

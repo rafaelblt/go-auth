@@ -11,65 +11,63 @@ import (
 
 func TestNewUsername(t *testing.T) {
 	testCases := []struct {
-		desc        string
-		input       string
-		normalized  string
-		expectedErr validation.Issues
+		desc           string
+		input          string
+		normalized     string
+		expectedIssues validation.Issues
 	}{
 		{
-			desc:        "valid case",
-			input:       "blatantss",
-			normalized:  "blatantss",
+			desc:       "valid case",
+			input:      "blatantss",
+			normalized: "blatantss",
 		},
 		{
-			desc:        "input with uppercase",
-			input:       "BlatantSS",
-			normalized:  "blatantss",
+			desc:       "input with uppercase",
+			input:      "BlatantSS",
+			normalized: "blatantss",
 		},
 		{
-			desc:        "input with leading white space",
-			input:       "  spiderman",
-			normalized:  "spiderman",
+			desc:       "input with leading white space",
+			input:      "  spiderman",
+			normalized: "spiderman",
 		},
 		{
-			desc:        "input with trailing white space",
-			input:       "venom  ",
-			normalized:  "venom",
+			desc:       "input with trailing white space",
+			input:      "venom  ",
+			normalized: "venom",
 		},
 		{
-			desc:        "empty value",
-			input:       "",
-			normalized:  "",
-			expectedErr: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
+			desc:           "empty value",
+			input:          "",
+			normalized:     "",
+			expectedIssues: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
-			desc:        "input too short",
-			input:       strings.Repeat("a", UsernameMinLen-1),
-			normalized:  "",
-			expectedErr: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
+			desc:           "input too short",
+			input:          strings.Repeat("a", UsernameMinLen-1),
+			normalized:     "",
+			expectedIssues: validation.Issues{validation.IssueTooShort(UsernameMinLen)},
 		},
 		{
-			desc:        "input too long",
-			input:       strings.Repeat("a", UsernameMaxLen+1),
-			normalized:  "",
-			expectedErr: validation.Issues{validation.IssueTooLong(UsernameMaxLen)},
+			desc:           "input too long",
+			input:          strings.Repeat("a", UsernameMaxLen+1),
+			normalized:     "",
+			expectedIssues: validation.Issues{validation.IssueTooLong(UsernameMaxLen)},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			username, err := NewUsername(tC.input)
+			username, issues := NewUsername(tC.input)
 
-			if len(tC.expectedErr) == 0 {
-				require.NoError(t, err)
+			if len(tC.expectedIssues) == 0 {
+				require.Truef(t, issues.IsEmpty(), "unexpected issues: %s", issues)
 				assert.Equal(t, tC.normalized, username.String())
 				return
 			}
 
-			require.Error(t, err)
+			require.Falsef(t, issues.IsEmpty(), "expected issues: %s", tC.expectedIssues)
 			assert.True(t, username.IsZero())
-			var issues validation.Issues
-			require.ErrorAs(t, err, &issues)
-			assert.ElementsMatch(t, tC.expectedErr, issues)
+			assert.ElementsMatch(t, tC.expectedIssues, issues)
 		})
 	}
 }

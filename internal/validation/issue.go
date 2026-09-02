@@ -19,16 +19,6 @@ func (iss Issue) Details() map[string]any {
 
 type Issues []Issue
 
-func (iss Issues) Error() string {
-	msgs := make([]string, len(iss))
-
-	for i, issue := range iss {
-		msgs[i] = issue.Code()
-	}
-
-	return strings.Join(msgs, "; ")
-}
-
 func (iss Issues) String() string {
 	msgs := make([]string, len(iss))
 

@@ -9,7 +9,7 @@ import (
 
 func MustUsername(t *testing.T, value string) user.Username {
 	t.Helper()
-	username, err := user.NewUsername(value)
-	require.NoError(t, err)
+	username, issues := user.NewUsername(value)
+	require.Truef(t, issues.IsEmpty(), "%q is invalid to username: %s", value, issues)
 	return username
 }

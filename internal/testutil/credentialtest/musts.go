@@ -9,8 +9,8 @@ import (
 
 func MustPlainPassword(t *testing.T, value string) credential.PlainPassword {
 	t.Helper()
-	pwd, err := credential.NewPlainPassword(value)
-	require.NoError(t, err)
+	pwd, issues := credential.NewPlainPassword(value)
+	require.Truef(t, issues.IsEmpty(), "%q is invalid to plain password: %s", value, issues)
 	return pwd
 }
 

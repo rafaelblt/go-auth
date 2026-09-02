@@ -76,9 +76,9 @@ func mapUserToEntity(model userModel) (*user.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse user id failed: %w", err)
 	}
-	username, err := user.NewUsername(model.Username)
-	if err != nil {
-		return nil, fmt.Errorf("username creation failed: %w", err)
+	username, issues := user.NewUsername(model.Username)
+	if !issues.IsEmpty() {
+		return nil, fmt.Errorf("username creation failed: %s", issues)
 	}
 	status, err := user.ParseStatus(model.Status)
 	if err != nil {

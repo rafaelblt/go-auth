@@ -11,25 +11,25 @@ import (
 
 func TestNewPlainPassword(t *testing.T) {
 	var testCases = []struct {
-		desc        string
-		input       string
-		normalized  string
-		expectedErr validation.Issues
+		desc           string
+		input          string
+		normalized     string
+		expectedIssues validation.Issues
 	}{
 		{
-			desc:        "empty input",
-			input:       "",
-			expectedErr: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
+			desc:           "empty input",
+			input:          "",
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
-			desc:        "input too short",
-			input:       strings.Repeat("a", PlainPasswordMinLen-1),
-			expectedErr: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
+			desc:           "input too short",
+			input:          strings.Repeat("a", PlainPasswordMinLen-1),
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
 		},
 		{
-			desc:        "input too long",
-			input:       strings.Repeat("a", PlainPasswordMaxLen+1),
-			expectedErr: validation.Issues{validation.IssueTooLong(PlainPasswordMaxLen)},
+			desc:           "input too long",
+			input:          strings.Repeat("a", PlainPasswordMaxLen+1),
+			expectedIssues: validation.Issues{validation.IssueTooLong(PlainPasswordMaxLen)},
 		},
 		{
 			desc:       "valid input",
@@ -46,22 +46,30 @@ func TestNewPlainPassword(t *testing.T) {
 			input:      "9eF7}{d7[X$@   ",
 			normalized: "9eF7}{d7[X$@",
 		},
+		{
+			desc:           "input too short only after normalization",
+			input:          "  a  ",
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen)},
+		},
+		{
+			desc:       "input within max only after normalization",
+			input:      "  " + strings.Repeat("a", PlainPasswordMaxLen) + "  ",
+			normalized: strings.Repeat("a", PlainPasswordMaxLen),
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			password, err := NewPlainPassword(tC.input)
+			password, issues := NewPlainPassword(tC.input)
 
-			if len(tC.expectedErr) == 0 {
-				require.NoError(t, err)
+			if len(tC.expectedIssues) == 0 {
+				require.Truef(t, issues.IsEmpty(), "unexpected issues: %s", issues)
 				assert.Equal(t, tC.normalized, password.Value())
 				return
 			}
 
-			require.Error(t, err)
+			require.Falsef(t, issues.IsEmpty(), "expected issues: %s", tC.expectedIssues)
 			assert.True(t, password.IsZero())
-			var issues validation.Issues
-			require.ErrorAs(t, err, &issues)
-			assert.ElementsMatch(t, tC.expectedErr, issues)
+			assert.ElementsMatch(t, tC.expectedIssues, issues)
 		})
 	}
 }

@@ -15,7 +15,6 @@ const (
 	UsernameMaxLen = 32
 )
 
-func NewUsername(value string) (Username, error) {
 	normalized := normalizeUsername(value)
 
 	issues := make(validation.Issues, 0)
@@ -25,8 +24,9 @@ func NewUsername(value string) (Username, error) {
 	if len(normalized) > UsernameMaxLen {
 		issues = append(issues, validation.IssueTooLong(UsernameMaxLen))
 	}
+func NewUsername(value string) (Username, validation.Issues) {
 
-	if len(issues) > 0 {
+	if !issues.IsEmpty() {
 		return Username{}, issues
 	}
 

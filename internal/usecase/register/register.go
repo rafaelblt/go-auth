@@ -24,12 +24,12 @@ var ErrUsernameAlreadyExists = usecase.NewError(
 )
 
 func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
-	validation := validation.NewAccumulator()
+	acc := validation.NewAccumulator()
 
-	username, err := user.NewUsername(input.Username)
-	validation.Add(FieldUsername, err)
-	password, err := credential.NewPlainPassword(input.Password)
-	validation.Add(FieldPassword, err)
+	username, usernameIssues := user.NewUsername(input.Username)
+	acc.Add(FieldUsername, usernameIssues)
+	password, passwordIssues := credential.NewPlainPassword(input.Password)
+	acc.Add(FieldPassword, passwordIssues)
 
 	err = validation.Err()
 	if err != nil {
