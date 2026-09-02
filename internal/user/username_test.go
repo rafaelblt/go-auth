@@ -27,16 +27,6 @@ func TestNewUsername(t *testing.T) {
 			normalized: "blatantss",
 		},
 		{
-			desc:       "input with leading white space",
-			input:      "  spiderman",
-			normalized: "spiderman",
-		},
-		{
-			desc:       "input with trailing white space",
-			input:      "venom  ",
-			normalized: "venom",
-		},
-		{
 			desc:           "empty value",
 			input:          "",
 			normalized:     "",

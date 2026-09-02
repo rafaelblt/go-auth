@@ -134,7 +134,7 @@ func TestUser_ChangeUsername(t *testing.T) {
 		{
 			desc:      "valid change",
 			user:      usertest.NewUser(t, nil),
-			username:  usertest.MustUsername(t, "other username"),
+			username:  usertest.MustUsername(t, "other_username"),
 			updatedAt: time.Now().UTC(),
 			expectErr: false,
 		},
@@ -148,7 +148,7 @@ func TestUser_ChangeUsername(t *testing.T) {
 		{
 			desc:      "updated at before created at",
 			user:      usertest.NewUser(t, nil),
-			username:  usertest.MustUsername(t, "other username"),
+			username:  usertest.MustUsername(t, "other_username"),
 			updatedAt: time.Date(1, 1, 1, 1, 1, 0, 0, time.UTC),
 			expectErr: true,
 		},

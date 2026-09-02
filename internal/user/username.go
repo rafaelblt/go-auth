@@ -3,6 +3,7 @@ package user
 import (
 	"strings"
 
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
@@ -15,16 +16,26 @@ const (
 	UsernameMaxLen = 32
 )
 
+var usernameAllowedChars = buildUsernameAllowedChars(
+	"abcdefghijklmnopqrstuvwxyz0123456789._-",
+)
+
+func buildUsernameAllowedChars(s string) shared.Set[rune] {
+	set := shared.NewSet[rune]()
+	for _, r := range s {
+		set.Add(r)
+	}
+	return set
+}
+
+func NewUsername(value string) (Username, validation.Issues) {
 	normalized := normalizeUsername(value)
 
-	issues := make(validation.Issues, 0)
-	if len(normalized) < UsernameMinLen {
-		issues = append(issues, validation.IssueTooShort(UsernameMinLen))
-	}
-	if len(normalized) > UsernameMaxLen {
-		issues = append(issues, validation.IssueTooLong(UsernameMaxLen))
-	}
-func NewUsername(value string) (Username, validation.Issues) {
+	issues := validation.Validate(normalized,
+		validation.MinLength(UsernameMinLen),
+		validation.MaxLength(UsernameMaxLen),
+		validation.AllowedChars(usernameAllowedChars),
+	)
 
 	if !issues.IsEmpty() {
 		return Username{}, issues
@@ -34,7 +45,7 @@ func NewUsername(value string) (Username, validation.Issues) {
 }
 
 func normalizeUsername(value string) string {
-	return strings.TrimSpace(strings.ToLower(value))
+	return strings.ToLower(value)
 }
 
 func (u Username) IsZero() bool   { return u.value == "" }
