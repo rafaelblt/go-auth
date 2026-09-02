@@ -31,7 +31,7 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 	password, passwordIssues := credential.NewPlainPassword(input.Password)
 	acc.Add(FieldPassword, passwordIssues)
 
-	err = validation.Err()
+	err := acc.Err()
 	if err != nil {
 		return Output{}, err
 	}
