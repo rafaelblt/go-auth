@@ -16,26 +16,20 @@ const (
 	UsernameMaxLen = 32
 )
 
-var usernameAllowedChars = buildUsernameAllowedChars(
-	"abcdefghijklmnopqrstuvwxyz0123456789._-",
+var usernameAllowedChars = shared.NewSetFrom(
+	[]rune("abcdefghijklmnopqrstuvwxyz0123456789._-")...,
 )
 
-func buildUsernameAllowedChars(s string) shared.Set[rune] {
-	set := shared.NewSet[rune]()
-	for _, r := range s {
-		set.Add(r)
-	}
-	return set
+var usernameValidators = []validation.Validator[string]{
+	validation.MinLength(UsernameMinLen),
+	validation.MaxLength(UsernameMaxLen),
+	validation.AllowedChars(usernameAllowedChars),
 }
 
 func NewUsername(value string) (Username, validation.Issues) {
 	normalized := normalizeUsername(value)
 
-	issues := validation.Validate(normalized,
-		validation.MinLength(UsernameMinLen),
-		validation.MaxLength(UsernameMaxLen),
-		validation.AllowedChars(usernameAllowedChars),
-	)
+	issues := validation.Validate(normalized, usernameValidators...)
 
 	if !issues.IsEmpty() {
 		return Username{}, issues
