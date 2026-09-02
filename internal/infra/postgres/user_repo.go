@@ -21,24 +21,16 @@ func NewUserRepo(db DB) (*UserRepo, error) {
 }
 
 func (repo *UserRepo) Add(ctx context.Context, usr *user.User) error {
-	if usr == nil {
-		return errors.New("cannot save a nil user in database")
-	}
-	if usr.IsZero() {
-		return errors.New("cannot save a zero user in database")
+	model, err := mapUserToModel(usr)
+	if err != nil {
+		return fmt.Errorf("map user to model failed: %w", err)
 	}
 
 	sql := `INSERT INTO users
 			(id, username, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5)`
-
-	_, err := repo.db.Exec(ctx, sql,
-		usr.ID().Value(),
-		usr.Username().String(),
-		usr.Status().String(),
-		usr.CreatedAt(),
-		usr.UpdatedAt(),
-	)
+			VALUES
+			(@id, @username, @status, @created_at, @updated_at)`
+	_, err = repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
 
 	if err != nil {
 		return fmt.Errorf("user insert failed: %w", err)
@@ -68,7 +60,7 @@ func (repo *UserRepo) FindByID(ctx context.Context, id user.ID) (*user.User, err
 		return nil, fmt.Errorf("collect one row failed: %w", err)
 	}
 
-	usr, err := repo.mapModel(model)
+	usr, err := mapUserToEntity(model)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +85,7 @@ func (repo *UserRepo) FindByUsername(ctx context.Context, username user.Username
 		return nil, fmt.Errorf("collect one row failed: %w", err)
 	}
 
-	usr, err := repo.mapModel(model)
+	usr, err := mapUserToEntity(model)
 	if err != nil {
 		return nil, err
 	}
@@ -111,32 +103,4 @@ func (repo *UserRepo) ExistsByUsername(ctx context.Context, username user.Userna
 	}
 
 	return exists, nil
-}
-
-func (repo *UserRepo) mapModel(model userModel) (*user.User, error) {
-	id, err := user.ParseID(model.ID)
-	if err != nil {
-		return nil, fmt.Errorf("parse user id failed: %w", err)
-	}
-	username, issues := user.NewUsername(model.Username)
-	if !issues.IsEmpty() {
-		return nil, fmt.Errorf("username creation failed: %s", issues)
-	}
-	status, err := user.ParseStatus(model.Status)
-	if err != nil {
-		return nil, fmt.Errorf("parse user status failed: %w", err)
-	}
-
-	usr, err := user.RestoreUser(user.RestoreParams{
-		ID:        id,
-		Username:  username,
-		Status:    status,
-		CreatedAt: model.CreatedAt,
-		UpdatedAt: model.UpdatedAt,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("restore user failed: %w", err)
-	}
-
-	return usr, nil
 }
