@@ -13,48 +13,34 @@ func TestNewPlainPassword(t *testing.T) {
 	var testCases = []struct {
 		desc           string
 		input          string
-		normalized     string
 		expectedIssues validation.Issues
 	}{
 		{
 			desc:           "empty input",
 			input:          "",
-			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen, validation.UnitByte)},
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinCodePoints, validation.UnitCodePoint)},
 		},
 		{
 			desc:           "input too short",
-			input:          strings.Repeat("a", PlainPasswordMinLen-1),
-			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen, validation.UnitByte)},
+			input:          strings.Repeat("a", PlainPasswordMinCodePoints-1),
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinCodePoints, validation.UnitCodePoint)},
 		},
 		{
 			desc:           "input too long",
-			input:          strings.Repeat("a", PlainPasswordMaxLen+1),
-			expectedIssues: validation.Issues{validation.IssueTooLong(PlainPasswordMaxLen, validation.UnitByte)},
+			input:          strings.Repeat("a", PlainPasswordMaxBytes+1),
+			expectedIssues: validation.Issues{validation.IssueTooLong(PlainPasswordMaxBytes, validation.UnitByte)},
 		},
 		{
-			desc:       "valid input",
-			input:      "X8j5-30mWkPh",
-			normalized: "X8j5-30mWkPh",
+			desc:  "valid input",
+			input: "X8j5-30mWkPh",
 		},
 		{
-			desc:       "with leading white space",
-			input:      "   mR&927Sa8.5f",
-			normalized: "mR&927Sa8.5f",
+			desc:  "with leading white space",
+			input: "   mR&927Sa8.5f",
 		},
 		{
-			desc:       "with traling white space",
-			input:      "9eF7}{d7[X$@   ",
-			normalized: "9eF7}{d7[X$@",
-		},
-		{
-			desc:           "input too short only after normalization",
-			input:          "  a  ",
-			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinLen, validation.UnitByte)},
-		},
-		{
-			desc:       "input within max only after normalization",
-			input:      "  " + strings.Repeat("a", PlainPasswordMaxLen) + "  ",
-			normalized: strings.Repeat("a", PlainPasswordMaxLen),
+			desc:  "with traling white space",
+			input: "9eF7}{d7[X$@   ",
 		},
 	}
 	for _, tC := range testCases {
@@ -63,7 +49,7 @@ func TestNewPlainPassword(t *testing.T) {
 
 			if len(tC.expectedIssues) == 0 {
 				require.Truef(t, issues.IsEmpty(), "unexpected issues: %s", issues)
-				assert.Equal(t, tC.normalized, password.Value())
+				assert.Equal(t, tC.input, password.Value())
 				return
 			}
 

@@ -1,8 +1,6 @@
 package credential
 
 import (
-	"strings"
-
 	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
@@ -11,30 +9,23 @@ type PlainPassword struct {
 }
 
 const (
-	PlainPasswordMaxLen = 32
-	PlainPasswordMinLen = 4
+	PlainPasswordMaxBytes      = 72
+	PlainPasswordMinCodePoints = 4
 )
 
-func NewPlainPassword(value string) (PlainPassword, validation.Issues) {
-	normalized := normalizePlainPassword(value)
+var plainPasswordValidators = []validation.Validator[string]{
+	validation.MinLength(PlainPasswordMinCodePoints, validation.UnitCodePoint),
+	validation.MaxLength(PlainPasswordMaxBytes, validation.UnitByte),
+}
 
-	issues := make(validation.Issues, 0)
-	if len(normalized) < PlainPasswordMinLen {
-		issues = append(issues, validation.IssueTooShort(PlainPasswordMinLen, validation.UnitByte))
-	}
-	if len(normalized) > PlainPasswordMaxLen {
-		issues = append(issues, validation.IssueTooLong(PlainPasswordMaxLen, validation.UnitByte))
-	}
+func NewPlainPassword(value string) (PlainPassword, validation.Issues) {
+	issues := validation.Validate(value, plainPasswordValidators...)
 
 	if !issues.IsEmpty() {
 		return PlainPassword{}, issues
 	}
 
-	return PlainPassword{value: normalized}, nil
-}
-
-func normalizePlainPassword(value string) string {
-	return strings.TrimSpace(value)
+	return PlainPassword{value: value}, nil
 }
 
 func (p PlainPassword) Value() string { return p.value }

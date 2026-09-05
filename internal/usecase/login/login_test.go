@@ -52,28 +52,28 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 			desc: "password too short",
 			input: login.Input{
 				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
+				Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
 			},
 		},
 		{
 			desc: "password too long",
 			input: login.Input{
 				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
+				Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
 			},
 		},
 		{
 			desc: "username and password too short",
 			input: login.Input{
 				Username: strings.Repeat("a", user.UsernameMinLen-1),
-				Password: strings.Repeat("a", credential.PlainPasswordMinLen-1),
+				Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
 			},
 		},
 		{
 			desc: "username and password too long",
 			input: login.Input{
 				Username: strings.Repeat("a", user.UsernameMaxLen+1),
-				Password: strings.Repeat("a", credential.PlainPasswordMaxLen+1),
+				Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
 			},
 		},
 	}
