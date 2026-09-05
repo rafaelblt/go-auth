@@ -38,8 +38,8 @@ func TestIssue_Details(t *testing.T) {
 	}{
 		{
 			desc:     "with details",
-			issue:    Issue{code: "SOME_CODE", details: map[string]any{"max": 10, "min": 2}},
-			expected: map[string]any{"max": 10, "min": 2},
+			issue:    Issue{code: "SOME_CODE", details: map[string]any{KeyMaxLength: 10, KeyMinLength: 2}},
+			expected: map[string]any{KeyMaxLength: 10, KeyMinLength: 2},
 		},
 		{
 			desc:     "with empty details",
@@ -72,12 +72,12 @@ func TestIssues_String(t *testing.T) {
 		},
 		{
 			desc:     "single issue",
-			issues:   Issues{IssueTooShort(3)},
+			issues:   Issues{IssueTooShort(3, UnitCodePoint)},
 			expected: CodeTooShort,
 		},
 		{
 			desc:     "multiple issues",
-			issues:   Issues{IssueTooShort(3), IssueTooLong(32)},
+			issues:   Issues{IssueTooShort(3, UnitCodePoint), IssueTooLong(32, UnitCodePoint)},
 			expected: CodeTooShort + "; " + CodeTooLong,
 		},
 	}
@@ -95,8 +95,8 @@ func TestIssues_IsEmpty(t *testing.T) {
 		expected bool
 	}{
 		{desc: "empty", issues: Issues{}, expected: true},
-		{desc: "single issue", issues: Issues{IssueTooShort(3)}, expected: false},
-		{desc: "multiple issues", issues: Issues{IssueTooShort(3), IssueTooLong(32)}, expected: false},
+		{desc: "single issue", issues: Issues{IssueTooShort(3, UnitCodePoint)}, expected: false},
+		{desc: "multiple issues", issues: Issues{IssueTooShort(3, UnitCodePoint), IssueTooLong(32, UnitCodePoint)}, expected: false},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

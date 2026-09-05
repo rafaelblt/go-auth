@@ -20,10 +20,10 @@ func NewPlainPassword(value string) (PlainPassword, validation.Issues) {
 
 	issues := make(validation.Issues, 0)
 	if len(normalized) < PlainPasswordMinLen {
-		issues = append(issues, validation.IssueTooShort(PlainPasswordMinLen))
+		issues = append(issues, validation.IssueTooShort(PlainPasswordMinLen, validation.UnitByte))
 	}
 	if len(normalized) > PlainPasswordMaxLen {
-		issues = append(issues, validation.IssueTooLong(PlainPasswordMaxLen))
+		issues = append(issues, validation.IssueTooLong(PlainPasswordMaxLen, validation.UnitByte))
 	}
 
 	if !issues.IsEmpty() {

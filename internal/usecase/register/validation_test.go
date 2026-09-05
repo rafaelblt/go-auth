@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRegister_ReturnsValidationError_WithUsernameTooShort(t *testing.T) {
+func TestRegister_ReturnsValidationError_WhenUsernameIsInvalid(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: strings.Repeat("a", user.UsernameMinLen-1),
@@ -27,7 +27,7 @@ func TestRegister_ReturnsValidationError_WithUsernameTooShort(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldUsername,
-		validation.IssueTooShort(user.UsernameMinLen),
+		validation.IssueTooShort(user.UsernameMinLen, validation.UnitCodePoint),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -46,7 +46,7 @@ func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldUsername,
-		validation.IssueTooLong(user.UsernameMaxLen),
+		validation.IssueTooLong(user.UsernameMaxLen, validation.UnitCodePoint),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -65,7 +65,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooLong(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldPassword,
-		validation.IssueTooLong(credential.PlainPasswordMaxLen),
+		validation.IssueTooLong(credential.PlainPasswordMaxLen, validation.UnitByte),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -84,7 +84,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooShort(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldPassword,
-		validation.IssueTooShort(credential.PlainPasswordMinLen),
+		validation.IssueTooShort(credential.PlainPasswordMinLen, validation.UnitByte),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -104,11 +104,11 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 	expected := []validation.FieldError{
 		validation.NewFieldError(
 			register.FieldUsername,
-			validation.IssueTooShort(user.UsernameMinLen),
+			validation.IssueTooShort(user.UsernameMinLen, validation.UnitCodePoint),
 		),
 		validation.NewFieldError(
 			register.FieldPassword,
-			validation.IssueTooShort(credential.PlainPasswordMinLen),
+			validation.IssueTooShort(credential.PlainPasswordMinLen, validation.UnitByte),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())
@@ -129,11 +129,11 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testi
 	expected := []validation.FieldError{
 		validation.NewFieldError(
 			register.FieldUsername,
-			validation.IssueTooLong(user.UsernameMaxLen),
+			validation.IssueTooLong(user.UsernameMaxLen, validation.UnitCodePoint),
 		),
 		validation.NewFieldError(
 			register.FieldPassword,
-			validation.IssueTooLong(credential.PlainPasswordMaxLen),
+			validation.IssueTooLong(credential.PlainPasswordMaxLen, validation.UnitByte),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())

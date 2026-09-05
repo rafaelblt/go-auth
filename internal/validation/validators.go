@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -21,23 +22,40 @@ func Validate[T any](value T, validators ...Validator[T]) Issues {
 	return result
 }
 
-func MinLength(min int) Validator[string] {
+func MinLength(min int, unit LengthUnit) Validator[string] {
+	length := lengthCounter(unit)
+
 	return func(value string) *Issue {
-		if utf8.RuneCountInString(value) < min {
-			return shared.Ptr(IssueTooShort(min))
+		if length(value) < min {
+			return shared.Ptr(IssueTooShort(min, unit))
 		}
 		return nil
 	}
 }
 
-func MaxLength(max int) Validator[string] {
+func MaxLength(max int, unit LengthUnit) Validator[string] {
+	length := lengthCounter(unit)
+
 	return func(value string) *Issue {
-		if utf8.RuneCountInString(value) > max {
-			return shared.Ptr(IssueTooLong(max))
+		if length(value) > max {
+			return shared.Ptr(IssueTooLong(max, unit))
 		}
 		return nil
 	}
 }
+
+func lengthCounter(unit LengthUnit) func(value string) int {
+	switch unit {
+	case UnitCodePoint:
+		return utf8.RuneCountInString
+	case UnitByte:
+		return byteLength
+	default:
+		panic(fmt.Sprintf("unexpected length unit: %s", unit))
+	}
+}
+
+func byteLength(value string) int { return len(value) }
 
 func AllowedChars(allowed shared.Set[rune]) Validator[string] {
 	return func(value string) *Issue {

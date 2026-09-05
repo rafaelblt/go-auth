@@ -25,7 +25,7 @@ func TestTranslateError(t *testing.T) {
 		{
 			desc: "validation error",
 			err: validation.NewValidationError(
-				validation.NewFieldError("field", validation.IssueTooLong(1)),
+				validation.NewFieldError("field", validation.IssueTooLong(1, validation.UnitCodePoint)),
 			),
 			expectedStatus: http.StatusUnprocessableEntity,
 		},
@@ -85,22 +85,22 @@ func TestTranslateValidationError(t *testing.T) {
 		{
 			desc: "1 field error",
 			err: validation.NewValidationError(
-				validation.NewFieldError("single", validation.IssueTooLong(10)),
+				validation.NewFieldError("single", validation.IssueTooLong(10, validation.UnitCodePoint)),
 			),
 		},
 		{
 			desc: "2 field errors",
 			err: validation.NewValidationError(
-				validation.NewFieldError("pair1", validation.IssueTooLong(2)),
-				validation.NewFieldError("pair2", validation.IssueTooShort(1)),
+				validation.NewFieldError("pair1", validation.IssueTooLong(2, validation.UnitCodePoint)),
+				validation.NewFieldError("pair2", validation.IssueTooShort(1, validation.UnitCodePoint)),
 			),
 		},
 		{
 			desc: "3 field errors",
 			err: validation.NewValidationError(
-				validation.NewFieldError("family1", validation.IssueTooLong(2)),
-				validation.NewFieldError("family2", validation.IssueTooShort(4)),
-				validation.NewFieldError("family3", validation.IssueTooLong(6)),
+				validation.NewFieldError("family1", validation.IssueTooLong(2, validation.UnitCodePoint)),
+				validation.NewFieldError("family2", validation.IssueTooShort(4, validation.UnitCodePoint)),
+				validation.NewFieldError("family3", validation.IssueTooLong(6, validation.UnitCodePoint)),
 			),
 		},
 	}

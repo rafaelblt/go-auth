@@ -95,20 +95,28 @@ func TestMinLength(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		min      int
+		unit     LengthUnit
 		value    string
 		expected *Issue
 	}{
-		{desc: "shorter than min", min: 3, value: "ab", expected: shared.Ptr(IssueTooShort(3))},
-		{desc: "empty value with positive min", min: 3, value: "", expected: shared.Ptr(IssueTooShort(3))},
-		{desc: "at min boundary", min: 3, value: "abc"},
-		{desc: "above min", min: 3, value: "abcd"},
-		{desc: "empty value with zero min", min: 0, value: ""},
-		{desc: "multibyte runes counted as runes", min: 3, value: "ção"},
-		{desc: "multibyte runes below min", min: 4, value: "ção", expected: shared.Ptr(IssueTooShort(4))},
+		{desc: "code points: shorter than min", min: 3, unit: UnitCodePoint, value: "ab", expected: shared.Ptr(IssueTooShort(3, UnitCodePoint))},
+		{desc: "code points: empty value with positive min", min: 3, unit: UnitCodePoint, value: "", expected: shared.Ptr(IssueTooShort(3, UnitCodePoint))},
+		{desc: "code points: at min boundary", min: 3, unit: UnitCodePoint, value: "abc"},
+		{desc: "code points: above min", min: 3, unit: UnitCodePoint, value: "abcd"},
+		{desc: "code points: empty value with zero min", min: 0, unit: UnitCodePoint, value: ""},
+		{desc: "code points: multibyte runes counted as runes", min: 3, unit: UnitCodePoint, value: "ção"},
+		{desc: "code points: multibyte runes below min", min: 4, unit: UnitCodePoint, value: "ção", expected: shared.Ptr(IssueTooShort(4, UnitCodePoint))},
+		{desc: "bytes: shorter than min", min: 3, unit: UnitByte, value: "ab", expected: shared.Ptr(IssueTooShort(3, UnitByte))},
+		{desc: "bytes: empty value with positive min", min: 3, unit: UnitByte, value: "", expected: shared.Ptr(IssueTooShort(3, UnitByte))},
+		{desc: "bytes: at min boundary", min: 3, unit: UnitByte, value: "abc"},
+		{desc: "bytes: above min", min: 3, unit: UnitByte, value: "abcd"},
+		{desc: "bytes: empty value with zero min", min: 0, unit: UnitByte, value: ""},
+		{desc: "bytes: multibyte runes counted as bytes", min: 5, unit: UnitByte, value: "ção"},
+		{desc: "bytes: multibyte runes below min", min: 6, unit: UnitByte, value: "ção", expected: shared.Ptr(IssueTooShort(6, UnitByte))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			iss := MinLength(tC.min)(tC.value)
+			iss := MinLength(tC.min, tC.unit)(tC.value)
 
 			assert.Equal(t, tC.expected, iss)
 		})
@@ -119,25 +127,51 @@ func TestMaxLength(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		max      int
+		unit     LengthUnit
 		value    string
 		expected *Issue
 	}{
-		{desc: "longer than max", max: 5, value: "abcdef", expected: shared.Ptr(IssueTooLong(5))},
-		{desc: "at max boundary", max: 5, value: "abcde"},
-		{desc: "below max", max: 5, value: "abcd"},
-		{desc: "empty value", max: 5, value: ""},
-		{desc: "empty value with zero max", max: 0, value: ""},
-		{desc: "any value with zero max", max: 0, value: "a", expected: shared.Ptr(IssueTooLong(0))},
-		{desc: "multibyte runes counted as runes", max: 3, value: "ção"},
-		{desc: "multibyte runes above max", max: 2, value: "ção", expected: shared.Ptr(IssueTooLong(2))},
+		{desc: "code points: longer than max", max: 5, unit: UnitCodePoint, value: "abcdef", expected: shared.Ptr(IssueTooLong(5, UnitCodePoint))},
+		{desc: "code points: at max boundary", max: 5, unit: UnitCodePoint, value: "abcde"},
+		{desc: "code points: below max", max: 5, unit: UnitCodePoint, value: "abcd"},
+		{desc: "code points: empty value", max: 5, unit: UnitCodePoint, value: ""},
+		{desc: "code points: empty value with zero max", max: 0, unit: UnitCodePoint, value: ""},
+		{desc: "code points: any value with zero max", max: 0, unit: UnitCodePoint, value: "a", expected: shared.Ptr(IssueTooLong(0, UnitCodePoint))},
+		{desc: "code points: multibyte runes counted as runes", max: 3, unit: UnitCodePoint, value: "ção"},
+		{desc: "code points: multibyte runes above max", max: 2, unit: UnitCodePoint, value: "ção", expected: shared.Ptr(IssueTooLong(2, UnitCodePoint))},
+		{desc: "bytes: longer than max", max: 5, unit: UnitByte, value: "abcdef", expected: shared.Ptr(IssueTooLong(5, UnitByte))},
+		{desc: "bytes: at max boundary", max: 5, unit: UnitByte, value: "abcde"},
+		{desc: "bytes: below max", max: 5, unit: UnitByte, value: "abcd"},
+		{desc: "bytes: empty value", max: 5, unit: UnitByte, value: ""},
+		{desc: "bytes: empty value with zero max", max: 0, unit: UnitByte, value: ""},
+		{desc: "bytes: any value with zero max", max: 0, unit: UnitByte, value: "a", expected: shared.Ptr(IssueTooLong(0, UnitByte))},
+		{desc: "bytes: multibyte runes counted as bytes", max: 5, unit: UnitByte, value: "ção"},
+		{desc: "bytes: multibyte runes above max", max: 4, unit: UnitByte, value: "ção", expected: shared.Ptr(IssueTooLong(4, UnitByte))},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			iss := MaxLength(tC.max)(tC.value)
+			iss := MaxLength(tC.max, tC.unit)(tC.value)
 
 			assert.Equal(t, tC.expected, iss)
 		})
 	}
+}
+
+func TestLengthValidators_UnitsDisagreeOnMultibyte(t *testing.T) {
+	value := "ção" // 3 code points, 5 bytes
+
+	assert.Nil(t, MaxLength(3, UnitCodePoint)(value))
+	assert.Equal(t, shared.Ptr(IssueTooLong(3, UnitByte)), MaxLength(3, UnitByte)(value))
+
+	assert.Equal(t, shared.Ptr(IssueTooShort(5, UnitCodePoint)), MinLength(5, UnitCodePoint)(value))
+	assert.Nil(t, MinLength(5, UnitByte)(value))
+}
+
+func TestLengthValidators_PanicOnUnknownUnitAtConstruction(t *testing.T) {
+	unknown := LengthUnit("unknown")
+
+	assert.Panics(t, func() { MinLength(3, unknown) })
+	assert.Panics(t, func() { MaxLength(3, unknown) })
 }
 
 func TestAllowedChars(t *testing.T) {

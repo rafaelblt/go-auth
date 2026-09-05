@@ -21,8 +21,8 @@ var usernameAllowedChars = shared.NewSetFrom(
 )
 
 var usernameValidators = []validation.Validator[string]{
-	validation.MinLength(UsernameMinLen),
-	validation.MaxLength(UsernameMaxLen),
+	validation.MinLength(UsernameMinLen, validation.UnitCodePoint),
+	validation.MaxLength(UsernameMaxLen, validation.UnitCodePoint),
 	validation.AllowedChars(usernameAllowedChars),
 }
 
