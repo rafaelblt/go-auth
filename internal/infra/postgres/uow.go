@@ -60,9 +60,9 @@ func buildUowDeps(tx pgx.Tx) (port.UowDeps, error) {
 	if err != nil {
 		return port.UowDeps{}, fmt.Errorf("user repo build failed: %w", err)
 	}
-	credRepo, err := NewCredentialRepo(tx)
+	pwdRepo, err := NewPasswordRepo(tx)
 	if err != nil {
-		return port.UowDeps{}, fmt.Errorf("credential repo build failed: %w", err)
+		return port.UowDeps{}, fmt.Errorf("password repo build failed: %w", err)
 	}
 	sessRepo, err := NewSessionRepo(tx)
 	if err != nil {
@@ -74,7 +74,7 @@ func buildUowDeps(tx pgx.Tx) (port.UowDeps, error) {
 	}
 	deps := port.UowDeps{
 		UserWriter:         userRepo,
-		CredentialWriter:   credRepo,
+		PasswordWriter:     pwdRepo,
 		SessionWriter:      sessRepo,
 		RefreshTokenWriter: refreshTokenRepo,
 	}

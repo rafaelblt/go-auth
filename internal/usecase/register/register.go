@@ -56,7 +56,7 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	cred, err := uc.createCredential(password.CreationParams{
+	pwd, err := uc.createPassword(password.CreationParams{
 		UserID:    usr.ID(),
 		Hash:      hashed,
 		CreatedAt: now,
@@ -65,7 +65,7 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	err = uc.save(ctx, usr, cred)
+	err = uc.save(ctx, usr, pwd)
 	if err != nil {
 		return Output{}, err
 	}
@@ -93,23 +93,23 @@ func (uc Register) createUser(params user.CreationParams) (*user.User, error) {
 	return usr, nil
 }
 
-func (uc Register) createCredential(params password.CreationParams) (*password.Credential, error) {
-	cred, err := password.NewCredential(params)
+func (uc Register) createPassword(params password.CreationParams) (*password.Password, error) {
+	pwd, err := password.NewPassword(params)
 	if err != nil {
-		return nil, fmt.Errorf("credential creation failed: %w", err)
+		return nil, fmt.Errorf("password creation failed: %w", err)
 	}
-	return cred, nil
+	return pwd, nil
 }
 
-func (uc Register) save(ctx context.Context, user *user.User, cred *password.Credential) error {
+func (uc Register) save(ctx context.Context, user *user.User, pwd *password.Password) error {
 	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		err := deps.UserWriter.Add(ctx, user)
 		if err != nil {
 			return fmt.Errorf("user writer save failed: %w", err)
 		}
-		err = deps.CredentialWriter.Add(ctx, cred)
+		err = deps.PasswordWriter.Add(ctx, pwd)
 		if err != nil {
-			return fmt.Errorf("credential writer save failed: %w", err)
+			return fmt.Errorf("password writer save failed: %w", err)
 		}
 		return nil
 	})

@@ -22,7 +22,7 @@ type infraDeps struct {
 	Clock                 *infra.SystemClock
 	UnitOfWork            *postgres.UnitOfWork
 	Users                 *postgres.UserRepo
-	Credentials           *postgres.CredentialRepo
+	Passwords             *postgres.PasswordRepo
 	Sessions              *postgres.SessionRepo
 	RefreshTokens         *postgres.RefreshTokenRepo
 	PasswordHasher        *bcrypt.Hasher
@@ -58,11 +58,11 @@ func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
 	}
 	deps.Users = users
 
-	creds, err := buildCredentialRepo(pool)
+	passwords, err := buildPasswordRepo(pool)
 	if err != nil {
 		return infraDeps{}, err
 	}
-	deps.Credentials = creds
+	deps.Passwords = passwords
 
 	sessions, err := buildSessionRepo(pool)
 	if err != nil {
@@ -142,10 +142,10 @@ func buildUserRepo(db postgres.DB) (*postgres.UserRepo, error) {
 	return repo, nil
 }
 
-func buildCredentialRepo(db postgres.DB) (*postgres.CredentialRepo, error) {
-	repo, err := postgres.NewCredentialRepo(db)
+func buildPasswordRepo(db postgres.DB) (*postgres.PasswordRepo, error) {
+	repo, err := postgres.NewPasswordRepo(db)
 	if err != nil {
-		return nil, fmt.Errorf("credential repo creation failed: %w", err)
+		return nil, fmt.Errorf("password repo creation failed: %w", err)
 	}
 	return repo, nil
 }

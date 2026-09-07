@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewCredential(t *testing.T) {
+func TestNewPassword(t *testing.T) {
 	hash, err := NewHashed("hash")
 	require.NoError(t, err)
 	testCases := []struct {
@@ -52,24 +52,24 @@ func TestNewCredential(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			credential, err := NewCredential(tC.params)
+			pwd, err := NewPassword(tC.params)
 			if tC.expectErr {
 				assert.Error(t, err)
-				assert.Zero(t, credential)
+				assert.Zero(t, pwd)
 				return
 			}
 			require.NoError(t, err)
-			require.NotZero(t, credential)
-			assert.NotZero(t, credential.ID())
-			assert.Equal(t, credential.UserID(), tC.params.UserID)
-			assert.Equal(t, credential.Hash(), tC.params.Hash)
-			assert.Equal(t, credential.CreatedAt(), tC.params.CreatedAt)
-			assert.Equal(t, credential.UpdatedAt(), tC.params.CreatedAt)
+			require.NotZero(t, pwd)
+			assert.NotZero(t, pwd.ID())
+			assert.Equal(t, pwd.UserID(), tC.params.UserID)
+			assert.Equal(t, pwd.Hash(), tC.params.Hash)
+			assert.Equal(t, pwd.CreatedAt(), tC.params.CreatedAt)
+			assert.Equal(t, pwd.UpdatedAt(), tC.params.CreatedAt)
 		})
 	}
 }
 
-func TestRestoreCredential(t *testing.T) {
+func TestRestorePassword(t *testing.T) {
 	hash, err := NewHashed("hash")
 	require.NoError(t, err)
 	testCases := []struct {
@@ -151,18 +151,18 @@ func TestRestoreCredential(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			credential, err := RestoreCredential(tC.params)
+			pwd, err := RestorePassword(tC.params)
 			if tC.expectErr {
 				assert.Error(t, err)
-				assert.Zero(t, credential)
+				assert.Zero(t, pwd)
 			} else {
 				require.NoError(t, err)
-				require.NotZero(t, credential)
-				assert.Equal(t, credential.ID(), tC.params.ID)
-				assert.Equal(t, credential.UserID(), tC.params.UserID)
-				assert.Equal(t, credential.Hash(), tC.params.Hash)
-				assert.Equal(t, credential.CreatedAt(), tC.params.CreatedAt)
-				assert.Equal(t, credential.UpdatedAt(), tC.params.UpdatedAt)
+				require.NotZero(t, pwd)
+				assert.Equal(t, pwd.ID(), tC.params.ID)
+				assert.Equal(t, pwd.UserID(), tC.params.UserID)
+				assert.Equal(t, pwd.Hash(), tC.params.Hash)
+				assert.Equal(t, pwd.CreatedAt(), tC.params.CreatedAt)
+				assert.Equal(t, pwd.UpdatedAt(), tC.params.UpdatedAt)
 			}
 		})
 	}

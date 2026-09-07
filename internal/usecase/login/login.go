@@ -24,7 +24,7 @@ type Output struct {
 
 type Login struct {
 	users            port.UserReader
-	credentials      port.CredentialReader
+	passwords        port.PasswordReader
 	pwdChecker       port.PasswordChecker
 	accessIssuer     port.AccessTokenIssuer
 	refreshGenerator port.RefreshTokenGenerator
@@ -55,15 +55,15 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, ErrInvalidCredentials
 	}
 
-	cred, err := uc.credentials.FindByUserID(ctx, usr.ID())
+	pwd, err := uc.passwords.FindByUserID(ctx, usr.ID())
 	if err != nil {
-		return Output{}, fmt.Errorf("find credential by user id failed: %w", err)
+		return Output{}, fmt.Errorf("find password by user id failed: %w", err)
 	}
-	if cred == nil {
+	if pwd == nil {
 		return Output{}, ErrInvalidCredentials
 	}
 
-	ok, err := uc.pwdChecker.Verify(plain, cred.Hash())
+	ok, err := uc.pwdChecker.Verify(plain, pwd.Hash())
 	if err != nil {
 		return Output{}, fmt.Errorf("password verification failed: %w", err)
 	}

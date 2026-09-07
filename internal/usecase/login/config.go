@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	UserReader            port.UserReader
-	CredentialReader      port.CredentialReader
+	PasswordReader        port.PasswordReader
 	PasswordChecker       port.PasswordChecker
 	AccessTokenIssuer     port.AccessTokenIssuer
 	RefreshTokenGenerator port.RefreshTokenGenerator
@@ -23,8 +23,8 @@ func New(cfg Config) (Login, error) {
 	if cfg.UserReader == nil {
 		return Login{}, errors.New("user reader cannot be nil")
 	}
-	if cfg.CredentialReader == nil {
-		return Login{}, errors.New("credential reader cannot be nil")
+	if cfg.PasswordReader == nil {
+		return Login{}, errors.New("password reader cannot be nil")
 	}
 	if cfg.PasswordChecker == nil {
 		return Login{}, errors.New("password checker cannot be nil")
@@ -46,7 +46,7 @@ func New(cfg Config) (Login, error) {
 	}
 	uc := Login{
 		users:            cfg.UserReader,
-		credentials:      cfg.CredentialReader,
+		passwords:        cfg.PasswordReader,
 		pwdChecker:       cfg.PasswordChecker,
 		accessIssuer:     cfg.AccessTokenIssuer,
 		refreshGenerator: cfg.RefreshTokenGenerator,

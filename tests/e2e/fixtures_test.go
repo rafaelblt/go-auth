@@ -31,9 +31,9 @@ func (f *Fixtures) SaveUser(t *testing.T, usr *user.User) {
 	postgrestest.InsertUser(t, f.pool, usr)
 }
 
-func (f *Fixtures) SaveCredential(t *testing.T, cred *password.Credential) {
+func (f *Fixtures) SavePassword(t *testing.T, pwd *password.Password) {
 	t.Helper()
-	postgrestest.InsertCredential(t, f.pool, cred)
+	postgrestest.InsertPassword(t, f.pool, pwd)
 }
 
 func (f *Fixtures) SaveSession(t *testing.T, sess *session.Session) {
@@ -57,11 +57,11 @@ func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, password.Pla
 
 	hashed := passwordtest.MustHashed(t, string(bytes))
 
-	cred := passwordtest.NewCredential(t, func(p *password.RestoreParams) {
+	pwd := passwordtest.NewPassword(t, func(p *password.RestoreParams) {
 		p.UserID = usr.ID()
 		p.Hash = hashed
 	})
-	f.SaveCredential(t, cred)
+	f.SavePassword(t, pwd)
 
 	return usr, plain
 }

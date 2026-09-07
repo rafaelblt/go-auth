@@ -56,7 +56,7 @@ func buildRegister(deps infraDeps) (register.Register, error) {
 func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
 	uc, err := login.New(login.Config{
 		UserReader:            deps.Users,
-		CredentialReader:      deps.Credentials,
+		PasswordReader:        deps.Passwords,
 		PasswordChecker:       deps.PasswordHasher,
 		AccessTokenIssuer:     deps.AccessTokenService,
 		RefreshTokenGenerator: deps.RefreshTokenGenerator,

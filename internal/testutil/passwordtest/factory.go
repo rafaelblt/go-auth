@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NewCredential(t *testing.T, override func(p *password.RestoreParams)) *password.Credential {
+func NewPassword(t *testing.T, override func(p *password.RestoreParams)) *password.Password {
 	t.Helper()
 
 	params := password.RestoreParams{
@@ -24,7 +24,7 @@ func NewCredential(t *testing.T, override func(p *password.RestoreParams)) *pass
 		override(&params)
 	}
 
-	entity, err := password.RestoreCredential(params)
-	require.NoError(t, err, "password credential restore failed")
+	entity, err := password.RestorePassword(params)
+	require.NoError(t, err, "password restore failed")
 	return entity
 }

@@ -16,7 +16,7 @@ type UnitOfWork interface {
 
 type UowDeps struct {
 	UserWriter         UserWriter
-	CredentialWriter   CredentialWriter
+	PasswordWriter     PasswordWriter
 	SessionWriter      SessionWriter
 	RefreshTokenWriter RefreshTokenWriter
 }
@@ -36,15 +36,15 @@ type UserWriter interface {
 	Add(context.Context, *user.User) error
 }
 
-// Password credential
+// Password
 
-type CredentialReader interface {
-	FindByID(context.Context, password.ID) (*password.Credential, error)
-	FindByUserID(context.Context, user.ID) (*password.Credential, error)
+type PasswordReader interface {
+	FindByID(context.Context, password.ID) (*password.Password, error)
+	FindByUserID(context.Context, user.ID) (*password.Password, error)
 }
 
-type CredentialWriter interface {
-	Add(context.Context, *password.Credential) error
+type PasswordWriter interface {
+	Add(context.Context, *password.Password) error
 }
 
 // Session

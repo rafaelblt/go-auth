@@ -94,30 +94,30 @@ func TestMapUserToEntity(t *testing.T) {
 	}
 }
 
-func TestMapCredentialToModel(t *testing.T) {
+func TestMapPasswordToModel(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		entity    *password.Credential
+		entity    *password.Password
 		expectErr bool
 	}{
 		{
-			desc:      "credential nil",
+			desc:      "password nil",
 			entity:    nil,
 			expectErr: true,
 		},
 		{
-			desc:      "credential zero",
-			entity:    &password.Credential{},
+			desc:      "password zero",
+			entity:    &password.Password{},
 			expectErr: true,
 		},
 		{
-			desc:   "default credential",
-			entity: passwordtest.NewCredential(t, nil),
+			desc:   "default password",
+			entity: passwordtest.NewPassword(t, nil),
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			model, err := mapCredentialToModel(tC.entity)
+			model, err := mapPasswordToModel(tC.entity)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, model)
@@ -133,20 +133,20 @@ func TestMapCredentialToModel(t *testing.T) {
 	}
 }
 
-func TestMapCredentialToEntity(t *testing.T) {
+func TestMapPasswordToEntity(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		model     credentialModel
+		model     passwordModel
 		expectErr bool
 	}{
 		{
 			desc:      "model zero",
-			model:     credentialModel{},
+			model:     passwordModel{},
 			expectErr: true,
 		},
 		{
 			desc: "valid model",
-			model: credentialModel{
+			model: passwordModel{
 				ID:        shared.NewEntityID().String(),
 				UserID:    shared.NewEntityID().String(),
 				Hash:      "hash",
@@ -157,7 +157,7 @@ func TestMapCredentialToEntity(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			entity, err := mapCredentialToEntity(tC.model)
+			entity, err := mapPasswordToEntity(tC.model)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Nil(t, entity)

@@ -49,26 +49,26 @@ func TestUnitOfWork_Do_WithUserWriter(t *testing.T) {
 	assert.True(t, exists)
 }
 
-func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
+func TestUnitOfWork_Do_WithPasswordWriter(t *testing.T) {
 	ctx := context.Background()
 	pool := poolFactory.AcquireWithMigrations(t)
 	uow, err := postgres.NewUnitOfWork(pool)
 	require.NoError(t, err)
 
 	usr := usertest.NewUser(t, nil)
-	cred := passwordtest.NewCredential(t, func(p *password.RestoreParams) {
+	pwd := passwordtest.NewPassword(t, func(p *password.RestoreParams) {
 		p.UserID = usr.ID()
 	})
 
 	err = uow.Do(ctx, func(deps port.UowDeps) error {
 		require.NoError(t, deps.UserWriter.Add(ctx, usr))
-		return deps.CredentialWriter.Add(ctx, cred)
+		return deps.PasswordWriter.Add(ctx, pwd)
 	})
 
 	assert.NoError(t, err)
 	var exists bool
-	query := `SELECT EXISTS( SELECT 1 FROM password_credentials WHERE id=$1 )`
-	assert.NoError(t, pool.QueryRow(ctx, query, cred.ID().Value()).Scan(&exists))
+	query := `SELECT EXISTS( SELECT 1 FROM passwords WHERE id=$1 )`
+	assert.NoError(t, pool.QueryRow(ctx, query, pwd.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }
 

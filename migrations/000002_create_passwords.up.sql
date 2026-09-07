@@ -1,4 +1,4 @@
-CREATE TABLE password_credentials (
+CREATE TABLE passwords (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE
         REFERENCES users(id)

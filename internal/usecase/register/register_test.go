@@ -131,7 +131,7 @@ func TestRegister_SavesNewUser(t *testing.T) {
 	assert.Equal(t, input.Username, user.Username().String())
 }
 
-func TestRegister_SavesNewCredential_AndHashesThePassword(t *testing.T) {
+func TestRegister_SavesNewPassword_AndHashesIt(t *testing.T) {
 	helper := NewTestHelper(t)
 
 	plain := helper.ValidPlainPassword()
@@ -147,7 +147,7 @@ func TestRegister_SavesNewCredential_AndHashesThePassword(t *testing.T) {
 	hash, ok := helper.FakePasswordHasher.GetHashByPassword(plain)
 	require.True(t, ok, "use case didnt hash the password")
 	assert.True(t,
-		helper.FakeUnitOfWork.FakeCredentialWriter.CheckHashIsSaved(hash),
+		helper.FakeUnitOfWork.FakePasswordWriter.CheckHashIsSaved(hash),
 	)
 }
 
@@ -164,12 +164,12 @@ func TestRegister_ReturnsError_WhenUserWriterFails(t *testing.T) {
 	assert.ErrorIs(t, err, expectedErr)
 }
 
-func TestRegister_ReturnsError_WhenCredentialWriterFails(t *testing.T) {
+func TestRegister_ReturnsError_WhenPasswordWriterFails(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := helper.ValidInput()
 
 	expectedErr := errors.New("internal error")
-	helper.FakeUnitOfWork.FakeCredentialWriter.SetError(expectedErr)
+	helper.FakeUnitOfWork.FakePasswordWriter.SetError(expectedErr)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
 

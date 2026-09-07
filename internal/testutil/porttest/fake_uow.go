@@ -8,7 +8,7 @@ import (
 
 type FakeUnitOfWork struct {
 	FakeUserWriter         *FakeUserWriter
-	FakeCredentialWriter   *FakeCredentialWriter
+	FakePasswordWriter     *FakePasswordWriter
 	FakeSessionWriter      *FakeSessionWriter
 	FakeRefreshTokenWriter *FakeRefreshTokenWriter
 }
@@ -16,7 +16,7 @@ type FakeUnitOfWork struct {
 func NewFakeUnitOfWork() *FakeUnitOfWork {
 	uow := FakeUnitOfWork{
 		FakeUserWriter:         NewFakeUserWriter(),
-		FakeCredentialWriter:   NewFakeCredentialWriter(),
+		FakePasswordWriter:     NewFakePasswordWriter(),
 		FakeSessionWriter:      NewFakeSessionWriter(),
 		FakeRefreshTokenWriter: NewFakeRefreshTokenWriter(),
 	}
@@ -26,7 +26,7 @@ func NewFakeUnitOfWork() *FakeUnitOfWork {
 func (uow FakeUnitOfWork) Do(ctx context.Context, fn func(deps port.UowDeps) error) error {
 	return fn(port.UowDeps{
 		UserWriter:         uow.FakeUserWriter,
-		CredentialWriter:   uow.FakeCredentialWriter,
+		PasswordWriter:     uow.FakePasswordWriter,
 		SessionWriter:      uow.FakeSessionWriter,
 		RefreshTokenWriter: uow.FakeRefreshTokenWriter,
 	})

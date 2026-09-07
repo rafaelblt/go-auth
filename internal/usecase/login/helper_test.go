@@ -16,7 +16,7 @@ import (
 type TestHelper struct {
 	t                         *testing.T
 	FakeUserReader            *porttest.FakeUserReader
-	FakeCredentialReader      *porttest.FakeCredentialReader
+	FakePasswordReader        *porttest.FakePasswordReader
 	FakePasswordChecker       *porttest.FakePasswordChecker
 	FakeAccessTokenIssuer     *porttest.FakeAccessTokenIssuer
 	FakeRefreshTokenGenerator *porttest.FakeRefreshTokenGenerator
@@ -29,7 +29,7 @@ func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
 		t:                         t,
 		FakeUserReader:            porttest.NewFakeUserReader(),
-		FakeCredentialReader:      porttest.NewFakeCredentialReader(),
+		FakePasswordReader:        porttest.NewFakePasswordReader(),
 		FakePasswordChecker:       porttest.NewFakePasswordChecker(),
 		FakeAccessTokenIssuer:     porttest.NewFakeAccessTokenIssuer(),
 		FakeRefreshTokenGenerator: porttest.NewFakeRefreshTokenGenerator(),
@@ -44,7 +44,7 @@ func (helper TestHelper) UseCase() login.Login {
 	helper.t.Helper()
 	uc, err := login.New(login.Config{
 		UserReader:            helper.FakeUserReader,
-		CredentialReader:      helper.FakeCredentialReader,
+		PasswordReader:        helper.FakePasswordReader,
 		PasswordChecker:       helper.FakePasswordChecker,
 		AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 		RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -75,13 +75,13 @@ func (helper TestHelper) GetUserAndPassword() (*user.User, password.Plain) {
 	return usr, pwd
 }
 
-func (helper TestHelper) AddUserAndPassword(user *user.User, pwd password.Plain) {
+func (helper TestHelper) AddUserAndPassword(user *user.User, plain password.Plain) {
 	helper.FakeUserReader.InsertUser(user)
-	hash := passwordtest.MustHashed(helper.t, pwd.Value())
-	cred := passwordtest.NewCredential(helper.t, func(params *password.RestoreParams) {
+	hash := passwordtest.MustHashed(helper.t, plain.Value())
+	pwd := passwordtest.NewPassword(helper.t, func(params *password.RestoreParams) {
 		params.UserID = user.ID()
 		params.Hash = hash
 	})
-	helper.FakeCredentialReader.InsertCredential(cred)
-	helper.FakePasswordChecker.SetPair(pwd, hash)
+	helper.FakePasswordReader.InsertPassword(pwd)
+	helper.FakePasswordChecker.SetPair(plain, hash)
 }

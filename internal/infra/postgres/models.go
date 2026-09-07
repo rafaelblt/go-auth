@@ -23,7 +23,7 @@ type userModel struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-type credentialModel struct {
+type passwordModel struct {
 	ID        string    `db:"id"`
 	UserID    string    `db:"user_id"`
 	Hash      string    `db:"hash"`
@@ -97,15 +97,15 @@ func mapUserToEntity(model userModel) (*user.User, error) {
 	return usr, nil
 }
 
-func mapCredentialToModel(entity *password.Credential) (credentialModel, error) {
+func mapPasswordToModel(entity *password.Password) (passwordModel, error) {
 	if entity == nil {
-		return credentialModel{}, errors.New("credential nil")
+		return passwordModel{}, errors.New("password nil")
 	}
 	if entity.IsZero() {
-		return credentialModel{}, errors.New("credential zero")
+		return passwordModel{}, errors.New("password zero")
 	}
 
-	model := credentialModel{
+	model := passwordModel{
 		ID:        entity.ID().String(),
 		UserID:    entity.UserID().String(),
 		Hash:      entity.Hash().Value(),
@@ -116,10 +116,10 @@ func mapCredentialToModel(entity *password.Credential) (credentialModel, error) 
 	return model, nil
 }
 
-func mapCredentialToEntity(model credentialModel) (*password.Credential, error) {
+func mapPasswordToEntity(model passwordModel) (*password.Password, error) {
 	id, err := password.ParseID(model.ID)
 	if err != nil {
-		return nil, fmt.Errorf("parse credential id failed: %w", err)
+		return nil, fmt.Errorf("parse password id failed: %w", err)
 	}
 	userID, err := user.ParseID(model.UserID)
 	if err != nil {
@@ -130,7 +130,7 @@ func mapCredentialToEntity(model credentialModel) (*password.Credential, error) 
 		return nil, fmt.Errorf("new hashed password failed: %w", err)
 	}
 
-	cred, err := password.RestoreCredential(password.RestoreParams{
+	pwd, err := password.RestorePassword(password.RestoreParams{
 		ID:        id,
 		UserID:    userID,
 		Hash:      hash,
@@ -138,10 +138,10 @@ func mapCredentialToEntity(model credentialModel) (*password.Credential, error) 
 		UpdatedAt: model.UpdatedAt,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("restore credential failed: %w", err)
+		return nil, fmt.Errorf("restore password failed: %w", err)
 	}
 
-	return cred, nil
+	return pwd, nil
 }
 
 func mapSessionToModel(entity *session.Session) (sessionModel, error) {

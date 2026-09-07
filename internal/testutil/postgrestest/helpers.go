@@ -33,26 +33,26 @@ func InsertUser(t *testing.T, db postgres.DB, usr *user.User) {
 	require.NoError(t, err, "user insert failed")
 }
 
-func InsertCredential(t *testing.T, db postgres.DB, cred *password.Credential) {
+func InsertPassword(t *testing.T, db postgres.DB, pwd *password.Password) {
 	t.Helper()
 
 	require.NotNil(t, db, "db nil")
-	require.NotNil(t, cred, "credential nil")
-	require.NotZero(t, cred, "credential zero")
+	require.NotNil(t, pwd, "password nil")
+	require.NotZero(t, pwd, "password zero")
 
-	sql := `INSERT INTO password_credentials
+	sql := `INSERT INTO passwords
 			(id, user_id, hash, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5)`
 
 	_, err := db.Exec(t.Context(), sql,
-		cred.ID().Value(),
-		cred.UserID().Value(),
-		cred.Hash().Value(),
-		cred.CreatedAt(),
-		cred.UpdatedAt(),
+		pwd.ID().Value(),
+		pwd.UserID().Value(),
+		pwd.Hash().Value(),
+		pwd.CreatedAt(),
+		pwd.UpdatedAt(),
 	)
 
-	require.NoError(t, err, "insert credential failed")
+	require.NoError(t, err, "insert password failed")
 }
 
 func InsertSession(t *testing.T, db postgres.DB, sess *session.Session) {

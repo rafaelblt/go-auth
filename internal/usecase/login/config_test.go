@@ -18,7 +18,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "valid case",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -32,7 +32,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "user reader nil",
 			config: login.Config{
 				UserReader:            nil,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -43,10 +43,10 @@ func TestNewLogin(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			desc: "credential reader nil",
+			desc: "password reader nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      nil,
+				PasswordReader:        nil,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -60,7 +60,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "password checker nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       nil,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -74,7 +74,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "access token issuer nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     nil,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -88,7 +88,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "refresh token issuer nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: nil,
@@ -102,7 +102,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "uow nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -116,7 +116,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "clock nil",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -130,7 +130,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "refresh token ttl zero",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
@@ -144,7 +144,7 @@ func TestNewLogin(t *testing.T) {
 			desc: "refresh token ttl negative",
 			config: login.Config{
 				UserReader:            helper.FakeUserReader,
-				CredentialReader:      helper.FakeCredentialReader,
+				PasswordReader:        helper.FakePasswordReader,
 				PasswordChecker:       helper.FakePasswordChecker,
 				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
 				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
