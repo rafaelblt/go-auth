@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/rafaelblt/go-auth/internal/validation"
@@ -55,7 +55,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooLong(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: helper.ValidUsername().String(),
-		Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
+		Password: strings.Repeat("a", password.PlainMaxBytes+1),
 	}
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
@@ -65,7 +65,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooLong(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldPassword,
-		validation.IssueTooLong(credential.PlainPasswordMaxBytes, validation.UnitByte),
+		validation.IssueTooLong(password.PlainMaxBytes, validation.UnitByte),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -74,7 +74,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooShort(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: helper.ValidUsername().String(),
-		Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
+		Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 	}
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
@@ -84,7 +84,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooShort(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldPassword,
-		validation.IssueTooShort(credential.PlainPasswordMinCodePoints, validation.UnitCodePoint),
+		validation.IssueTooShort(password.PlainMinCodePoints, validation.UnitCodePoint),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -93,7 +93,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: strings.Repeat("a", user.UsernameMinLen-1),
-		Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
+		Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 	}
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
@@ -108,7 +108,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 		),
 		validation.NewFieldError(
 			register.FieldPassword,
-			validation.IssueTooShort(credential.PlainPasswordMinCodePoints, validation.UnitCodePoint),
+			validation.IssueTooShort(password.PlainMinCodePoints, validation.UnitCodePoint),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())
@@ -118,7 +118,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testi
 	helper := NewTestHelper(t)
 	input := register.Input{
 		Username: strings.Repeat("a", user.UsernameMaxLen+1),
-		Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
+		Password: strings.Repeat("a", password.PlainMaxBytes+1),
 	}
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
@@ -133,7 +133,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testi
 		),
 		validation.NewFieldError(
 			register.FieldPassword,
-			validation.IssueTooLong(credential.PlainPasswordMaxBytes, validation.UnitByte),
+			validation.IssueTooLong(password.PlainMaxBytes, validation.UnitByte),
 		),
 	}
 	assert.ElementsMatch(t, expected, verr.Errors())

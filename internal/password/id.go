@@ -1,4 +1,4 @@
-package credential
+package password
 
 import "github.com/rafaelblt/go-auth/internal/shared"
 

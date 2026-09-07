@@ -1,4 +1,7 @@
-package credential
+// Package password holds the credential a user authenticates with:
+// a plain password supplied at register/login time, and the hash of it
+// that is the only form ever persisted.
+package password
 
 import (
 	"errors"
@@ -10,18 +13,14 @@ import (
 type Credential struct {
 	id        ID
 	userID    user.ID
-	kind      Kind
-	provider  Provider
-	secret    Secret
+	hash      Hashed
 	createdAt time.Time
 	updatedAt time.Time
 }
 
 type CreationParams struct {
 	UserID    user.ID
-	Kind      Kind
-	Provider  Provider
-	Secret    Secret
+	Hash      Hashed
 	CreatedAt time.Time
 }
 
@@ -29,21 +28,13 @@ func NewCredential(params CreationParams) (*Credential, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("user id cannot be zero")
 	}
-	if params.Kind.IsZero() {
-		return nil, errors.New("kind cannot be zero")
-	}
-	if params.Provider.IsZero() {
-		return nil, errors.New("provider cannot be zero")
-	}
-	if params.Secret.IsZero() {
-		return nil, errors.New("secret cannot be zero")
+	if params.Hash.IsZero() {
+		return nil, errors.New("hash cannot be zero")
 	}
 	cred := &Credential{
 		id:        NewID(),
 		userID:    params.UserID,
-		kind:      params.Kind,
-		provider:  params.Provider,
-		secret:    params.Secret,
+		hash:      params.Hash,
 		createdAt: params.CreatedAt,
 		updatedAt: params.CreatedAt,
 	}
@@ -53,9 +44,7 @@ func NewCredential(params CreationParams) (*Credential, error) {
 type RestoreParams struct {
 	ID        ID
 	UserID    user.ID
-	Kind      Kind
-	Provider  Provider
-	Secret    Secret
+	Hash      Hashed
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -67,14 +56,8 @@ func RestoreCredential(params RestoreParams) (*Credential, error) {
 	if params.UserID.IsZero() {
 		return nil, errors.New("user id cannot be zero")
 	}
-	if params.Kind.IsZero() {
-		return nil, errors.New("kind cannot be zero")
-	}
-	if params.Provider.IsZero() {
-		return nil, errors.New("provider cannot be zero")
-	}
-	if params.Secret.IsZero() {
-		return nil, errors.New("secret cannot be zero")
+	if params.Hash.IsZero() {
+		return nil, errors.New("hash cannot be zero")
 	}
 	if params.CreatedAt.IsZero() {
 		return nil, errors.New("created at cannot be zero")
@@ -85,9 +68,7 @@ func RestoreCredential(params RestoreParams) (*Credential, error) {
 	cred := &Credential{
 		id:        params.ID,
 		userID:    params.UserID,
-		kind:      params.Kind,
-		provider:  params.Provider,
-		secret:    params.Secret,
+		hash:      params.Hash,
 		createdAt: params.CreatedAt,
 		updatedAt: params.UpdatedAt,
 	}
@@ -96,9 +77,7 @@ func RestoreCredential(params RestoreParams) (*Credential, error) {
 
 func (c *Credential) ID() ID               { return c.id }
 func (c *Credential) UserID() user.ID      { return c.userID }
-func (c *Credential) Kind() Kind           { return c.kind }
-func (c *Credential) Provider() Provider   { return c.provider }
-func (c *Credential) Secret() Secret       { return c.secret }
+func (c *Credential) Hash() Hashed         { return c.hash }
 func (c *Credential) CreatedAt() time.Time { return c.createdAt }
 func (c *Credential) UpdatedAt() time.Time { return c.updatedAt }
 

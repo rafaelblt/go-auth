@@ -1,11 +1,11 @@
 package port
 
-import "github.com/rafaelblt/go-auth/internal/credential"
+import "github.com/rafaelblt/go-auth/internal/password"
 
 type PasswordHasher interface {
-	Hash(credential.PlainPassword) (credential.Secret, error)	
+	Hash(password.Plain) (password.Hashed, error)
 }
 
 type PasswordChecker interface {
-	Verify(credential.PlainPassword, credential.Secret) (bool, error)
+	Verify(password.Plain, password.Hashed) (bool, error)
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
@@ -43,24 +43,20 @@ func (helper CredentialRepoTestHelper) SaveUser(usr *user.User) {
 	require.NoError(helper.t, userRepo.Add(context.Background(), usr))
 }
 
-func (helper CredentialRepoTestHelper) CheckCredentialIsSaved(cred *credential.Credential) bool {
+func (helper CredentialRepoTestHelper) CheckCredentialIsSaved(cred *password.Credential) bool {
 	var result bool
 	err := helper.db.QueryRow(context.Background(),
 		`SELECT EXISTS(
-			SELECT 1 FROM credentials WHERE
+			SELECT 1 FROM password_credentials WHERE
 			id=$1 AND
 			user_id=$2 AND
-			kind=$3 AND
-			provider=$4 AND
-			secret=$5 AND
-			created_at=$6 AND
-			updated_at=$7
+			hash=$3 AND
+			created_at=$4 AND
+			updated_at=$5
 		)`,
 		cred.ID().Value(),
 		cred.UserID().Value(),
-		cred.Kind().String(),
-		cred.Provider().String(),
-		cred.Secret().Value(),
+		cred.Hash().Value(),
 		cred.CreatedAt(),
 		cred.UpdatedAt(),
 	).Scan(&result)
@@ -76,7 +72,7 @@ func TestCredentialRepo_Save(t *testing.T) {
 	usr := usertest.NewUser(t, nil)
 	helper.SaveUser(usr)
 
-	cred := credentialtest.NewCredential(t, func(params *credential.RestoreParams) {
+	cred := passwordtest.NewCredential(t, func(params *password.RestoreParams) {
 		params.UserID = usr.ID()
 	})
 
@@ -91,7 +87,7 @@ func TestCredentialRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
 	repo := helper.Repo()
 
 	ctx := context.Background()
-	cred, err := repo.FindByID(ctx, credential.NewID())
+	cred, err := repo.FindByID(ctx, password.NewID())
 
 	assert.NoError(t, err)
 	assert.Nil(t, cred)
@@ -102,7 +98,7 @@ func TestCredentialRepo_FindByID_ReturnsCredential_WhenIDExists(t *testing.T) {
 	usr := usertest.NewUser(t, nil)
 	helper.SaveUser(usr)
 
-	cred := credentialtest.NewCredential(t, func(params *credential.RestoreParams) {
+	cred := passwordtest.NewCredential(t, func(params *password.RestoreParams) {
 		params.UserID = usr.ID()
 	})
 
@@ -117,23 +113,23 @@ func TestCredentialRepo_FindByID_ReturnsCredential_WhenIDExists(t *testing.T) {
 	assert.Equal(t, cred.ID(), found.ID())
 }
 
-func TestCredentialRepo_FindByUserAndKind_ReturnsNil_WhenNotExists(t *testing.T) {
+func TestCredentialRepo_FindByUserID_ReturnsNil_WhenNotExists(t *testing.T) {
 	helper := NewCredentialRepoTestHelper(t)
 	repo := helper.Repo()
 
 	ctx := context.Background()
-	cred, err := repo.FindByUserAndKind(ctx, user.NewID(), credential.KindPassword)
+	cred, err := repo.FindByUserID(ctx, user.NewID())
 
 	assert.NoError(t, err)
 	assert.Nil(t, cred)
 }
 
-func TestCredentialRepo_FindByUserAndKind_ReturnsCredential_WhenExists(t *testing.T) {
+func TestCredentialRepo_FindByUserID_ReturnsCredential_WhenExists(t *testing.T) {
 	helper := NewCredentialRepoTestHelper(t)
 	usr := usertest.NewUser(t, nil)
 	helper.SaveUser(usr)
 
-	testCred := credentialtest.NewCredential(t, func(p *credential.RestoreParams) {
+	testCred := passwordtest.NewCredential(t, func(p *password.RestoreParams) {
 		p.UserID = usr.ID()
 	})
 
@@ -141,7 +137,7 @@ func TestCredentialRepo_FindByUserAndKind_ReturnsCredential_WhenExists(t *testin
 	ctx := context.Background()
 	require.NoError(t, repo.Add(ctx, testCred))
 
-	found, err := repo.FindByUserAndKind(ctx, testCred.UserID(), testCred.Kind())
+	found, err := repo.FindByUserID(ctx, testCred.UserID())
 
 	assert.NoError(t, err)
 	assert.NotNil(t, found)

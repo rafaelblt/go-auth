@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -28,8 +28,8 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 
 	username, usernameIssues := user.NewUsername(input.Username)
 	acc.Add(FieldUsername, usernameIssues)
-	password, passwordIssues := credential.NewPlainPassword(input.Password)
-	acc.Add(FieldPassword, passwordIssues)
+	plain, plainIssues := password.NewPlain(input.Password)
+	acc.Add(FieldPassword, plainIssues)
 
 	err := acc.Err()
 	if err != nil {
@@ -41,7 +41,7 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	hashed, err := uc.hasher.Hash(password)
+	hashed, err := uc.hasher.Hash(plain)
 	if err != nil {
 		return Output{}, fmt.Errorf("password hashing failed: %w", err)
 	}
@@ -56,11 +56,9 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	cred, err := uc.createCredential(credential.CreationParams{
+	cred, err := uc.createCredential(password.CreationParams{
 		UserID:    usr.ID(),
-		Kind:      credential.KindPassword,
-		Provider:  credential.ProviderLocal,
-		Secret:    hashed,
+		Hash:      hashed,
 		CreatedAt: now,
 	})
 	if err != nil {
@@ -95,15 +93,15 @@ func (uc Register) createUser(params user.CreationParams) (*user.User, error) {
 	return usr, nil
 }
 
-func (uc Register) createCredential(params credential.CreationParams) (*credential.Credential, error) {
-	cred, err := credential.NewCredential(params)
+func (uc Register) createCredential(params password.CreationParams) (*password.Credential, error) {
+	cred, err := password.NewCredential(params)
 	if err != nil {
 		return nil, fmt.Errorf("credential creation failed: %w", err)
 	}
 	return cred, nil
 }
 
-func (uc Register) save(ctx context.Context, user *user.User, cred *credential.Credential) error {
+func (uc Register) save(ctx context.Context, user *user.User, cred *password.Credential) error {
 	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		err := deps.UserWriter.Add(ctx, user)
 		if err != nil {

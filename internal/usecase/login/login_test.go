@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -52,28 +52,28 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 			desc: "password too short",
 			input: login.Input{
 				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
+				Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
 		},
 		{
 			desc: "password too long",
 			input: login.Input{
 				Username: "username",
-				Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
+				Password: strings.Repeat("a", password.PlainMaxBytes+1),
 			},
 		},
 		{
 			desc: "username and password too short",
 			input: login.Input{
 				Username: strings.Repeat("a", user.UsernameMinLen-1),
-				Password: strings.Repeat("a", credential.PlainPasswordMinCodePoints-1),
+				Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
 		},
 		{
 			desc: "username and password too long",
 			input: login.Input{
 				Username: strings.Repeat("a", user.UsernameMaxLen+1),
-				Password: strings.Repeat("a", credential.PlainPasswordMaxBytes+1),
+				Password: strings.Repeat("a", password.PlainMaxBytes+1),
 			},
 		},
 	}

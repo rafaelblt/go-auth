@@ -3,7 +3,7 @@ package port
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/user"
 )
@@ -36,15 +36,15 @@ type UserWriter interface {
 	Add(context.Context, *user.User) error
 }
 
-// Credential
+// Password credential
 
 type CredentialReader interface {
-	FindByID(context.Context, credential.ID) (*credential.Credential, error)
-	FindByUserAndKind(context.Context, user.ID, credential.Kind) (*credential.Credential, error)
+	FindByID(context.Context, password.ID) (*password.Credential, error)
+	FindByUserID(context.Context, user.ID) (*password.Credential, error)
 }
 
 type CredentialWriter interface {
-	Add(context.Context, *credential.Credential) error
+	Add(context.Context, *password.Credential) error
 }
 
 // Session

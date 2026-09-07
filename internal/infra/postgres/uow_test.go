@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/session"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +56,7 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 	require.NoError(t, err)
 
 	usr := usertest.NewUser(t, nil)
-	cred := credentialtest.NewCredential(t, func(p *credential.RestoreParams) {
+	cred := passwordtest.NewCredential(t, func(p *password.RestoreParams) {
 		p.UserID = usr.ID()
 	})
 
@@ -67,7 +67,7 @@ func TestUnitOfWork_Do_WithCredentialWriter(t *testing.T) {
 
 	assert.NoError(t, err)
 	var exists bool
-	query := `SELECT EXISTS( SELECT 1 FROM credentials WHERE id=$1 )`
+	query := `SELECT EXISTS( SELECT 1 FROM password_credentials WHERE id=$1 )`
 	assert.NoError(t, pool.QueryRow(ctx, query, cred.ID().Value()).Scan(&exists))
 	assert.True(t, exists)
 }

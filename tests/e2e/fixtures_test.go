@@ -9,10 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/config"
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
@@ -31,7 +31,7 @@ func (f *Fixtures) SaveUser(t *testing.T, usr *user.User) {
 	postgrestest.InsertUser(t, f.pool, usr)
 }
 
-func (f *Fixtures) SaveCredential(t *testing.T, cred *credential.Credential) {
+func (f *Fixtures) SaveCredential(t *testing.T, cred *password.Credential) {
 	t.Helper()
 	postgrestest.InsertCredential(t, f.pool, cred)
 }
@@ -46,22 +46,20 @@ func (f *Fixtures) SaveRefreshToken(t *testing.T, token *session.RefreshToken) {
 	postgrestest.InsertRefreshToken(t, f.pool, token)
 }
 
-func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, credential.PlainPassword) {
+func (f *Fixtures) CreateUserAndPassword(t *testing.T) (*user.User, password.Plain) {
 	usr := usertest.NewUser(t, nil)
 	f.SaveUser(t, usr)
 
-	plain := credentialtest.MustPlainPassword(t, "as-0dfo-01@$JU90512nsd")
+	plain := passwordtest.MustPlain(t, "as-0dfo-01@$JU90512nsd")
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(plain.Value()), f.cfg.BcryptCost())
+	bytes, err := bcrypt.GenerateFromPassword([]byte(plain.Value()), f.cfg.BcryptCost())
 	require.NoError(t, err, "bcrypt generate from password failed")
 
-	secret := credentialtest.MustSecret(t, string(hash))
+	hashed := passwordtest.MustHashed(t, string(bytes))
 
-	cred := credentialtest.NewCredential(t, func(p *credential.RestoreParams) {
+	cred := passwordtest.NewCredential(t, func(p *password.RestoreParams) {
 		p.UserID = usr.ID()
-		p.Kind = credential.KindPassword
-		p.Provider = credential.ProviderLocal
-		p.Secret = secret
+		p.Hash = hashed
 	})
 	f.SaveCredential(t, cred)
 

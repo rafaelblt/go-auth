@@ -134,20 +134,20 @@ func TestRegister_SavesNewUser(t *testing.T) {
 func TestRegister_SavesNewCredential_AndHashesThePassword(t *testing.T) {
 	helper := NewTestHelper(t)
 
-	password := helper.ValidPlainPassword()
+	plain := helper.ValidPlainPassword()
 	input := register.Input{
 		Username: helper.ValidUsername().String(),
-		Password: password.Value(),
+		Password: plain.Value(),
 	}
 
 	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
 
-	secret, ok := helper.FakePasswordHasher.GetSecretByPassword(password)
+	hash, ok := helper.FakePasswordHasher.GetHashByPassword(plain)
 	require.True(t, ok, "use case didnt hash the password")
 	assert.True(t,
-		helper.FakeUnitOfWork.FakeCredentialWriter.CheckSecretIsSaved(secret),
+		helper.FakeUnitOfWork.FakeCredentialWriter.CheckHashIsSaved(hash),
 	)
 }
 

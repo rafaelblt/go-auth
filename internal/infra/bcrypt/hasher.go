@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,9 +27,9 @@ func NewHasher(cfg Config) (*Hasher, error) {
 	return &hasher, nil
 }
 
-func (h Hasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
+func (h Hasher) Hash(plain password.Plain) (password.Hashed, error) {
 	if plain.IsZero() {
-		return credential.Secret{},
+		return password.Hashed{},
 			errors.New("plain password cannot be zero in bcrypt hashing")
 	}
 
@@ -38,27 +38,27 @@ func (h Hasher) Hash(plain credential.PlainPassword) (credential.Secret, error) 
 		h.cost,
 	)
 	if err != nil {
-		return credential.Secret{},
+		return password.Hashed{},
 			fmt.Errorf("bcrypt hash generation failed: %w", err)
 	}
 
-	secret, err := credential.NewSecret(string(bytes))
+	hashed, err := password.NewHashed(string(bytes))
 	if err != nil {
-		return credential.Secret{},
-			fmt.Errorf("new credential secret failed: %w", err)
+		return password.Hashed{},
+			fmt.Errorf("new hashed password failed: %w", err)
 	}
 
-	return secret, err
+	return hashed, err
 }
 
-func (h Hasher) Verify(plain credential.PlainPassword, hash credential.Secret) (bool, error) {
+func (h Hasher) Verify(plain password.Plain, hash password.Hashed) (bool, error) {
 	if plain.IsZero() {
 		return false,
 			errors.New("plain password cannot be zero in bcrypt verify")
 	}
 	if hash.IsZero() {
 		return false,
-			errors.New("credential secret cannot be zero in bcrypt verify")
+			errors.New("hashed password cannot be zero in bcrypt verify")
 	}
 
 	err := bcrypt.CompareHashAndPassword(

@@ -3,41 +3,41 @@ package porttest
 import (
 	"fmt"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 )
 
 type FakePasswordHasher struct {
-	data map[credential.PlainPassword]credential.Secret
+	data map[password.Plain]password.Hashed
 	err  error
 }
 
 func NewFakePasswordHasher() FakePasswordHasher {
 	return FakePasswordHasher{
-		data: make(map[credential.PlainPassword]credential.Secret),
+		data: make(map[password.Plain]password.Hashed),
 		err:  nil,
 	}
 }
 
-func (hsh *FakePasswordHasher) Hash(plain credential.PlainPassword) (credential.Secret, error) {
+func (hsh *FakePasswordHasher) Hash(plain password.Plain) (password.Hashed, error) {
 	if hsh.err != nil {
-		return credential.Secret{}, hsh.err
+		return password.Hashed{}, hsh.err
 	}
 
-	secret, err := credential.NewSecret(fmt.Sprintf("fake-hash<%s>", plain.Value()))
+	hashed, err := password.NewHashed(fmt.Sprintf("fake-hash<%s>", plain.Value()))
 	if err != nil {
-		e := fmt.Errorf("failed to create credential secret in fake hasher: %w", err)
-		return credential.Secret{}, e
+		e := fmt.Errorf("failed to create hashed password in fake hasher: %w", err)
+		return password.Hashed{}, e
 	}
 
-	hsh.data[plain] = secret
-	return secret, hsh.err
+	hsh.data[plain] = hashed
+	return hashed, hsh.err
 }
 
 func (hsh *FakePasswordHasher) SetError(err error) {
 	hsh.err = err
 }
 
-func (hsh *FakePasswordHasher) GetSecretByPassword(plain credential.PlainPassword) (credential.Secret, bool) {
-	secret, ok := hsh.data[plain]
-	return secret, ok
+func (hsh *FakePasswordHasher) GetHashByPassword(plain password.Plain) (password.Hashed, bool) {
+	hashed, ok := hsh.data[plain]
+	return hashed, ok
 }

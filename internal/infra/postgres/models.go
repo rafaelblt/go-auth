@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -26,9 +26,7 @@ type userModel struct {
 type credentialModel struct {
 	ID        string    `db:"id"`
 	UserID    string    `db:"user_id"`
-	Kind      string    `db:"kind"`
-	Provider  string    `db:"provider"`
-	Secret    string    `db:"secret"`
+	Hash      string    `db:"hash"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
@@ -99,7 +97,7 @@ func mapUserToEntity(model userModel) (*user.User, error) {
 	return usr, nil
 }
 
-func mapCredentialToModel(entity *credential.Credential) (credentialModel, error) {
+func mapCredentialToModel(entity *password.Credential) (credentialModel, error) {
 	if entity == nil {
 		return credentialModel{}, errors.New("credential nil")
 	}
@@ -110,9 +108,7 @@ func mapCredentialToModel(entity *credential.Credential) (credentialModel, error
 	model := credentialModel{
 		ID:        entity.ID().String(),
 		UserID:    entity.UserID().String(),
-		Kind:      entity.Kind().String(),
-		Provider:  entity.Provider().String(),
-		Secret:    entity.Secret().Value(),
+		Hash:      entity.Hash().Value(),
 		CreatedAt: entity.CreatedAt(),
 		UpdatedAt: entity.UpdatedAt(),
 	}
@@ -120,8 +116,8 @@ func mapCredentialToModel(entity *credential.Credential) (credentialModel, error
 	return model, nil
 }
 
-func mapCredentialToEntity(model credentialModel) (*credential.Credential, error) {
-	id, err := credential.ParseID(model.ID)
+func mapCredentialToEntity(model credentialModel) (*password.Credential, error) {
+	id, err := password.ParseID(model.ID)
 	if err != nil {
 		return nil, fmt.Errorf("parse credential id failed: %w", err)
 	}
@@ -129,25 +125,15 @@ func mapCredentialToEntity(model credentialModel) (*credential.Credential, error
 	if err != nil {
 		return nil, fmt.Errorf("parse user id failed: %w", err)
 	}
-	kind, err := credential.ParseKind(model.Kind)
+	hash, err := password.NewHashed(model.Hash)
 	if err != nil {
-		return nil, fmt.Errorf("parse credential kind failed: %w", err)
-	}
-	provider, err := credential.ParseProvider(model.Provider)
-	if err != nil {
-		return nil, fmt.Errorf("parse credential provider failed: %w", err)
-	}
-	secret, err := credential.NewSecret(model.Secret)
-	if err != nil {
-		return nil, fmt.Errorf("new credential secret failed: %w", err)
+		return nil, fmt.Errorf("new hashed password failed: %w", err)
 	}
 
-	cred, err := credential.RestoreCredential(credential.RestoreParams{
+	cred, err := password.RestoreCredential(password.RestoreParams{
 		ID:        id,
 		UserID:    userID,
-		Kind:      kind,
-		Provider:  provider,
-		Secret:    secret,
+		Hash:      hash,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	})

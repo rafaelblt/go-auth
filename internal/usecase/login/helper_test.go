@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -65,25 +65,23 @@ func (helper TestHelper) ValidInput() login.Input {
 	}
 }
 
-func (helper TestHelper) GetUserAndPassword() (*user.User, credential.PlainPassword) {
+func (helper TestHelper) GetUserAndPassword() (*user.User, password.Plain) {
 	helper.t.Helper()
 
 	usr := usertest.NewUser(helper.t, nil)
-	pwd := credentialtest.MustPlainPassword(helper.t, "al-=-vçd1çf1-04ktsx")
+	pwd := passwordtest.MustPlain(helper.t, "al-=-vçd1çf1-04ktsx")
 
 	helper.AddUserAndPassword(usr, pwd)
 	return usr, pwd
 }
 
-func (helper TestHelper) AddUserAndPassword(user *user.User, pwd credential.PlainPassword) {
+func (helper TestHelper) AddUserAndPassword(user *user.User, pwd password.Plain) {
 	helper.FakeUserReader.InsertUser(user)
-	secret := credentialtest.MustSecret(helper.t, pwd.Value())
-	cred := credentialtest.NewCredential(helper.t, func(params *credential.RestoreParams) {
+	hash := passwordtest.MustHashed(helper.t, pwd.Value())
+	cred := passwordtest.NewCredential(helper.t, func(params *password.RestoreParams) {
 		params.UserID = user.ID()
-		params.Kind = credential.KindPassword
-		params.Provider = credential.ProviderLocal
-		params.Secret = secret
+		params.Hash = hash
 	})
 	helper.FakeCredentialReader.InsertCredential(cred)
-	helper.FakePasswordChecker.SetPair(pwd, secret)
+	helper.FakePasswordChecker.SetPair(pwd, hash)
 }

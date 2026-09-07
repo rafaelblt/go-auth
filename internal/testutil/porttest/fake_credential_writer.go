@@ -3,20 +3,20 @@ package porttest
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 )
 
 type FakeCredentialWriter struct {
-	data []*credential.Credential
+	data []*password.Credential
 	err  error
 }
 
 func NewFakeCredentialWriter() *FakeCredentialWriter {
-	return &FakeCredentialWriter{data: []*credential.Credential{}}
+	return &FakeCredentialWriter{data: []*password.Credential{}}
 }
 
 func (w *FakeCredentialWriter) Add(
-	ctx context.Context, cred *credential.Credential,
+	ctx context.Context, cred *password.Credential,
 ) error {
 	if w.err != nil {
 		return w.err
@@ -25,13 +25,13 @@ func (w *FakeCredentialWriter) Add(
 	return nil
 }
 
-func (w *FakeCredentialWriter) SavedCredentials() []*credential.Credential {
+func (w *FakeCredentialWriter) SavedCredentials() []*password.Credential {
 	return w.data
 }
 
-func (w *FakeCredentialWriter) CheckSecretIsSaved(s credential.Secret) bool {
+func (w *FakeCredentialWriter) CheckHashIsSaved(h password.Hashed) bool {
 	for _, cred := range w.data {
-		if cred.Secret() == s {
+		if cred.Hash() == h {
 			return true
 		}
 	}

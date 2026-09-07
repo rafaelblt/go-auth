@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/usecase"
@@ -42,28 +42,28 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	if !issues.IsEmpty() {
 		return Output{}, ErrInvalidCredentials
 	}
-	password, issues := credential.NewPlainPassword(input.Password)
+	plain, issues := password.NewPlain(input.Password)
 	if !issues.IsEmpty() {
 		return Output{}, ErrInvalidCredentials
 	}
 
-	user, err := uc.users.FindByUsername(ctx, username)
+	usr, err := uc.users.FindByUsername(ctx, username)
 	if err != nil {
 		return Output{}, fmt.Errorf("find user by username failed: %w", err)
 	}
-	if user == nil {
+	if usr == nil {
 		return Output{}, ErrInvalidCredentials
 	}
 
-	credential, err := uc.credentials.FindByUserAndKind(ctx, user.ID(), credential.KindPassword)
+	cred, err := uc.credentials.FindByUserID(ctx, usr.ID())
 	if err != nil {
-		return Output{}, fmt.Errorf("find credential by user and kind failed: %w", err)
+		return Output{}, fmt.Errorf("find credential by user id failed: %w", err)
 	}
-	if credential == nil {
+	if cred == nil {
 		return Output{}, ErrInvalidCredentials
 	}
 
-	ok, err := uc.pwdChecker.Verify(password, credential.Secret())
+	ok, err := uc.pwdChecker.Verify(plain, cred.Hash())
 	if err != nil {
 		return Output{}, fmt.Errorf("password verification failed: %w", err)
 	}
@@ -74,7 +74,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	now := uc.clock.Now()
 
 	sess, err := session.NewSession(session.SessionCreationParams{
-		UserID:    user.ID(),
+		UserID:    usr.ID(),
 		CreatedAt: now,
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	}
 
 	issuedAccess, err := uc.accessIssuer.Issue(port.AccessTokenPayload{
-		UserID: user.ID(),
+		UserID: usr.ID(),
 	})
 	if err != nil {
 		return Output{}, fmt.Errorf("access token issuer failed: %w", err)

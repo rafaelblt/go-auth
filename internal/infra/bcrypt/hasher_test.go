@@ -3,8 +3,8 @@ package bcrypt
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -73,33 +73,33 @@ func TestHash(t *testing.T) {
 
 	testCases := []struct {
 		desc      string
-		password  credential.PlainPassword
+		password  password.Plain
 		expectErr bool
 	}{
 		{
 			desc:      "plain password zero",
-			password:  credential.PlainPassword{},
+			password:  password.Plain{},
 			expectErr: true,
 		},
 		{
 			desc:      "valid case",
-			password:  credentialtest.MustPlainPassword(t, "12345678"),
+			password:  passwordtest.MustPlain(t, "12345678"),
 			expectErr: false,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			secret, err := hasher.Hash(tC.password)
+			hashed, err := hasher.Hash(tC.password)
 			if tC.expectErr {
 				assert.Error(t, err)
-				assert.Zero(t, secret)
+				assert.Zero(t, hashed)
 				return
-			} 
+			}
 			require.NoError(t, err)
-			require.NotZero(t, secret)
-			assert.NotEqual(t, tC.password.Value(), secret.Value())
+			require.NotZero(t, hashed)
+			assert.NotEqual(t, tC.password.Value(), hashed.Value())
 			assert.NoError(t, bcrypt.CompareHashAndPassword(
-				[]byte(secret.Value()),
+				[]byte(hashed.Value()),
 				[]byte(tC.password.Value()),
 			))
 		})
@@ -111,24 +111,24 @@ func TestVerify_WithPlainPasswordZero(t *testing.T) {
 	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
-	password := credential.PlainPassword{}
-	secret := credentialtest.MustSecret(t, "secret")
+	plain := password.Plain{}
+	hashed := passwordtest.MustHashed(t, "hash")
 
-	check, err := hasher.Verify(password, secret)
+	check, err := hasher.Verify(plain, hashed)
 
 	assert.Error(t, err)
 	assert.False(t, check)
 }
 
-func TestVerify_WithCredentialSecretZero(t *testing.T) {
+func TestVerify_WithHashedPasswordZero(t *testing.T) {
 	cfg := Config{Cost: bcrypt.MinCost}
 	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
-	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")
-	secret := credential.Secret{}
+	plain := passwordtest.MustPlain(t, "1240970sadpiogkj1")
+	hashed := password.Hashed{}
 
-	check, err := hasher.Verify(password, secret)
+	check, err := hasher.Verify(plain, hashed)
 
 	assert.Error(t, err)
 	assert.False(t, check)
@@ -139,11 +139,11 @@ func TestVerify_WithValidPassword(t *testing.T) {
 	hasher, err := NewHasher(cfg)
 	require.NoError(t, err)
 
-	password := credentialtest.MustPlainPassword(t, "1240970sadpiogkj1")
-	secret, err := hasher.Hash(password)
+	plain := passwordtest.MustPlain(t, "1240970sadpiogkj1")
+	hashed, err := hasher.Hash(plain)
 	require.NoError(t, err)
 
-	check, err := hasher.Verify(password, secret)
+	check, err := hasher.Verify(plain, hashed)
 
 	assert.NoError(t, err)
 	assert.True(t, check)

@@ -1,4 +1,4 @@
-package credential
+package password
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewPlainPassword(t *testing.T) {
+func TestNewPlain(t *testing.T) {
 	var testCases = []struct {
 		desc           string
 		input          string
@@ -18,17 +18,17 @@ func TestNewPlainPassword(t *testing.T) {
 		{
 			desc:           "empty input",
 			input:          "",
-			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinCodePoints, validation.UnitCodePoint)},
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainMinCodePoints, validation.UnitCodePoint)},
 		},
 		{
 			desc:           "input too short",
-			input:          strings.Repeat("a", PlainPasswordMinCodePoints-1),
-			expectedIssues: validation.Issues{validation.IssueTooShort(PlainPasswordMinCodePoints, validation.UnitCodePoint)},
+			input:          strings.Repeat("a", PlainMinCodePoints-1),
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainMinCodePoints, validation.UnitCodePoint)},
 		},
 		{
 			desc:           "input too long",
-			input:          strings.Repeat("a", PlainPasswordMaxBytes+1),
-			expectedIssues: validation.Issues{validation.IssueTooLong(PlainPasswordMaxBytes, validation.UnitByte)},
+			input:          strings.Repeat("a", PlainMaxBytes+1),
+			expectedIssues: validation.Issues{validation.IssueTooLong(PlainMaxBytes, validation.UnitByte)},
 		},
 		{
 			desc:  "valid input",
@@ -45,7 +45,7 @@ func TestNewPlainPassword(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			password, issues := NewPlainPassword(tC.input)
+			password, issues := NewPlain(tC.input)
 
 			if len(tC.expectedIssues) == 0 {
 				require.Truef(t, issues.IsEmpty(), "unexpected issues: %s", issues)
@@ -60,14 +60,14 @@ func TestNewPlainPassword(t *testing.T) {
 	}
 }
 
-func TestPlainPassword_IsZero(t *testing.T) {
+func TestPlain_IsZero(t *testing.T) {
 	testCases := []struct {
 		desc     string
-		pwd      PlainPassword
+		pwd      Plain
 		expected bool
 	}{
-		{desc: "zero", pwd: PlainPassword{}, expected: true},
-		{desc: "not zero", pwd: PlainPassword{"value"}, expected: false},
+		{desc: "zero", pwd: Plain{}, expected: true},
+		{desc: "not zero", pwd: Plain{"value"}, expected: false},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

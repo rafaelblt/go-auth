@@ -1,18 +1,18 @@
 package porttest
 
 import (
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 )
 
 type FakePasswordChecker struct {
-	pairs  map[credential.Secret]credential.PlainPassword
+	pairs  map[password.Hashed]password.Plain
 	err    error
 	defaut *bool
 }
 
 func NewFakePasswordChecker() *FakePasswordChecker {
 	checker := FakePasswordChecker{
-		pairs:  make(map[credential.Secret]credential.PlainPassword),
+		pairs:  make(map[password.Hashed]password.Plain),
 		err:    nil,
 		defaut: nil,
 	}
@@ -20,7 +20,7 @@ func NewFakePasswordChecker() *FakePasswordChecker {
 }
 
 func (checker *FakePasswordChecker) Verify(
-	plain credential.PlainPassword, secret credential.Secret,
+	plain password.Plain, hash password.Hashed,
 ) (bool, error) {
 	if checker.err != nil {
 		return false, checker.err
@@ -29,7 +29,7 @@ func (checker *FakePasswordChecker) Verify(
 		return *checker.defaut, nil
 	}
 
-	expectedPlain, ok := checker.pairs[secret]
+	expectedPlain, ok := checker.pairs[hash]
 	if ok {
 		return plain == expectedPlain, nil
 	}
@@ -46,7 +46,7 @@ func (checker *FakePasswordChecker) SetDefault(def bool) {
 }
 
 func (checker *FakePasswordChecker) SetPair(
-	plain credential.PlainPassword, secret credential.Secret,
+	plain password.Plain, hash password.Hashed,
 ) {
-	checker.pairs[secret] = plain
+	checker.pairs[hash] = plain
 }

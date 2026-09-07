@@ -3,9 +3,9 @@ package register_test
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -57,7 +57,7 @@ func (helper TestHelper) ValidUsername() user.Username {
 	return usertest.MustUsername(helper.t, "username")
 }
 
-func (helper TestHelper) ValidPlainPassword() credential.PlainPassword {
+func (helper TestHelper) ValidPlainPassword() password.Plain {
 	helper.t.Helper()
-	return credentialtest.MustPlainPassword(helper.t, "12345678")
+	return passwordtest.MustPlain(helper.t, "12345678")
 }

@@ -1,4 +1,4 @@
-package credential
+package password
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewCredential(t *testing.T) {
-	secret, err := NewSecret("secret")
+	hash, err := NewHashed("hash")
 	require.NoError(t, err)
 	testCases := []struct {
 		desc      string
@@ -26,42 +26,16 @@ func TestNewCredential(t *testing.T) {
 			desc: "user id zero",
 			params: CreationParams{
 				UserID:    user.ID{},
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 			},
 			expectErr: true,
 		},
 		{
-			desc: "kind zero",
+			desc: "hash zero",
 			params: CreationParams{
 				UserID:    user.NewID(),
-				Kind:      Kind{},
-				Provider:  ProviderLocal,
-				Secret:    secret,
-				CreatedAt: time.Now().UTC(),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "provider zero",
-			params: CreationParams{
-				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  Provider{},
-				Secret:    secret,
-				CreatedAt: time.Now().UTC(),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "secret zero",
-			params: CreationParams{
-				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    Secret{},
+				Hash:      Hashed{},
 				CreatedAt: time.Now().UTC(),
 			},
 			expectErr: true,
@@ -70,9 +44,7 @@ func TestNewCredential(t *testing.T) {
 			desc: "valid case",
 			params: CreationParams{
 				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 			},
 			expectErr: false,
@@ -90,9 +62,7 @@ func TestNewCredential(t *testing.T) {
 			require.NotZero(t, credential)
 			assert.NotZero(t, credential.ID())
 			assert.Equal(t, credential.UserID(), tC.params.UserID)
-			assert.Equal(t, credential.Kind(), tC.params.Kind)
-			assert.Equal(t, credential.Provider(), tC.params.Provider)
-			assert.Equal(t, credential.Secret(), tC.params.Secret)
+			assert.Equal(t, credential.Hash(), tC.params.Hash)
 			assert.Equal(t, credential.CreatedAt(), tC.params.CreatedAt)
 			assert.Equal(t, credential.UpdatedAt(), tC.params.CreatedAt)
 		})
@@ -100,7 +70,7 @@ func TestNewCredential(t *testing.T) {
 }
 
 func TestRestoreCredential(t *testing.T) {
-	secret, err := NewSecret("secret")
+	hash, err := NewHashed("hash")
 	require.NoError(t, err)
 	testCases := []struct {
 		desc      string
@@ -117,9 +87,7 @@ func TestRestoreCredential(t *testing.T) {
 			params: RestoreParams{
 				ID:        ID{},
 				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			},
@@ -130,48 +98,18 @@ func TestRestoreCredential(t *testing.T) {
 			params: RestoreParams{
 				ID:        NewID(),
 				UserID:    user.ID{},
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			},
 			expectErr: true,
 		},
 		{
-			desc: "kind zero",
+			desc: "hash zero",
 			params: RestoreParams{
 				ID:        NewID(),
 				UserID:    user.NewID(),
-				Kind:      Kind{},
-				Provider:  ProviderLocal,
-				Secret:    secret,
-				CreatedAt: time.Now().UTC(),
-				UpdatedAt: time.Now().UTC(),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "provider zero",
-			params: RestoreParams{
-				ID:        NewID(),
-				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  Provider{},
-				Secret:    secret,
-				CreatedAt: time.Now().UTC(),
-				UpdatedAt: time.Now().UTC(),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "secret zero",
-			params: RestoreParams{
-				ID:        NewID(),
-				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    Secret{},
+				Hash:      Hashed{},
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			},
@@ -182,9 +120,7 @@ func TestRestoreCredential(t *testing.T) {
 			params: RestoreParams{
 				ID:        NewID(),
 				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Time{},
 				UpdatedAt: time.Now().UTC(),
 			},
@@ -195,9 +131,7 @@ func TestRestoreCredential(t *testing.T) {
 			params: RestoreParams{
 				ID:        NewID(),
 				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Time{},
 			},
@@ -208,9 +142,7 @@ func TestRestoreCredential(t *testing.T) {
 			params: RestoreParams{
 				ID:        NewID(),
 				UserID:    user.NewID(),
-				Kind:      KindPassword,
-				Provider:  ProviderLocal,
-				Secret:    secret,
+				Hash:      hash,
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			},
@@ -228,9 +160,7 @@ func TestRestoreCredential(t *testing.T) {
 				require.NotZero(t, credential)
 				assert.Equal(t, credential.ID(), tC.params.ID)
 				assert.Equal(t, credential.UserID(), tC.params.UserID)
-				assert.Equal(t, credential.Kind(), tC.params.Kind)
-				assert.Equal(t, credential.Provider(), tC.params.Provider)
-				assert.Equal(t, credential.Secret(), tC.params.Secret)
+				assert.Equal(t, credential.Hash(), tC.params.Hash)
 				assert.Equal(t, credential.CreatedAt(), tC.params.CreatedAt)
 				assert.Equal(t, credential.UpdatedAt(), tC.params.UpdatedAt)
 			}

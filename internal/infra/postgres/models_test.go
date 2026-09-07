@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/credential"
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/testutil/credentialtest"
+	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/user"
@@ -97,7 +97,7 @@ func TestMapUserToEntity(t *testing.T) {
 func TestMapCredentialToModel(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		entity    *credential.Credential
+		entity    *password.Credential
 		expectErr bool
 	}{
 		{
@@ -107,12 +107,12 @@ func TestMapCredentialToModel(t *testing.T) {
 		},
 		{
 			desc:      "credential zero",
-			entity:    &credential.Credential{},
+			entity:    &password.Credential{},
 			expectErr: true,
 		},
 		{
 			desc:   "default credential",
-			entity: credentialtest.NewCredential(t, nil),
+			entity: passwordtest.NewCredential(t, nil),
 		},
 	}
 	for _, tC := range testCases {
@@ -126,9 +126,7 @@ func TestMapCredentialToModel(t *testing.T) {
 			require.NotZero(t, model)
 			assert.Equal(t, tC.entity.ID().String(), model.ID)
 			assert.Equal(t, tC.entity.UserID().String(), model.UserID)
-			assert.Equal(t, tC.entity.Kind().String(), model.Kind)
-			assert.Equal(t, tC.entity.Provider().String(), model.Provider)
-			assert.Equal(t, tC.entity.Secret().Value(), model.Secret)
+			assert.Equal(t, tC.entity.Hash().Value(), model.Hash)
 			assert.Equal(t, tC.entity.CreatedAt(), model.CreatedAt)
 			assert.Equal(t, tC.entity.UpdatedAt(), model.UpdatedAt)
 		})
@@ -151,9 +149,7 @@ func TestMapCredentialToEntity(t *testing.T) {
 			model: credentialModel{
 				ID:        shared.NewEntityID().String(),
 				UserID:    shared.NewEntityID().String(),
-				Kind:      credential.KindPassword.String(),
-				Provider:  credential.ProviderLocal.String(),
-				Secret:    "secret",
+				Hash:      "hash",
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			},
@@ -170,9 +166,7 @@ func TestMapCredentialToEntity(t *testing.T) {
 			require.False(t, entity.IsZero())
 			assert.Equal(t, tC.model.ID, entity.ID().String())
 			assert.Equal(t, tC.model.UserID, entity.UserID().String())
-			assert.Equal(t, tC.model.Kind, entity.Kind().String())
-			assert.Equal(t, tC.model.Provider, entity.Provider().String())
-			assert.Equal(t, tC.model.Secret, entity.Secret().Value())
+			assert.Equal(t, tC.model.Hash, entity.Hash().Value())
 			assert.Equal(t, tC.model.CreatedAt, entity.CreatedAt())
 			assert.Equal(t, tC.model.UpdatedAt, entity.UpdatedAt())
 		})
