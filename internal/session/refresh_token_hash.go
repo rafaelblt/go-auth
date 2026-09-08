@@ -20,7 +20,7 @@ func NewRefreshTokenHash(value []byte) (RefreshTokenHash, error) {
 }
 
 func (h RefreshTokenHash) Value() []byte {
-	return h.value[:]
+	return slices.Clone(h.value)
 }
 
 func (h RefreshTokenHash) IsZero() bool {

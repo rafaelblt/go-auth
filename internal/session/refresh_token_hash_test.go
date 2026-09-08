@@ -48,3 +48,13 @@ func TestNewRefreshTokenHash_CloneBytes(t *testing.T) {
 	v[0] = 4
 	assert.False(t, bytes.Equal(v, hash.value), "byte slice is not cloned")
 }
+
+func TestRefreshTokenHash_Value_ReturnsClone(t *testing.T) {
+	hash, err := NewRefreshTokenHash([]byte{1, 2, 3, 4, 5})
+	require.NoError(t, err)
+
+	value := hash.Value()
+	value[0] = 9
+
+	assert.Equal(t, []byte{1, 2, 3, 4, 5}, hash.value, "byte slice is not cloned")
+}
