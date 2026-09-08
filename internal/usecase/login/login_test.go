@@ -2,6 +2,7 @@ package login_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -168,4 +169,43 @@ func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
 	assert.False(t, token.HasParent())
 	assert.Equal(t, helper.FakeClock.Now(), token.CreatedAt())
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), token.ExpiresAt())
+}
+
+func TestLogin_ReturnsError_WhenUnitOfWorkFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestLogin_ReturnsError_WhenSessionWriterFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.FakeSessionWriter.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestLogin_ReturnsError_WhenRefreshTokenWriterFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.FakeRefreshTokenWriter.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
 }

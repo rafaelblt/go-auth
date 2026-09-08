@@ -104,7 +104,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("refresh token creation failed: %w", err)
 	}
 
-	uc.uow.Do(ctx, func(deps port.UowDeps) error {
+	err = uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		err := deps.SessionWriter.Add(ctx, sess)
 		if err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
@@ -117,6 +117,9 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 
 		return nil
 	})
+	if err != nil {
+		return Output{}, fmt.Errorf("session and refresh token saving failed: %w", err)
+	}
 
 	output := Output{
 		AccessToken: usecase.AccessTokenDTO{
