@@ -2,6 +2,7 @@ package refresh_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -131,4 +132,44 @@ func TestRefresh_RevokesSessionOfTokenAlreadyUsed(t *testing.T) {
 	revokedAt, isRevoked := updated.RevokedAt()
 	require.True(t, isRevoked)
 	assert.Equal(t, helper.FakeClock.Now(), revokedAt)
+}
+
+func TestRefresh_ReturnsError_WhenUnitOfWorkFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	in := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.SetError(expectedErr)
+
+	out, err := helper.UseCase().Execute(context.Background(), in)
+
+	assert.Zero(t, out)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestRefresh_ReturnsError_WhenRefreshTokenWriterFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	in := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.FakeRefreshTokenWriter.SetError(expectedErr)
+
+	out, err := helper.UseCase().Execute(context.Background(), in)
+
+	assert.Zero(t, out)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestRefresh_ReturnsError_WhenRevokingSessionOfTokenAlreadyUsedFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	raw := helper.GetTokenAlreadyUsed()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.SetError(expectedErr)
+
+	out, err := helper.UseCase().Execute(context.Background(), refresh.Input{RefreshToken: raw})
+
+	assert.Zero(t, out)
+	assert.ErrorIs(t, err, expectedErr)
+	assert.NotErrorIs(t, err, refresh.ErrTokenAlreadyUsed)
 }
