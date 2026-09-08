@@ -59,6 +59,23 @@ func TestIssue_Details(t *testing.T) {
 	}
 }
 
+func TestIssue_Details_ReturnsClone(t *testing.T) {
+	issue := Issue{code: "SOME_CODE", details: map[string]any{KeyMaxLength: 10}}
+
+	details := issue.Details()
+	details[KeyMaxLength] = 999
+	delete(details, KeyMaxLength)
+	details["injected"] = true
+
+	assert.Equal(t, map[string]any{KeyMaxLength: 10}, issue.details, "details map is not cloned")
+}
+
+func TestIssue_Details_KeepsNilForIssueWithoutDetails(t *testing.T) {
+	issue := Issue{code: "SOME_CODE"}
+
+	assert.Nil(t, issue.Details())
+}
+
 func TestIssues_String(t *testing.T) {
 	testCases := []struct {
 		desc     string

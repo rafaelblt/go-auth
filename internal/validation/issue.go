@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"maps"
 	"strings"
 )
 
@@ -14,7 +15,7 @@ func (iss Issue) Code() string {
 }
 
 func (iss Issue) Details() map[string]any {
-	return iss.details
+	return maps.Clone(iss.details)
 }
 
 type Issues []Issue
