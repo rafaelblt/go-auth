@@ -109,22 +109,6 @@ func (uc *Refresh) getSessionOfToken(ctx context.Context, token *session.Refresh
 	return sess, nil
 }
 
-func (uc *Refresh) tryUseToken(ctx context.Context, token *session.RefreshToken) error {
-	sess, err := uc.sessions.FindByID(ctx, token.SessionID())
-	if err != nil {
-		return fmt.Errorf("find session by id failed: %w", err)
-	}
-	if sess == nil {
-		return errors.New("refresh token session id not exists")
-	}
-
-	if sess.IsRevoked() {
-		return ErrSessionRevoked
-	}
-
-	return token.Use(uc.clock.Now())
-}
-
 func (uc *Refresh) tokenAlreadyUsed(ctx context.Context, sessID session.SessionID) error {
 	sess, err := uc.sessions.FindByID(ctx, sessID)
 	if err != nil {
