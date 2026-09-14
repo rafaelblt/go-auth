@@ -59,6 +59,8 @@ type accessIssued = port.AccessTokenIssued
 type refreshGenerated = port.RefreshTokenGenerated
 
 func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
+	now := uc.clock.Now()
+
 	token, err := uc.resolveToken(ctx, in.RefreshToken)
 	if err != nil {
 		return Output{}, err
@@ -73,17 +75,22 @@ func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
 		return Output{}, ErrSessionRevoked
 	}
 
-	err = token.Use(uc.clock.Now())
+	err = token.Use(now)
 	switch {
-	case err == nil:
-		return uc.completeRefresh(ctx, sess, token)
 	case errors.Is(err, session.ErrTokenAlreadyUsed):
-		return Output{}, uc.tokenAlreadyUsed(ctx, token.SessionID())
+		return Output{}, uc.handleTokenReuse(ctx, sess, now)
 	case errors.Is(err, session.ErrTokenExpired):
 		return Output{}, ErrTokenExpired
-	default:
+	case err != nil:
 		return Output{}, fmt.Errorf("unexpected error from token use: %w", err)
 	}
+
+	output, err := uc.rotate(ctx, sess, token, now)
+	if errors.Is(err, session.ErrTokenAlreadyUsed) {
+		// A concurrent refresh spent the token between the read and the write.
+		return Output{}, uc.handleTokenReuse(ctx, sess, now)
+	}
+	return output, err
 }
 
 func (uc *Refresh) resolveToken(ctx context.Context, raw string) (*session.RefreshToken, error) {
@@ -104,41 +111,40 @@ func (uc *Refresh) getSessionOfToken(ctx context.Context, token *session.Refresh
 		return nil, fmt.Errorf("find session by id failed: %w", err)
 	}
 	if sess == nil {
-		return nil, errors.New("refresh token session id not exists")
+		return nil, errors.New("session of refresh token not found")
 	}
 	return sess, nil
 }
 
-func (uc *Refresh) tokenAlreadyUsed(ctx context.Context, sessID session.SessionID) error {
-	sess, err := uc.sessions.FindByID(ctx, sessID)
-	if err != nil {
-		return fmt.Errorf("find session by id failed: %w", err)
-	}
-	if sess.IsRevoked() {
-		return nil
-	}
-
-	sess.Revoke(uc.clock.Now())
-	err = uc.uow.Do(ctx, func(deps port.UowDeps) error {
+// handleTokenReuse revokes the session of a reused token and reports the reuse.
+// It never returns nil.
+func (uc *Refresh) handleTokenReuse(ctx context.Context, sess *session.Session, now time.Time) error {
+	sess.Revoke(now)
+	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		if err := deps.SessionWriter.Update(ctx, sess); err != nil {
-			return fmt.Errorf("update session failed: %w", err)
+			return fmt.Errorf("session writer failed: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("uow do failed: %w", err)
+		return fmt.Errorf("session revocation failed: %w", err)
 	}
 
 	return ErrTokenAlreadyUsed
 }
 
-func (uc *Refresh) completeRefresh(ctx context.Context, sess *session.Session, used *session.RefreshToken) (Output, error) {
+func (uc *Refresh) rotate(
+	ctx context.Context,
+	sess *session.Session,
+	used *session.RefreshToken,
+	now time.Time,
+) (Output, error) {
 	accessData, refreshData, err := uc.generateTokens(sess.UserID())
 	if err != nil {
 		return Output{}, err
 	}
 
-	newToken, err := uc.createToken(refreshData.Hash, sess.ID(), used.ID())
+	newToken, err := uc.createToken(refreshData.Hash, sess.ID(), used.ID(), now)
 	if err != nil {
 		return Output{}, err
 	}
@@ -183,8 +189,8 @@ func (uc *Refresh) createToken(
 	hash session.RefreshTokenHash,
 	sessionID session.SessionID,
 	parentID session.RefreshTokenID,
+	now time.Time,
 ) (*session.RefreshToken, error) {
-	now := uc.clock.Now()
 	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: sessionID,
 		Hash:      hash,
@@ -199,10 +205,10 @@ func (uc *Refresh) createToken(
 }
 
 func (uc *Refresh) saveTokens(ctx context.Context, used, new *session.RefreshToken) error {
-	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.RefreshTokenWriter.Update(ctx, used)
+	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
+		err := deps.RefreshTokenWriter.MarkUsed(ctx, used)
 		if err != nil {
-			return fmt.Errorf("update used refresh token failed: %w", err)
+			return fmt.Errorf("mark used refresh token failed: %w", err)
 		}
 
 		err = deps.RefreshTokenWriter.Add(ctx, new)
@@ -212,4 +218,8 @@ func (uc *Refresh) saveTokens(ctx context.Context, used, new *session.RefreshTok
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("refresh tokens saving failed: %w", err)
+	}
+	return nil
 }

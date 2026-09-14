@@ -34,3 +34,7 @@ func (r *FakeRefreshTokenResolver) Resolve(
 func (r *FakeRefreshTokenResolver) Insert(raw string, token *session.RefreshToken) {
 	r.data[raw] = token
 }
+
+func (r *FakeRefreshTokenResolver) SetError(err error) {
+	r.err = err
+}

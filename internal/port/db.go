@@ -62,7 +62,10 @@ type SessionWriter interface {
 
 type RefreshTokenWriter interface {
 	Add(context.Context, *session.RefreshToken) error
-	Update(context.Context, *session.RefreshToken) error
+	// MarkUsed persists the use of a token already spent in memory. It applies
+	// only while the stored token is unused, and returns
+	// session.ErrTokenAlreadyUsed when another use got there first.
+	MarkUsed(context.Context, *session.RefreshToken) error
 }
 
 type RefreshTokenReader interface {

@@ -37,3 +37,7 @@ func (r *FakeSessionReader) FindByID(
 func (r *FakeSessionReader) Insert(sess *session.Session) {
 	r.data[sess.ID()] = shared.ClonePtr(sess)
 }
+
+func (r *FakeSessionReader) SetError(err error) {
+	r.err = err
+}

@@ -38,6 +38,7 @@ The service shape and how layers depend on each other. How it works:
 | 0002 | [Ports and adapters](0002-ports-and-adapters.md) | Accepted |
 | 0003 | [Split read and write interfaces](0003-split-read-write-interfaces.md) | Accepted |
 | 0020 | [Two token types](0020-two-token-types.md) | Accepted |
+| 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | Accepted |
 
 ### Domain
 
@@ -92,6 +93,8 @@ Token formats, signing, rotation and reuse detection. How it works:
 | 0028 | [Uniform errors on login and refresh](0028-uniform-auth-errors.md) | Accepted |
 | 0029 | [Audit events](0029-audit-events.md) | Proposed |
 | 0045 | [Login verifies a dummy hash when the account is missing](0045-login-dummy-hash.md) | Accepted |
+| 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | Accepted |
+| 0047 | [A refresh that loses the race for its token is reuse](0047-lost-refresh-race-is-reuse.md) | Accepted |
 
 ### API
 

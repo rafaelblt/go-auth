@@ -8,15 +8,15 @@ import (
 )
 
 type FakeRefreshTokenWriter struct {
-	adds    []*session.RefreshToken
-	updates []*session.RefreshToken
-	err     error
+	adds       []*session.RefreshToken
+	markedUsed []*session.RefreshToken
+	err        error
 }
 
 func NewFakeRefreshTokenWriter() *FakeRefreshTokenWriter {
 	return &FakeRefreshTokenWriter{
-		adds:    []*session.RefreshToken{},
-		updates: []*session.RefreshToken{},
+		adds:       []*session.RefreshToken{},
+		markedUsed: []*session.RefreshToken{},
 	}
 }
 
@@ -36,7 +36,7 @@ func (w *FakeRefreshTokenWriter) Add(
 	return w.err
 }
 
-func (w *FakeRefreshTokenWriter) Update(
+func (w *FakeRefreshTokenWriter) MarkUsed(
 	ctx context.Context, token *session.RefreshToken,
 ) error {
 	if w.err != nil {
@@ -48,7 +48,10 @@ func (w *FakeRefreshTokenWriter) Update(
 	if token.IsZero() {
 		return errors.New("refresh token zero")
 	}
-	w.updates = append(w.updates, token)
+	if !token.IsUsed() {
+		return errors.New("refresh token not used")
+	}
+	w.markedUsed = append(w.markedUsed, token)
 	return nil
 }
 
@@ -56,8 +59,8 @@ func (w *FakeRefreshTokenWriter) Adds() []*session.RefreshToken {
 	return w.adds
 }
 
-func (w *FakeRefreshTokenWriter) Updates() []*session.RefreshToken {
-	return w.updates
+func (w *FakeRefreshTokenWriter) MarkedUsed() []*session.RefreshToken {
+	return w.markedUsed
 }
 
 func (w *FakeRefreshTokenWriter) SetError(err error) {

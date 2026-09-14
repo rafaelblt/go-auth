@@ -1,6 +1,7 @@
 package refresh_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -8,9 +9,13 @@ import (
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
+	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const fixtureRaw = "default_raw"
 
 type TestHelper struct {
 	t                         *testing.T
@@ -54,89 +59,103 @@ func (helper *TestHelper) UseCase() *refresh.Refresh {
 
 func (helper *TestHelper) ValidInput() refresh.Input {
 	helper.t.Helper()
-	_, raw := helper.GetRefreshTokenAndRaw()
-	return refresh.Input{RefreshToken: raw}
+	return helper.Seed().Input()
 }
 
-func (helper *TestHelper) GetRefreshTokenAndRaw() (*session.RefreshToken, string) {
+// Fixture is a session and one of its refresh tokens, stored in the fakes.
+type Fixture struct {
+	Session *session.Session
+	Token   *session.RefreshToken
+	Raw     string
+}
+
+func (f Fixture) Input() refresh.Input {
+	return refresh.Input{RefreshToken: f.Raw}
+}
+
+// Seed stores an active session and an unused, unexpired token of it.
+func (helper *TestHelper) Seed() Fixture {
+	helper.t.Helper()
+	return helper.seed(nil, nil)
+}
+
+func (helper *TestHelper) SeedUsedToken() Fixture {
+	helper.t.Helper()
+	return helper.seed(nil, func(p *session.RefreshTokenRestoreParams) {
+		p.UsedAt = shared.Ptr(helper.FakeClock.Now().Add(-time.Minute))
+	})
+}
+
+func (helper *TestHelper) SeedExpiredToken() Fixture {
+	helper.t.Helper()
+	return helper.seed(nil, func(p *session.RefreshTokenRestoreParams) {
+		p.ExpiresAt = helper.FakeClock.Now().Add(-time.Minute)
+	})
+}
+
+func (helper *TestHelper) SeedRevokedSession() Fixture {
+	helper.t.Helper()
+	return helper.seed(func(p *session.SessionRestoreParams) {
+		p.RevokedAt = shared.Ptr(helper.FakeClock.Now().Add(-time.Minute))
+	}, nil)
+}
+
+// SeedTokenWithoutSession stores a token whose session the reader cannot find.
+func (helper *TestHelper) SeedTokenWithoutSession() Fixture {
 	helper.t.Helper()
 
-	sess := sessiontest.NewSession(helper.t, nil)
+	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
+		p.ExpiresAt = helper.FakeClock.Now().Add(time.Hour)
+	})
+	helper.FakeRefreshTokenResolver.Insert(fixtureRaw, token)
+
+	return Fixture{Token: token, Raw: fixtureRaw}
+}
+
+func (helper *TestHelper) seed(
+	sessOverride func(p *session.SessionRestoreParams),
+	tokenOverride func(p *session.RefreshTokenRestoreParams),
+) Fixture {
+	helper.t.Helper()
+
+	sess := sessiontest.NewSession(helper.t, sessOverride)
 	helper.FakeSessionReader.Insert(sess)
 
 	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
 		p.SessionID = sess.ID()
-		p.ExpiresAt = helper.FakeClock.Now().Add(1)
+		p.ExpiresAt = helper.FakeClock.Now().Add(time.Hour)
+		if tokenOverride != nil {
+			tokenOverride(p)
+		}
 	})
-	raw := "default_raw"
-	helper.FakeRefreshTokenResolver.Insert(raw, token)
+	helper.FakeRefreshTokenResolver.Insert(fixtureRaw, token)
 
-	return token, raw
+	return Fixture{Session: sess, Token: token, Raw: fixtureRaw}
 }
 
-func (helper *TestHelper) GetSessionAndTokenRaw() (*session.Session, string) {
+func (helper *TestHelper) AssertNoAccessTokenIssued() {
 	helper.t.Helper()
-
-	sess := sessiontest.NewSession(helper.t, nil)
-	helper.FakeSessionReader.Insert(sess)
-
-	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
-		p.SessionID = sess.ID()
-		p.ExpiresAt = helper.FakeClock.Now().Add(1)
-	})
-	raw := "default_raw"
-	helper.FakeRefreshTokenResolver.Insert(raw, token)
-
-	return sess, raw
+	assert.Empty(helper.t, helper.FakeAccessTokenIssuer.Issueds(), "access token issued")
 }
 
-func (helper *TestHelper) GetTokenAlreadyUsed() string {
+func (helper *TestHelper) AssertNoRefreshTokenWrites() {
 	helper.t.Helper()
-
-	sess := sessiontest.NewSession(helper.t, nil)
-	helper.FakeSessionReader.Insert(sess)
-
-	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
-		p.SessionID = sess.ID()
-		p.ExpiresAt = helper.FakeClock.Now().Add(1)
-		p.UsedAt = shared.Ptr(time.Now().UTC())
-	})
-	raw := "default_raw"
-	helper.FakeRefreshTokenResolver.Insert(raw, token)
-
-	return raw
+	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.MarkedUsed(), "refresh token marked used")
+	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds(), "refresh token added")
 }
 
-func (helper *TestHelper) GetTokenExpired() string {
+// AssertNoWrites checks that neither refresh tokens nor sessions were written.
+func (helper *TestHelper) AssertNoWrites() {
 	helper.t.Helper()
-
-	sess := sessiontest.NewSession(helper.t, nil)
-	helper.FakeSessionReader.Insert(sess)
-
-	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
-		p.SessionID = sess.ID()
-		p.ExpiresAt = helper.FakeClock.Now().Add(-1)
-	})
-	raw := "default_raw"
-	helper.FakeRefreshTokenResolver.Insert(raw, token)
-
-	return raw
+	helper.AssertNoRefreshTokenWrites()
+	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Updates(), "session updated")
 }
 
-func (helper *TestHelper) GetTokenWithSessionRevoked() string {
-	helper.t.Helper()
-
-	sess := sessiontest.NewSession(helper.t, func(p *session.SessionRestoreParams) {
-		p.RevokedAt = shared.Ptr(time.Now().UTC())
-	})
-	helper.FakeSessionReader.Insert(sess)
-
-	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
-		p.SessionID = sess.ID()
-		p.ExpiresAt = helper.FakeClock.Now().Add(1)
-	})
-	raw := "default_raw"
-	helper.FakeRefreshTokenResolver.Insert(raw, token)
-
-	return raw
+// AssertUnexpectedError checks that err is not a use case error, so the API
+// answers it as an internal error.
+func AssertUnexpectedError(t *testing.T, err error) {
+	t.Helper()
+	require.Error(t, err)
+	var uerr usecase.UseCaseError
+	assert.False(t, errors.As(err, &uerr), "expected an unexpected error, got use case error %v", err)
 }
