@@ -10,7 +10,7 @@ type refreshTokenID = session.RefreshTokenID
 type refreshToken = session.RefreshToken
 
 type FakeRefreshTokenReader struct {
- 	data map[refreshTokenID]*refreshToken
+	data map[refreshTokenID]*refreshToken
 	err  error
 }
 
