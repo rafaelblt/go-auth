@@ -53,4 +53,3 @@ func loginEncoder(out login.Output) response {
 func loginSuccessLog(ctx context.Context, out login.Output) {
 	loggerFrom(ctx).Info("success login") // TODO: add user id?
 }
-

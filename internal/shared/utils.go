@@ -14,8 +14,8 @@ func ClonePtr[T any](p *T) *T {
 }
 
 func PtrFromOk[T any](v T, ok bool) *T {
-    if !ok {
-        return nil
-    }
-    return &v
+	if !ok {
+		return nil
+	}
+	return &v
 }

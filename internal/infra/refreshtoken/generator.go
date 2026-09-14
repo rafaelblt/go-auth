@@ -2,7 +2,7 @@ package refreshtoken
 
 import "github.com/rafaelblt/go-auth/internal/port"
 
-type Generator struct {}
+type Generator struct{}
 
 func NewGenerator() *Generator {
 	return &Generator{}

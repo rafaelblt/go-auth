@@ -41,7 +41,7 @@ func NewDatabase(ctx context.Context) (*Database, error) {
 	return &db, nil
 }
 
-func NewDatabaseForTest(t *testing.T, ctx context.Context) (*Database) {
+func NewDatabaseForTest(t *testing.T, ctx context.Context) *Database {
 	db, err := NewDatabase(ctx)
 	require.NoError(t, err)
 
@@ -82,15 +82,15 @@ func (db *Database) Close(ctx context.Context) error {
 }
 
 func checkDockerAvailable(ctx context.Context) error {
-    client, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-    if err != nil {
-        return fmt.Errorf("Docker not found: %w", err)
-    }
-    defer client.Close()
+	client, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return fmt.Errorf("Docker not found: %w", err)
+	}
+	defer client.Close()
 
-    if _, err := client.Ping(ctx); err != nil {
-        return fmt.Errorf("Docker is unavailable (is it running?): %w", err)
-    }
+	if _, err := client.Ping(ctx); err != nil {
+		return fmt.Errorf("Docker is unavailable (is it running?): %w", err)
+	}
 
-    return nil
+	return nil
 }

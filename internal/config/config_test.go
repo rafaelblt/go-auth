@@ -51,31 +51,31 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 
 func TestLoadConfig_ReturnsError(t *testing.T) {
 	testCases := []struct {
-		desc   string
+		desc  string
 		setup func(t *testing.T)
 	}{
 		{
-			desc:   "address empty",
+			desc:  "address empty",
 			setup: func(t *testing.T) { t.Setenv(envAddress.Key, "") },
 		},
 		{
-			desc:   "database url empty",
+			desc:  "database url empty",
 			setup: func(t *testing.T) { t.Setenv(envDatabaseURL.Key, "") },
 		},
 		{
-			desc:   "auto migrate not bool",
+			desc:  "auto migrate not bool",
 			setup: func(t *testing.T) { t.Setenv(envAutoMigrate.Key, "yes") },
 		},
 		{
-			desc:   "bcrypt cost not int",
+			desc:  "bcrypt cost not int",
 			setup: func(t *testing.T) { t.Setenv(envBcryptCost.Key, "twelve") },
 		},
 		{
-			desc:   "access token ttl not duration format",
+			desc:  "access token ttl not duration format",
 			setup: func(t *testing.T) { t.Setenv(envAccessTokenTTL.Key, "1 hour") },
 		},
 		{
-			desc:   "refresh token ttl not duration format",
+			desc:  "refresh token ttl not duration format",
 			setup: func(t *testing.T) { t.Setenv(envRefreshTokenTTL.Key, "1 month") },
 		},
 	}

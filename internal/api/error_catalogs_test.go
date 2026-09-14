@@ -12,16 +12,16 @@ import (
 
 func TestErrorFieldCatalog(t *testing.T) {
 	testCases := []struct {
-		desc     string
-		field    string
+		desc  string
+		field string
 	}{
 		{
-			desc:     "register username field",
-			field:    register.FieldUsername,
+			desc:  "register username field",
+			field: register.FieldUsername,
 		},
 		{
-			desc:     "register password field",
-			field:    register.FieldPassword,
+			desc:  "register password field",
+			field: register.FieldPassword,
 		},
 	}
 	for _, tC := range testCases {

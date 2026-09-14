@@ -73,7 +73,7 @@ func TestAccessTokenFromLogin_WithJWK(t *testing.T) {
 		accessToken,
 		&jwt.RegisteredClaims{},
 		func(t *jwt.Token) (any, error) {
-			return  ed25519.PublicKey(publicKey), nil
+			return ed25519.PublicKey(publicKey), nil
 		},
 	)
 	require.NoError(t, err)

@@ -8,9 +8,9 @@ import (
 
 func TestNewAccessToken(t *testing.T) {
 	testCases := []struct {
-		desc       string
-		value      string
-		expectErr  bool
+		desc      string
+		value     string
+		expectErr bool
 	}{
 		{
 			desc:      "empty value",
@@ -18,9 +18,9 @@ func TestNewAccessToken(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			desc:       "valid value",
-			value:      "abc",
-			expectErr:  false,
+			desc:      "valid value",
+			value:     "abc",
+			expectErr: false,
 		},
 	}
 	for _, tC := range testCases {

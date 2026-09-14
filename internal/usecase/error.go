@@ -15,8 +15,8 @@ type UseCaseError struct {
 
 func NewError(code string, kind ErrorKind) UseCaseError {
 	return UseCaseError{
-		code:   code,
-		kind:   kind,
+		code: code,
+		kind: kind,
 	}
 }
 

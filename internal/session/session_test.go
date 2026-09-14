@@ -119,8 +119,8 @@ func TestRestoreSession(t *testing.T) {
 func TestRestoreSession_ClonesRevokedAt(t *testing.T) {
 	provided := shared.Ptr(time.Now())
 	sess, err := session.RestoreSession(session.SessionRestoreParams{
-		ID: session.NewSessionID(),
-		UserID: user.NewID(),
+		ID:        session.NewSessionID(),
+		UserID:    user.NewID(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		RevokedAt: provided,
@@ -154,7 +154,7 @@ func TestSession_Revoke_NotUpdateSession_WhenIsAlreadyRevoked(t *testing.T) {
 		p.RevokedAt = &alreadyRevoked
 		p.UpdatedAt = alreadyRevoked
 	})
-	
+
 	now := time.Now().UTC().Add(time.Hour)
 	sess.Revoke(now)
 

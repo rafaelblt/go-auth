@@ -20,7 +20,7 @@ func (rtg *FakeRefreshTokenGenerator) Generate() (port.RefreshTokenGenerated, er
 	if rtg.err != nil {
 		return port.RefreshTokenGenerated{}, rtg.err
 	}
-	hash, err := session.NewRefreshTokenHash([]byte{2, 0, 0, 4,})
+	hash, err := session.NewRefreshTokenHash([]byte{2, 0, 0, 4})
 	if err != nil {
 		e := fmt.Errorf("refresh token hash creation failed: %w", err)
 		return port.RefreshTokenGenerated{}, e

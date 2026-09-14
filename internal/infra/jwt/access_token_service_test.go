@@ -127,8 +127,8 @@ func TestNewAccessTokenService(t *testing.T) {
 
 func TestNewAccessTokenService_ReturnsError_WhenConfigIsInvalid(t *testing.T) {
 	testCases := []struct {
-		desc      string
-		cfg       AccessTokenServiceConfig
+		desc string
+		cfg  AccessTokenServiceConfig
 	}{
 		{
 			desc: "signer nil",
@@ -180,7 +180,7 @@ func TestAccessTokenService_Issue_ReturnsSignedTokenAndExpiresAt(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, issued)
 	assert.Equal(t, helper.FakeSigner.DefaultSignedToken(), issued.Token.Value())
-	assert.Equal(t, 
+	assert.Equal(t,
 		helper.FakeClock.Now().Add(helper.Expiration).Truncate(time.Second),
 		issued.ExpiresAt)
 }
@@ -214,7 +214,7 @@ func TestAccessTokenService_Issue_ReturnsError_WhenSignerFails(t *testing.T) {
 	helper.FakeSigner.SetSignError(expectedErr)
 
 	issued, err := helper.Service().Issue(helper.ValidPayload())
-	
+
 	assert.Zero(t, issued)
 	assert.ErrorIs(t, err, expectedErr)
 }
@@ -260,4 +260,3 @@ func TestAccessTokenService_Validate_ReturnsError_WhenSignerFails(t *testing.T) 
 	assert.Zero(t, claims)
 	assert.ErrorIs(t, err, expectedErr)
 }
-
