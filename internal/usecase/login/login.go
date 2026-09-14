@@ -31,6 +31,7 @@ type Login struct {
 	uow              port.UnitOfWork
 	clock            port.Clock
 	refreshTTL       time.Duration
+	dummyHash        password.Hashed
 }
 
 var ErrInvalidCredentials = usecase.NewError(
@@ -52,7 +53,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("find user by username failed: %w", err)
 	}
 	if usr == nil {
-		return Output{}, ErrInvalidCredentials
+		return Output{}, uc.rejectWithDummyVerify(plain)
 	}
 
 	pwd, err := uc.passwords.FindByUserID(ctx, usr.ID())
@@ -60,7 +61,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("find password by user id failed: %w", err)
 	}
 	if pwd == nil {
-		return Output{}, ErrInvalidCredentials
+		return Output{}, uc.rejectWithDummyVerify(plain)
 	}
 
 	ok, err := uc.pwdChecker.Verify(plain, pwd.Hash())
@@ -132,4 +133,14 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		},
 	}
 	return output, nil
+}
+
+// rejectWithDummyVerify spends the time of a real password check before
+// rejecting, so response time does not reveal whether the account exists.
+func (uc Login) rejectWithDummyVerify(plain password.Plain) error {
+	_, err := uc.pwdChecker.Verify(plain, uc.dummyHash)
+	if err != nil {
+		return fmt.Errorf("dummy password verification failed: %w", err)
+	}
+	return ErrInvalidCredentials
 }

@@ -23,6 +23,7 @@ type TestHelper struct {
 	FakeUnitOfWork            *porttest.FakeUnitOfWork
 	FakeClock                 *porttest.FakeClock
 	RefreshTokenTTL           time.Duration
+	DummyPasswordHash         password.Hashed
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
@@ -36,6 +37,7 @@ func NewTestHelper(t *testing.T) TestHelper {
 		FakeUnitOfWork:            porttest.NewFakeUnitOfWork(),
 		FakeClock:                 porttest.NewFakeClock(),
 		RefreshTokenTTL:           24 * time.Hour,
+		DummyPasswordHash:         passwordtest.MustHashed(t, "dummy-hash"),
 	}
 	return helper
 }
@@ -51,6 +53,7 @@ func (helper TestHelper) UseCase() login.Login {
 		UnitOfWork:            helper.FakeUnitOfWork,
 		Clock:                 helper.FakeClock,
 		RefreshTokenTTL:       helper.RefreshTokenTTL,
+		DummyPasswordHash:     helper.DummyPasswordHash,
 	})
 	require.NoError(helper.t, err)
 	return uc

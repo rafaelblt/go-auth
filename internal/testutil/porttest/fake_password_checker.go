@@ -6,8 +6,14 @@ import (
 
 type FakePasswordChecker struct {
 	pairs  map[password.Hashed]password.Plain
+	calls  []FakePasswordCheckerCall
 	err    error
 	defaut *bool
+}
+
+type FakePasswordCheckerCall struct {
+	Plain password.Plain
+	Hash  password.Hashed
 }
 
 func NewFakePasswordChecker() *FakePasswordChecker {
@@ -22,6 +28,11 @@ func NewFakePasswordChecker() *FakePasswordChecker {
 func (checker *FakePasswordChecker) Verify(
 	plain password.Plain, hash password.Hashed,
 ) (bool, error) {
+	checker.calls = append(checker.calls, FakePasswordCheckerCall{
+		Plain: plain,
+		Hash:  hash,
+	})
+
 	if checker.err != nil {
 		return false, checker.err
 	}
@@ -49,4 +60,8 @@ func (checker *FakePasswordChecker) SetPair(
 	plain password.Plain, hash password.Hashed,
 ) {
 	checker.pairs[hash] = plain
+}
+
+func (checker *FakePasswordChecker) Calls() []FakePasswordCheckerCall {
+	return checker.calls
 }

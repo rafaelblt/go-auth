@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/config"
+	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/port"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
@@ -54,6 +56,11 @@ func buildRegister(deps infraDeps) (register.Register, error) {
 }
 
 func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
+	dummyHash, err := newDummyPasswordHash(deps.PasswordHasher)
+	if err != nil {
+		return login.Login{}, err
+	}
+
 	uc, err := login.New(login.Config{
 		UserReader:            deps.Users,
 		PasswordReader:        deps.Passwords,
@@ -63,11 +70,27 @@ func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
 		UnitOfWork:            deps.UnitOfWork,
 		Clock:                 deps.Clock,
 		RefreshTokenTTL:       cfg.RefreshTokenTTL(),
+		DummyPasswordHash:     dummyHash,
 	})
 	if err != nil {
 		return login.Login{}, fmt.Errorf("login creation failed: %w", err)
 	}
 	return uc, nil
+}
+
+// newDummyPasswordHash hashes a fixed password with the configured hasher, so
+// verifying it costs the same as verifying a stored hash.
+func newDummyPasswordHash(hasher port.PasswordHasher) (password.Hashed, error) {
+	plain, issues := password.NewPlain("go-auth-dummy-password")
+	if !issues.IsEmpty() {
+		return password.Hashed{}, fmt.Errorf("dummy plain password is invalid: %s", issues)
+	}
+
+	hash, err := hasher.Hash(plain)
+	if err != nil {
+		return password.Hashed{}, fmt.Errorf("dummy password hashing failed: %w", err)
+	}
+	return hash, nil
 }
 
 func buildRefresh(cfg config.Config, deps infraDeps) (*refresh.Refresh, error) {

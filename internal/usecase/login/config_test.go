@@ -3,6 +3,7 @@ package login_test
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,6 +26,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: false,
 		},
@@ -39,6 +41,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -53,6 +56,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -67,6 +71,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -81,6 +86,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -95,6 +101,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -109,6 +116,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            nil,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -123,6 +131,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 nil,
 				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -137,6 +146,7 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       0,
+				DummyPasswordHash:     helper.DummyPasswordHash,
 			},
 			expectErr: true,
 		},
@@ -151,6 +161,22 @@ func TestNewLogin(t *testing.T) {
 				UnitOfWork:            helper.FakeUnitOfWork,
 				Clock:                 helper.FakeClock,
 				RefreshTokenTTL:       -1,
+				DummyPasswordHash:     helper.DummyPasswordHash,
+			},
+			expectErr: true,
+		},
+		{
+			desc: "dummy password hash zero",
+			config: login.Config{
+				UserReader:            helper.FakeUserReader,
+				PasswordReader:        helper.FakePasswordReader,
+				PasswordChecker:       helper.FakePasswordChecker,
+				AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
+				RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
+				UnitOfWork:            helper.FakeUnitOfWork,
+				Clock:                 helper.FakeClock,
+				RefreshTokenTTL:       helper.RefreshTokenTTL,
+				DummyPasswordHash:     password.Hashed{},
 			},
 			expectErr: true,
 		},

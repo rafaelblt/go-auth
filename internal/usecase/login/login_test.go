@@ -116,6 +116,83 @@ func TestLogin_ReturnsInvalidCredentials_WhenPasswordIsIncorrect(t *testing.T) {
 	assert.ErrorIs(t, err, login.ErrInvalidCredentials)
 }
 
+func TestLogin_ReturnsInvalidCredentials_WhenPasswordNotExists(t *testing.T) {
+	helper := NewTestHelper(t)
+	usr := usertest.NewUser(t, nil)
+	helper.FakeUserReader.InsertUser(usr)
+
+	output, err := helper.UseCase().Execute(context.Background(), login.Input{
+		Username: usr.Username().String(),
+		Password: "210-9i)S_D(Akfvfc12)",
+	})
+
+	require.Error(t, err)
+	require.Zero(t, output)
+	assert.ErrorIs(t, err, login.ErrInvalidCredentials)
+}
+
+func TestLogin_VerifiesDummyHash_WhenUsernameNotExists(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := login.Input{
+		Username: usertest.MustUsername(t, "username").String(),
+		Password: "210-9i)S_D(Akfvfc12)",
+	}
+
+	_, err := helper.UseCase().Execute(context.Background(), input)
+	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+
+	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
+	assert.Equal(t, input.Password, call.Plain.Value())
+	assert.Equal(t, helper.DummyPasswordHash, call.Hash)
+}
+
+func TestLogin_VerifiesDummyHash_WhenPasswordNotExists(t *testing.T) {
+	helper := NewTestHelper(t)
+	usr := usertest.NewUser(t, nil)
+	helper.FakeUserReader.InsertUser(usr)
+	input := login.Input{
+		Username: usr.Username().String(),
+		Password: "210-9i)S_D(Akfvfc12)",
+	}
+
+	_, err := helper.UseCase().Execute(context.Background(), input)
+	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+
+	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
+	assert.Equal(t, input.Password, call.Plain.Value())
+	assert.Equal(t, helper.DummyPasswordHash, call.Hash)
+}
+
+func TestLogin_VerifiesOnlyStoredHash_WhenPasswordIsIncorrect(t *testing.T) {
+	helper := NewTestHelper(t)
+	usr, pwd := helper.GetUserAndPassword()
+
+	_, err := helper.UseCase().Execute(context.Background(), login.Input{
+		Username: usr.Username().String(),
+		Password: pwd.Value() + "INCORRECT",
+	})
+	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+
+	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
+	assert.NotEqual(t, helper.DummyPasswordHash, call.Hash)
+}
+
+func TestLogin_ReturnsError_WhenDummyVerificationFails(t *testing.T) {
+	helper := NewTestHelper(t)
+
+	expectedErr := errors.New("internal error")
+	helper.FakePasswordChecker.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), login.Input{
+		Username: usertest.MustUsername(t, "username").String(),
+		Password: "210-9i)S_D(Akfvfc12)",
+	})
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+	assert.NotErrorIs(t, err, login.ErrInvalidCredentials)
+}
+
 func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {
 	helper := NewTestHelper(t)
 	usr, pwd := helper.GetUserAndPassword()

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 )
 
@@ -17,6 +18,10 @@ type Config struct {
 	Clock                 port.Clock
 
 	RefreshTokenTTL time.Duration
+
+	// DummyPasswordHash is verified when the account is missing. It must come
+	// from the configured hasher, so it costs the same as a stored hash.
+	DummyPasswordHash password.Hashed
 }
 
 func New(cfg Config) (Login, error) {
@@ -44,6 +49,9 @@ func New(cfg Config) (Login, error) {
 	if cfg.RefreshTokenTTL <= 0 {
 		return Login{}, errors.New("refresh ttl zero or negative")
 	}
+	if cfg.DummyPasswordHash.IsZero() {
+		return Login{}, errors.New("dummy password hash cannot be zero")
+	}
 	uc := Login{
 		users:            cfg.UserReader,
 		passwords:        cfg.PasswordReader,
@@ -53,6 +61,7 @@ func New(cfg Config) (Login, error) {
 		uow:              cfg.UnitOfWork,
 		clock:            cfg.Clock,
 		refreshTTL:       cfg.RefreshTokenTTL,
+		dummyHash:        cfg.DummyPasswordHash,
 	}
 	return uc, nil
 }

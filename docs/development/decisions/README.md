@@ -91,6 +91,7 @@ Token formats, signing, rotation and reuse detection. How it works:
 | 0027 | [Reuse is checked before expiry](0027-reuse-checked-before-expiry.md) | Accepted |
 | 0028 | [Uniform errors on login and refresh](0028-uniform-auth-errors.md) | Accepted |
 | 0029 | [Audit events](0029-audit-events.md) | Proposed |
+| 0045 | [Login verifies a dummy hash when the account is missing](0045-login-dummy-hash.md) | Accepted |
 
 ### API
 
@@ -140,7 +141,8 @@ works: [Configuration](../../configuration.md).
 choice was deliberate, and the reason cannot be recovered from the code. Most
 fixes and refactors apply an existing decision rather than make a new one; the
 commit message is enough for those. Limitations and missing features are not
-decisions either — they belong in the [roadmap](../roadmap.md).
+decisions either — they belong in the [roadmap](../roadmap.md) — and neither
+are defects, which are [issues](../issues/README.md).
 
 **How.**
 
