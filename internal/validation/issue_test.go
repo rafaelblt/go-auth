@@ -76,6 +76,35 @@ func TestIssue_Details_KeepsNilForIssueWithoutDetails(t *testing.T) {
 	assert.Nil(t, issue.Details())
 }
 
+func TestIssue_String(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		issue    Issue
+		expected string
+	}{
+		{
+			desc:     "with details sorted by key",
+			issue:    IssueTooShort(3, UnitCodePoint),
+			expected: CodeTooShort + "(min=3, unit=code_point)",
+		},
+		{
+			desc:     "with empty details",
+			issue:    IssueInvalidChars(),
+			expected: CodeInvalidCharacters,
+		},
+		{
+			desc:     "zero value",
+			issue:    Issue{},
+			expected: "",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expected, tC.issue.String())
+		})
+	}
+}
+
 func TestIssues_String(t *testing.T) {
 	testCases := []struct {
 		desc     string
