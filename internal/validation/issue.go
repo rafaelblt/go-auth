@@ -36,10 +36,10 @@ func (iss Issue) String() string {
 
 type Issues []Issue
 
-func (iss Issues) String() string {
-	msgs := make([]string, len(iss))
+func (issues Issues) String() string {
+	msgs := make([]string, len(issues))
 
-	for i, issue := range iss {
+	for i, issue := range issues {
 		msgs[i] = issue.Code()
 	}
 
