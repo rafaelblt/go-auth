@@ -11,9 +11,11 @@ func NewGenerator() *Generator {
 type generated = port.RefreshTokenGenerated
 
 func (g *Generator) Generate() (generated, error) {
+	// Unreachable since Go 1.24: crypto/rand.Read never returns an error and
+	// crashes the program instead. Kept so a failure is never swallowed.
 	token, err := generateToken()
 	if err != nil {
-		return generated{}, nil
+		return generated{}, err
 	}
 	hash, err := hashToken(token)
 	if err != nil {
