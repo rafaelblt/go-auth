@@ -9,6 +9,7 @@ const (
 	defaultBcryptCost      = 12
 	defaultAccessTokenTTL  = 30 * time.Minute
 	defaultRefreshTokenTTL = 7 * 24 * time.Hour
+	defaultLogFormat       = LogFormatJSON
 )
 
 var envDatabaseURL = env[string]{
@@ -60,4 +61,10 @@ var envRefreshTokenTTL = env[time.Duration]{
 		"NORMAL": defaultRefreshTokenTTL,
 		"LONG":   30 * 24 * time.Hour,
 	},
+}
+
+var envLogFormat = env[LogFormat]{
+	Key:     "LOG_FORMAT",
+	Default: defaultLogFormat,
+	Parser:  logFormatEnvParser,
 }

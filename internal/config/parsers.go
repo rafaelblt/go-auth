@@ -37,3 +37,11 @@ func boolEnvParser(val string) (bool, error) {
 		return false, fmt.Errorf("invalid bool value %q", val)
 	}
 }
+
+func logFormatEnvParser(val string) (LogFormat, error) {
+	f := LogFormat(strings.ToLower(val))
+	if !f.valid() {
+		return "", fmt.Errorf("invalid log format value %q", val)
+	}
+	return f, nil
+}

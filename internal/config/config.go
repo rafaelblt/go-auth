@@ -13,6 +13,7 @@ type Config struct {
 	bcryptCost      int
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
+	logFormat       LogFormat
 }
 
 type ConfigParams struct {
@@ -22,6 +23,7 @@ type ConfigParams struct {
 	BcryptCost      *int
 	AccessTokenTTL  *time.Duration
 	RefreshTokenTTL *time.Duration
+	LogFormat       *LogFormat
 }
 
 func NewConfig(params ConfigParams) (Config, error) {
@@ -58,6 +60,14 @@ func NewConfig(params ConfigParams) (Config, error) {
 		refreshTokenTTL = *params.RefreshTokenTTL
 	}
 
+	logFormat := defaultLogFormat
+	if params.LogFormat != nil {
+		if !params.LogFormat.valid() {
+			errs = append(errs, fmt.Errorf("log format %q unknown", *params.LogFormat))
+		}
+		logFormat = *params.LogFormat
+	}
+
 	if len(errs) > 0 {
 		e := fmt.Errorf("invalid config params: %w", errors.Join(errs...))
 		return Config{}, e
@@ -70,6 +80,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 		bcryptCost:      bcryptCost,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
+		logFormat:       logFormat,
 	}
 	return cfg, nil
 }
@@ -83,6 +94,7 @@ func LoadConfig() (Config, error) {
 	bcryptCost, errs := resolveEnv(envBcryptCost, errs)
 	refreshTokenTTL, errs := resolveEnv(envRefreshTokenTTL, errs)
 	accessTokenTTL, errs := resolveEnv(envAccessTokenTTL, errs)
+	logFormat, errs := resolveEnv(envLogFormat, errs)
 
 	if len(errs) > 0 {
 		e := fmt.Errorf("failed to load environment variables: %w", errors.Join(errs...))
@@ -96,6 +108,7 @@ func LoadConfig() (Config, error) {
 		BcryptCost:      &bcryptCost,
 		AccessTokenTTL:  &accessTokenTTL,
 		RefreshTokenTTL: &refreshTokenTTL,
+		LogFormat:       &logFormat,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("config loaded from environment variables invalid for new config: %s", err))
@@ -139,4 +152,8 @@ func (c Config) AccessTokenTTL() time.Duration {
 
 func (c Config) RefreshTokenTTL() time.Duration {
 	return c.refreshTokenTTL
+}
+
+func (c Config) LogFormat() LogFormat {
+	return c.logFormat
 }

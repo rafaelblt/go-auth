@@ -17,6 +17,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	bcryptCost := 8
 	accessTokenTTL := 22 * time.Minute
 	refreshTokenTTL := 2 * 24 * time.Hour
+	logFormat := LogFormatText
 
 	t.Setenv(envAddress.Key, address)
 	t.Setenv(envDatabaseURL.Key, databaseURL)
@@ -24,6 +25,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	t.Setenv(envBcryptCost.Key, strconv.Itoa(bcryptCost))
 	t.Setenv(envAccessTokenTTL.Key, accessTokenTTL.String())
 	t.Setenv(envRefreshTokenTTL.Key, refreshTokenTTL.String())
+	t.Setenv(envLogFormat.Key, string(logFormat))
 
 	cfg, err := LoadConfig()
 
@@ -34,6 +36,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	assert.Equal(t, bcryptCost, cfg.BcryptCost())
 	assert.Equal(t, accessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, refreshTokenTTL, cfg.RefreshTokenTTL())
+	assert.Equal(t, logFormat, cfg.LogFormat())
 }
 
 func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
@@ -47,6 +50,7 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultBcryptCost, cfg.BcryptCost())
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
+	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
 }
 
 func TestLoadConfig_ReturnsError(t *testing.T) {
@@ -78,6 +82,10 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 			desc:  "refresh token ttl not duration format",
 			setup: func(t *testing.T) { t.Setenv(envRefreshTokenTTL.Key, "1 month") },
 		},
+		{
+			desc:  "log format unknown",
+			setup: func(t *testing.T) { t.Setenv(envLogFormat.Key, "xml") },
+		},
 	}
 
 	for _, tC := range testCases {
@@ -100,6 +108,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 		BcryptCost:      shared.Ptr(8),
 		AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 		RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
+		LogFormat:       shared.Ptr(LogFormatText),
 	}
 
 	cfg, err := NewConfig(params)
@@ -112,6 +121,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	assert.Equal(t, *params.BcryptCost, cfg.BcryptCost())
 	assert.Equal(t, *params.AccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, *params.RefreshTokenTTL, cfg.RefreshTokenTTL())
+	assert.Equal(t, *params.LogFormat, cfg.LogFormat())
 }
 
 func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
@@ -127,6 +137,7 @@ func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultBcryptCost, cfg.BcryptCost())
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
+	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
 }
 
 func TestNewConfig_ReturnsError(t *testing.T) {
@@ -137,6 +148,7 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 			BcryptCost:      shared.Ptr(8),
 			AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 			RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
+			LogFormat:       shared.Ptr(LogFormatJSON),
 		}
 	}
 	testCases := []struct {
@@ -174,6 +186,14 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 		{
 			desc:   "refresh token ttl negative",
 			mutate: func(p *ConfigParams) { p.RefreshTokenTTL = shared.Ptr(-time.Hour) },
+		},
+		{
+			desc:   "log format empty",
+			mutate: func(p *ConfigParams) { p.LogFormat = shared.Ptr(LogFormat("")) },
+		},
+		{
+			desc:   "log format unknown",
+			mutate: func(p *ConfigParams) { p.LogFormat = shared.Ptr(LogFormat("xml")) },
 		},
 	}
 

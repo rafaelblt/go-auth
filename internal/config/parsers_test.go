@@ -164,3 +164,66 @@ func TestBoolEnvParser_ReturnsError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Zero(t, value)
 }
+
+func TestLogFormatEnvParser(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected LogFormat
+	}{
+		{
+			desc:     "lowercase json",
+			value:    "json",
+			expected: LogFormatJSON,
+		},
+		{
+			desc:     "lowercase text",
+			value:    "text",
+			expected: LogFormatText,
+		},
+		{
+			desc:     "uppercase json",
+			value:    "JSON",
+			expected: LogFormatJSON,
+		},
+		{
+			desc:     "mixed case text",
+			value:    "Text",
+			expected: LogFormatText,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := logFormatEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestLogFormatEnvParser_ReturnsError(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		value string
+	}{
+		{
+			desc:  "unknown",
+			value: "xml",
+		},
+		{
+			desc:  "empty",
+			value: "",
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := logFormatEnvParser(tC.value)
+
+			assert.Error(t, err)
+			assert.Zero(t, value)
+		})
+	}
+}
