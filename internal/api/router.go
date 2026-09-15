@@ -14,7 +14,6 @@ import (
 
 type Config struct {
 	Dependencies Dependencies
-	DevMode      bool
 }
 
 type Dependencies struct {
@@ -63,19 +62,17 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
-	chain := chainMiddlewares(cfg, mux)
+	chain := chainMiddlewares(mux)
 
 	return chain, nil
 }
 
-func chainMiddlewares(cfg Config, handler http.Handler) http.Handler {
+func chainMiddlewares(handler http.Handler) http.Handler {
 	type middleware func(http.Handler) http.Handler
-	middlewares := make([]middleware, 0)
-
-	if !cfg.DevMode {
-		middlewares = append(middlewares, adaptMiddleware(logging))
+	middlewares := []middleware{
+		adaptMiddleware(logging),
+		adaptMiddleware(recovery),
 	}
-	middlewares = append(middlewares, adaptMiddleware(recovery))
 
 	for _, middleware := range slices.Backward(middlewares) {
 		handler = middleware(handler)
