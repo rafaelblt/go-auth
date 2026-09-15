@@ -37,7 +37,7 @@ func execPeriodic(ctx context.Context, logger *slog.Logger, task periodicTask) {
 
 	start := time.Now()
 	if err := task.run(ctx); err != nil {
-		logger.Error("background task failed", "err", err, "elapsed", time.Since(start))
+		logger.Error("background task failed", "error", err, "elapsed", time.Since(start))
 		return
 	}
 
