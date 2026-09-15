@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -33,11 +32,15 @@ func verifySchema(ctx context.Context, db postgres.DB) error {
 		return fmt.Errorf("get current schema version failed: %w", err)
 	}
 
-	if current != latest {
-		e := fmt.Sprintf(
-			"the database scehama version (%d) is different from the latest migration (%d)",
+	switch {
+	case current < latest:
+		return fmt.Errorf(
+			"the database schema version (%d) is behind the latest migration (%d): apply the pending migrations",
 			current, latest)
-		return errors.New(e)
+	case current > latest:
+		return fmt.Errorf(
+			"the database schema version (%d) is ahead of the latest migration (%d): the binary is older than the database",
+			current, latest)
 	}
 	return nil
 }
