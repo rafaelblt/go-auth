@@ -18,18 +18,17 @@ func main() {
 }
 
 func run() error {
-	logger := slog.Default()
-	logger.Info("starting app setup...")
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	logger.Info("loading config...")
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Error("config load failed", "error", err)
+		slog.Error("config load failed", "error", err)
 		return err
 	}
+
+	logger := bootstrap.NewLogger(cfg.LogFormat())
+	slog.SetDefault(logger)
 
 	logger.Info("building app...")
 	app, err := bootstrap.NewApp(ctx, cfg)
