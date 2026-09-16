@@ -258,50 +258,58 @@ func TestRestoreRefreshToken_ClonesUsedAt(t *testing.T) {
 }
 
 func TestRefreshToken_Use(t *testing.T) {
-	usedAt := time.Now()
+	now := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
 	testCases := []struct {
 		desc        string
-		token       *session.RefreshToken
+		expiresAt   time.Time
+		usedAt      *time.Time
 		expectedErr error
 	}{
 		{
-			desc: "ExpiresAt one hour after UsedAt",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ExpiresAt = usedAt.Add(time.Hour)
-			}),
+			desc:      "unused and not expired",
+			expiresAt: now.Add(time.Hour),
 		},
 		{
-			desc: "ExpiresAt and UsedAt equal",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ExpiresAt = usedAt
-			}),
+			desc:      "unused and expiring at use time",
+			expiresAt: now,
 		},
 		{
-			desc: "UsedAt after ExpiresAt",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ExpiresAt = usedAt.Add(-1)
-			}),
+			desc:        "unused and expired",
+			expiresAt:   now.Add(-time.Nanosecond),
 			expectedErr: session.ErrTokenExpired,
 		},
 		{
-			desc: "token already used",
-			token: sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-				p.ExpiresAt = usedAt.Add(-2)
-				p.UsedAt = shared.Ptr(usedAt.Add(-1))
-			}),
+			desc:        "used and not expired",
+			expiresAt:   now.Add(time.Hour),
+			usedAt:      shared.Ptr(now.Add(-time.Minute)),
+			expectedErr: session.ErrTokenAlreadyUsed,
+		},
+		{
+			desc:        "used and expired reports reuse",
+			expiresAt:   now.Add(-time.Minute),
+			usedAt:      shared.Ptr(now.Add(-time.Hour)),
 			expectedErr: session.ErrTokenAlreadyUsed,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			err := tC.token.Use(usedAt)
-			assert.ErrorIs(t, err, tC.expectedErr)
-			if tC.expectedErr == nil {
-				retrievedUsedAt, isUsed := tC.token.UsedAt()
-				assert.True(t, isUsed)
-				assert.Equal(t, usedAt, retrievedUsedAt)
-				assert.Equal(t, usedAt, tC.token.UpdatedAt())
+			token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+				p.ExpiresAt = tC.expiresAt
+				p.UsedAt = tC.usedAt
+			})
+			updatedAt := token.UpdatedAt()
+
+			err := token.Use(now)
+
+			if tC.expectedErr != nil {
+				assert.ErrorIs(t, err, tC.expectedErr)
+				assert.Equal(t, tC.usedAt, shared.PtrFromOk(token.UsedAt()))
+				assert.Equal(t, updatedAt, token.UpdatedAt())
+				return
 			}
+			require.NoError(t, err)
+			assert.Equal(t, &now, shared.PtrFromOk(token.UsedAt()))
+			assert.Equal(t, now, token.UpdatedAt())
 		})
 	}
 }
