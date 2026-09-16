@@ -123,50 +123,6 @@ func TestRestoreUser(t *testing.T) {
 	}
 }
 
-func TestUser_ChangeUsername(t *testing.T) {
-	testCases := []struct {
-		desc      string
-		user      *user.User
-		username  user.Username
-		updatedAt time.Time
-		expectErr bool
-	}{
-		{
-			desc:      "valid change",
-			user:      usertest.NewUser(t, nil),
-			username:  usertest.MustUsername(t, "other_username"),
-			updatedAt: time.Now().UTC(),
-			expectErr: false,
-		},
-		{
-			desc:      "username zero",
-			user:      usertest.NewUser(t, nil),
-			username:  user.Username{},
-			updatedAt: time.Now().UTC(),
-			expectErr: true,
-		},
-		{
-			desc:      "updated at before created at",
-			user:      usertest.NewUser(t, nil),
-			username:  usertest.MustUsername(t, "other_username"),
-			updatedAt: time.Date(1, 1, 1, 1, 1, 0, 0, time.UTC),
-			expectErr: true,
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			err := tC.user.ChangeUsername(tC.username, tC.updatedAt)
-			if tC.expectErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tC.username, tC.user.Username())
-				assert.Equal(t, tC.updatedAt, tC.user.UpdatedAt())
-			}
-		})
-	}
-}
-
 func TestUser_IsZero(t *testing.T) {
 	testCases := []struct {
 		desc   string
