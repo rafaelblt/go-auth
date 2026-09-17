@@ -1,7 +1,7 @@
 package porttest
 
 import (
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 )
 
 type FakePasswordChecker struct {

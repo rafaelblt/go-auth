@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 )
 
 type Password struct {

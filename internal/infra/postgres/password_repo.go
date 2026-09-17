@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/rafaelblt/go-auth/internal/password"
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 )
 
 type PasswordRepo struct {

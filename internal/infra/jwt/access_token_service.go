@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
-	"github.com/rafaelblt/go-auth/internal/session"
-	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 const (

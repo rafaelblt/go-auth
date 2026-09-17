@@ -3,8 +3,8 @@ package porttest
 import (
 	"fmt"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/port"
-	"github.com/rafaelblt/go-auth/internal/session"
 )
 
 type FakeRefreshTokenGenerator struct {

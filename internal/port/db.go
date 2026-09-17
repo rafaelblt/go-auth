@@ -3,9 +3,9 @@ package port
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/password"
-	"github.com/rafaelblt/go-auth/internal/session"
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 )
 
 // Unit Of Work

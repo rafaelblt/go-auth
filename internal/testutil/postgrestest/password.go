@@ -3,8 +3,8 @@ package postgrestest
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/password"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelblt/go-auth/internal/session"
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/stretchr/testify/require"
 )
 

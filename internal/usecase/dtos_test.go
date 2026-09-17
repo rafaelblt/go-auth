@@ -3,9 +3,9 @@ package usecase_test
 import (
 	"testing"
 
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
-	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 )
 

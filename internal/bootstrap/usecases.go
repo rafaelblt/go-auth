@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/config"
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/login"

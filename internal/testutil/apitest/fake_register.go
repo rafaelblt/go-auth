@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
-	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type FakeRegister struct {

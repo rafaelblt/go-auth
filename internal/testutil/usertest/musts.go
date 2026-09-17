@@ -3,7 +3,7 @@ package usertest
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/stretchr/testify/require"
 )
 

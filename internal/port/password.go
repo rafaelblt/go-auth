@@ -1,6 +1,6 @@
 package port
 
-import "github.com/rafaelblt/go-auth/internal/password"
+import "github.com/rafaelblt/go-auth/internal/domain/password"
 
 type PasswordHasher interface {
 	Hash(password.Plain) (password.Hashed, error)

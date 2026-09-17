@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/stretchr/testify/assert"

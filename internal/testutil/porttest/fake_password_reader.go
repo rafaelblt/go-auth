@@ -3,8 +3,8 @@ package porttest
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/password"
-	"github.com/rafaelblt/go-auth/internal/user"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 )
 
 type FakePasswordReader struct {

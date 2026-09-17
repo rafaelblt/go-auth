@@ -3,7 +3,7 @@ package porttest
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 )
 
 type refreshTokenID = session.RefreshTokenID

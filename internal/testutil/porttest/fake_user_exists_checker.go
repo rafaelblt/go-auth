@@ -3,8 +3,8 @@ package porttest
 import (
 	"context"
 
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type FakeUserExistsChecker struct {

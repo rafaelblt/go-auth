@@ -3,8 +3,8 @@ package usecase
 import (
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
-	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type UserDTO struct {

@@ -3,7 +3,7 @@ package bcrypt
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

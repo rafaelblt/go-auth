@@ -3,7 +3,7 @@ package porttest
 import (
 	"context"
 
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 )
 
 type FakePasswordWriter struct {

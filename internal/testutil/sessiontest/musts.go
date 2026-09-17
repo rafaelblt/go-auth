@@ -3,7 +3,7 @@ package sessiontest
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/session"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/stretchr/testify/require"
 )
 

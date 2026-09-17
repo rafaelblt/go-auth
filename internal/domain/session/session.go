@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/user"
 )
 
 type SessionID struct {

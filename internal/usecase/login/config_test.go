@@ -3,7 +3,7 @@ package login_test
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/stretchr/testify/assert"
 )

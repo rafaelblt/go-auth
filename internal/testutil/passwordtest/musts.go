@@ -3,7 +3,7 @@ package passwordtest
 import (
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/password"
+	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/stretchr/testify/require"
 )
 
