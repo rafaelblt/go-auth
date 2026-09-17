@@ -10,7 +10,7 @@ type Plain struct {
 
 const (
 	PlainMaxBytes      = 72
-	PlainMinCodePoints = 4
+	PlainMinCodePoints = 8
 )
 
 var plainValidators = []validation.Validator[string]{
