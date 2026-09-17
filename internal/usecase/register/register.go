@@ -2,6 +2,7 @@ package register
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/password"
@@ -36,6 +37,8 @@ func (uc Register) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
+	// Checked here so a taken username costs one index lookup instead of a
+	// full bcrypt hash. The insert in save is what actually decides it.
 	err = uc.checkUsernameExists(ctx, username)
 	if err != nil {
 		return Output{}, err
@@ -101,9 +104,15 @@ func (uc Register) createPassword(params password.CreationParams) (*password.Pas
 	return pwd, nil
 }
 
-func (uc Register) save(ctx context.Context, user *user.User, pwd *password.Password) error {
-	return uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.UserWriter.Add(ctx, user)
+// save inserts the user and its password in one transaction. The username is
+// checked for free before the password is hashed, but only the insert decides
+// it: a registration that loses the race for the username is reported as a
+// conflict, not as an unexpected failure.
+//
+// See docs/development/decisions/0048-duplicate-username-reported-by-the-writer.md.
+func (uc Register) save(ctx context.Context, usr *user.User, pwd *password.Password) error {
+	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
+		err := deps.UserWriter.Add(ctx, usr)
 		if err != nil {
 			return fmt.Errorf("user writer save failed: %w", err)
 		}
@@ -113,4 +122,8 @@ func (uc Register) save(ctx context.Context, user *user.User, pwd *password.Pass
 		}
 		return nil
 	})
+	if errors.Is(err, user.ErrUsernameAlreadyExists) {
+		return ErrUsernameAlreadyExists
+	}
+	return err
 }

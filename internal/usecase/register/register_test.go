@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -100,6 +101,18 @@ func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
 	input := helper.ValidInput()
 	input.Username = username.String()
 	helper.FakeUserExistsChecker.InsertUsername(username)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, register.ErrUsernameAlreadyExists)
+}
+
+func TestRegister_ReturnsErrUsernameAlreadyExists_WhenUserWriterReportsItTaken(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := helper.ValidInput()
+
+	helper.FakeUnitOfWork.FakeUserWriter.SetError(user.ErrUsernameAlreadyExists)
 
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
