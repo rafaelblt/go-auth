@@ -12,8 +12,8 @@ revoking a session invalidates its tokens.
 
 ## Decision
 
-`Session` and `RefreshToken` live together in `internal/session`. They are one
-consistency boundary.
+`Session` and `RefreshToken` live together in `internal/domain/session`.
+They are one consistency boundary.
 
 ## Alternatives considered
 

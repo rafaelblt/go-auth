@@ -61,7 +61,7 @@ No row inserted means the username is taken. The repository decides on
 Nothing inspects `pgconn.PgError` outside the startup schema check, so there
 is still only one such place and no helper to extract for it.
 
-**The sentinel lives in `internal/user`.** It is the same placement
+**The sentinel lives in `internal/domain/user`.** It is the same placement
 [0046](0046-refresh-token-use-guarded-at-write.md) chose for
 `session.ErrTokenAlreadyUsed`: the repository reports a fact about stored
 state, and what to do about it stays in the use case. Putting this one in
@@ -70,11 +70,11 @@ different packages, and `port` holds the abstractions, not the vocabulary.
 
 The placement is not symmetrical with `session.ErrTokenAlreadyUsed`, and the
 difference is worth stating: that one is also produced by `RefreshToken.Use`,
-whereas nothing in `internal/user` produces or consumes this error — a single
-`User` cannot enforce uniqueness across users. It is still a fact about the
-domain rather than about one writer's contract, and any other implementation
-of `UserWriter` reports the same fact. The port documents it on `Add`, exactly
-as it documents `session.ErrTokenAlreadyUsed` on `MarkUsed`.
+whereas nothing in `internal/domain/user` produces or consumes this error —
+a single `User` cannot enforce uniqueness across users. It is still a fact
+about the domain rather than about one writer's contract, and any other
+implementation of `UserWriter` reports the same fact. The port documents it
+on `Add`, exactly as it documents `session.ErrTokenAlreadyUsed` on `MarkUsed`.
 
 **The early existence check stays.** Not to save building two entities, which
 costs nothing, but to save a bcrypt hash: without it, registering an existing
