@@ -43,7 +43,8 @@ The service shape and how layers depend on each other. How it works:
 
 ### Domain
 
-`internal/user`, `internal/password`, `internal/session`, `internal/shared`.
+`internal/domain/user`, `internal/domain/password`,
+`internal/domain/session`, `internal/shared`.
 How it works: [Domain model](../../architecture/domain-model.md).
 
 | # | Decision | Status |
