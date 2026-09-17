@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/rafaelblt/go-auth/internal/migrate"
+	"github.com/rafaelblt/go-auth/internal/infra/migrate"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/migrations"
 	"github.com/stretchr/testify/assert"

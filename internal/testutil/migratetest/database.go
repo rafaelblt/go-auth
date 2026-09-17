@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/migrate"
+	"github.com/rafaelblt/go-auth/internal/infra/migrate"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/stretchr/testify/require"
 )

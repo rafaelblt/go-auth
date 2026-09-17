@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/infra/migrate"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/migrate"
 	"github.com/rafaelblt/go-auth/migrations"
 )
 

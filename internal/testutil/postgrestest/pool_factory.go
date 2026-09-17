@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rafaelblt/go-auth/internal/infra/migrate"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/migrate"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
