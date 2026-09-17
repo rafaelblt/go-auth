@@ -20,6 +20,12 @@ func NewUserRepo(db DB) (*UserRepo, error) {
 	return &UserRepo{db: db}, nil
 }
 
+// Add guards the insert with ON CONFLICT (username), so of two concurrent
+// registrations of the same username only one is applied. The loser inserts
+// nothing and gets user.ErrUsernameAlreadyExists. A conflict on any other
+// column, the primary key included, is still an error.
+//
+// See docs/development/decisions/0048-duplicate-username-reported-by-the-writer.md.
 func (repo *UserRepo) Add(ctx context.Context, usr *user.User) error {
 	model, err := mapUserToModel(usr)
 	if err != nil {
@@ -29,11 +35,15 @@ func (repo *UserRepo) Add(ctx context.Context, usr *user.User) error {
 	sql := `INSERT INTO users
 			(id, username, status, created_at, updated_at)
 			VALUES
-			(@id, @username, @status, @created_at, @updated_at)`
-	_, err = repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
+			(@id, @username, @status, @created_at, @updated_at)
+			ON CONFLICT (username) DO NOTHING`
+	tag, err := repo.db.Exec(ctx, sql, pgx.StrictStructArgs(model))
 
 	if err != nil {
 		return fmt.Errorf("user insert failed: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return user.ErrUsernameAlreadyExists
 	}
 
 	return nil

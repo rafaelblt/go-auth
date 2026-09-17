@@ -76,6 +76,48 @@ func TestUserRepo_Save(t *testing.T) {
 	require.True(t, helper.CheckUserIsSaved(usr))
 }
 
+func TestUserRepo_Add_ReturnsErrUsernameAlreadyExists_WhenUsernameIsTaken(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+	ctx := context.Background()
+
+	first := usertest.NewUser(t, nil)
+	require.NoError(t, repo.Add(ctx, first))
+
+	second := usertest.NewUser(t, nil)
+	require.Equal(t, first.Username(), second.Username())
+	require.NotEqual(t, first.ID(), second.ID())
+
+	err := repo.Add(ctx, second)
+
+	assert.ErrorIs(t, err, user.ErrUsernameAlreadyExists)
+	assert.True(t, helper.CheckUserIsSaved(first), "the stored user was overwritten")
+
+	stored, err := repo.FindByUsername(ctx, first.Username())
+	require.NoError(t, err)
+	require.NotNil(t, stored)
+	assert.Equal(t, first.ID(), stored.ID(), "the username points at the second user")
+}
+
+func TestUserRepo_Add_ReturnsError_WhenIDIsTaken(t *testing.T) {
+	helper := NewUserRepoTestHelper(t)
+	repo := helper.Repo()
+	ctx := context.Background()
+
+	first := usertest.NewUser(t, nil)
+	require.NoError(t, repo.Add(ctx, first))
+
+	second := usertest.NewUser(t, func(p *user.RestoreParams) {
+		p.ID = first.ID()
+		p.Username = usertest.MustUsername(t, "other_user")
+	})
+
+	err := repo.Add(ctx, second)
+
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, user.ErrUsernameAlreadyExists)
+}
+
 func TestUserRepo_ExistsByUsername_WhenUsernameExists(t *testing.T) {
 	helper := NewUserRepoTestHelper(t)
 	repo := helper.Repo()

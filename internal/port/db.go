@@ -33,6 +33,9 @@ type UserExistsChecker interface {
 }
 
 type UserWriter interface {
+	// Add inserts a user. It applies only while the username is free, and
+	// returns user.ErrUsernameAlreadyExists when another insert took the
+	// username first.
 	Add(context.Context, *user.User) error
 }
 
