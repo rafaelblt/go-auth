@@ -39,6 +39,7 @@ The service shape and how layers depend on each other. How it works:
 | 0003 | [Split read and write interfaces](0003-split-read-write-interfaces.md) | Accepted |
 | 0020 | [Two token types](0020-two-token-types.md) | Accepted |
 | 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | Accepted |
+| 0048 | [A duplicate username is reported by the user writer](0048-duplicate-username-reported-by-the-writer.md) | Accepted |
 
 ### Domain
 
@@ -58,6 +59,7 @@ How it works: [Domain model](../../architecture/domain-model.md).
 | 0012 | [Minimum password length](0012-minimum-password-length.md) | Proposed |
 | 0013 | [Username as a separate entity](0013-username-as-separate-entity.md) | Proposed |
 | 0014 | [`Issues` rather than `error` from input constructors](0014-input-constructors-return-issues.md) | Accepted |
+| 0048 | [A duplicate username is reported by the user writer](0048-duplicate-username-reported-by-the-writer.md) | Accepted |
 
 ### Validation
 
