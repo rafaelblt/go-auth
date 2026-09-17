@@ -57,7 +57,7 @@ How it works: [Domain model](../../architecture/domain-model.md).
 | 0009 | [Defensive copying on reference-typed fields](0009-defensive-copying.md) | Accepted |
 | 0010 | [Username rules](0010-username-rules.md) | Accepted |
 | 0011 | [Password input rules](0011-password-input-rules.md) | Accepted |
-| 0012 | [Minimum password length](0012-minimum-password-length.md) | Proposed |
+| 0012 | [Minimum password length](0012-minimum-password-length.md) | Accepted |
 | 0013 | [Username as a separate entity](0013-username-as-separate-entity.md) | Proposed |
 | 0014 | [`Issues` rather than `error` from input constructors](0014-input-constructors-return-issues.md) | Accepted |
 | 0048 | [A duplicate username is reported by the user writer](0048-duplicate-username-reported-by-the-writer.md) | Accepted |

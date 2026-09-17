@@ -12,7 +12,7 @@ is handed to bcrypt, which silently truncates its input beyond 72 bytes.
 
 ## Decision
 
-At least 4 code points, at most 72 bytes, no normalisation, no character
+At least 8 code points, at most 72 bytes, no normalisation, no character
 restrictions.
 
 **No allowed-character set.** It is not this service's place to decide which
@@ -33,11 +33,12 @@ This is a considered compatibility bound, not coupling to bcrypt. Replacing the
 hasher would not automatically mean changing the constant; 72 bytes is ample
 for any password a human will type.
 
-**Minimum 4 code points**, counted in code points because a minimum length is a
+**Minimum 8 code points**, counted in code points because a minimum length is a
 statement about how much password there is, not how many bytes it occupies —
-a 4-character password of non-Latin characters should not pass a byte-counted
-check that a 4-character ASCII one fails.
+an 8-character password of non-Latin characters should not pass a byte-counted
+check that an 8-character ASCII one fails.
 
-Four is a floor on "is this a password at all", not a security recommendation.
-Whether to raise it is open: see
+This record originally set the minimum at 4, a floor on "is this a password at
+all" rather than a security recommendation. Why it is 8, and why it is neither
+lower nor configurable, is
 [Minimum password length](0012-minimum-password-length.md).
