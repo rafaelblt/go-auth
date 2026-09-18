@@ -88,6 +88,10 @@ func TestRefreshTokenSecret_Hash_IsSHA256OfValue(t *testing.T) {
 	assert.Equal(t, sum[:], secret.Hash().Value())
 }
 
-func TestRefreshTokenSecret_Hash_ZeroWhenSecretZero(t *testing.T) {
-	assert.True(t, RefreshTokenSecret{}.Hash().IsZero())
+func TestRefreshTokenSecret_Value_PanicsWhenSecretZero(t *testing.T) {
+	assert.Panics(t, func() { RefreshTokenSecret{}.Value() })
+}
+
+func TestRefreshTokenSecret_Hash_PanicsWhenSecretZero(t *testing.T) {
+	assert.Panics(t, func() { RefreshTokenSecret{}.Hash() })
 }
