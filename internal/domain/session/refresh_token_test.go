@@ -21,19 +21,7 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "session id zero",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.SessionID{},
-				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
-				CreatedAt: time.Now(),
-				ExpiresAt: time.Now(),
-			},
-			expectErr: true,
-		},
-		{
-			desc: "token hash zero",
-			params: session.RefreshTokenCreationParams{
-				SessionID: session.NewSessionID(),
-				Hash:      session.RefreshTokenHash{},
-				ParentID:  nil,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
 			},
@@ -43,7 +31,6 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "parent id zero",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.RefreshTokenID{}),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -54,7 +41,6 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "created at after expires at",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now().Add(time.Minute),
 				ExpiresAt: time.Now(),
@@ -65,7 +51,6 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "valid case",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -75,17 +60,19 @@ func TestNewRefreshToken(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			token, err := session.NewRefreshToken(tC.params)
+			token, secret, err := session.NewRefreshToken(tC.params)
 			if tC.expectErr {
 				assert.Error(t, err)
 				assert.Zero(t, token)
+				assert.Zero(t, secret)
 				return
 			}
 			require.NoError(t, err)
 			require.NotZero(t, token)
+			require.NotZero(t, secret)
 			assert.NotZero(t, token.ID())
 			assert.Equal(t, tC.params.SessionID, token.SessionID())
-			assert.Equal(t, tC.params.Hash, token.Hash())
+			assert.Equal(t, secret.Hash(), token.Hash())
 			assert.Equal(t, tC.params.ParentID, shared.PtrFromOk(token.ParentID()))
 			assert.Equal(t, tC.params.ExpiresAt, token.ExpiresAt())
 			assert.Nil(t, shared.PtrFromOk(token.UsedAt()))
@@ -97,9 +84,8 @@ func TestNewRefreshToken(t *testing.T) {
 
 func TestNewRefreshToken_ClonesParentID(t *testing.T) {
 	provided := shared.Ptr(session.NewRefreshTokenID())
-	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
+	token, _, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: session.NewSessionID(),
-		Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 		ParentID:  provided,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
@@ -111,6 +97,22 @@ func TestNewRefreshToken_ClonesParentID(t *testing.T) {
 	retrieved, ok := token.ParentID()
 	assert.True(t, ok)
 	assert.NotEqual(t, provided.Value(), retrieved.Value())
+}
+
+func TestNewRefreshToken_GeneratesDistinctSecrets(t *testing.T) {
+	params := session.RefreshTokenCreationParams{
+		SessionID: session.NewSessionID(),
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now(),
+	}
+
+	first, firstSecret, err := session.NewRefreshToken(params)
+	require.NoError(t, err)
+	second, secondSecret, err := session.NewRefreshToken(params)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, firstSecret.Value(), secondSecret.Value())
+	assert.False(t, first.Hash().Equal(second.Hash()))
 }
 
 func TestRestoreRefreshToken(t *testing.T) {

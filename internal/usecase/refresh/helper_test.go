@@ -15,29 +15,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const fixtureRaw = "default_raw"
-
 type TestHelper struct {
-	t                         *testing.T
-	FakeSessionReader         *porttest.FakeSessionReader
-	FakeAccessTokenIssuer     *porttest.FakeAccessTokenIssuer
-	FakeRefreshTokenResolver  *porttest.FakeRefreshTokenResolver
-	FakeRefreshTokenGenerator *porttest.FakeRefreshTokenGenerator
-	FakeUnitOfWork            *porttest.FakeUnitOfWork
-	FakeClock                 *porttest.FakeClock
-	RefreshTokenTTL           time.Duration
+	t                      *testing.T
+	FakeSessionReader      *porttest.FakeSessionReader
+	FakeAccessTokenIssuer  *porttest.FakeAccessTokenIssuer
+	FakeRefreshTokenReader *porttest.FakeRefreshTokenReader
+	FakeUnitOfWork         *porttest.FakeUnitOfWork
+	FakeClock              *porttest.FakeClock
+	RefreshTokenTTL        time.Duration
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
-		t:                         t,
-		FakeSessionReader:         porttest.NewFakeSessionReader(),
-		FakeAccessTokenIssuer:     porttest.NewFakeAccessTokenIssuer(),
-		FakeRefreshTokenGenerator: porttest.NewFakeRefreshTokenGenerator(),
-		FakeRefreshTokenResolver:  porttest.NewFakeRefreshTokenResolver(),
-		FakeUnitOfWork:            porttest.NewFakeUnitOfWork(),
-		FakeClock:                 porttest.NewFakeClock(),
-		RefreshTokenTTL:           24 * time.Hour,
+		t:                      t,
+		FakeSessionReader:      porttest.NewFakeSessionReader(),
+		FakeAccessTokenIssuer:  porttest.NewFakeAccessTokenIssuer(),
+		FakeRefreshTokenReader: porttest.NewFakeRefreshTokenReader(),
+		FakeUnitOfWork:         porttest.NewFakeUnitOfWork(),
+		FakeClock:              porttest.NewFakeClock(),
+		RefreshTokenTTL:        24 * time.Hour,
 	}
 	return helper
 }
@@ -45,13 +41,12 @@ func NewTestHelper(t *testing.T) TestHelper {
 func (helper *TestHelper) UseCase() *refresh.Refresh {
 	helper.t.Helper()
 	uc, err := refresh.New(refresh.Config{
-		SessionReader:         helper.FakeSessionReader,
-		AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
-		RefreshTokenResolver:  helper.FakeRefreshTokenResolver,
-		RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
-		UnitOfWork:            helper.FakeUnitOfWork,
-		Clock:                 helper.FakeClock,
-		RefreshTokenTTL:       helper.RefreshTokenTTL,
+		SessionReader:      helper.FakeSessionReader,
+		AccessTokenIssuer:  helper.FakeAccessTokenIssuer,
+		RefreshTokenReader: helper.FakeRefreshTokenReader,
+		UnitOfWork:         helper.FakeUnitOfWork,
+		Clock:              helper.FakeClock,
+		RefreshTokenTTL:    helper.RefreshTokenTTL,
 	})
 	require.NoError(helper.t, err)
 	return uc
@@ -104,12 +99,14 @@ func (helper *TestHelper) SeedRevokedSession() Fixture {
 func (helper *TestHelper) SeedTokenWithoutSession() Fixture {
 	helper.t.Helper()
 
+	secret := sessiontest.NewRefreshTokenSecret(helper.t)
 	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
+		p.Hash = secret.Hash()
 		p.ExpiresAt = helper.FakeClock.Now().Add(time.Hour)
 	})
-	helper.FakeRefreshTokenResolver.Insert(fixtureRaw, token)
+	helper.FakeRefreshTokenReader.Insert(token)
 
-	return Fixture{Token: token, Raw: fixtureRaw}
+	return Fixture{Token: token, Raw: secret.Value()}
 }
 
 func (helper *TestHelper) seed(
@@ -121,16 +118,18 @@ func (helper *TestHelper) seed(
 	sess := sessiontest.NewSession(helper.t, sessOverride)
 	helper.FakeSessionReader.Insert(sess)
 
+	secret := sessiontest.NewRefreshTokenSecret(helper.t)
 	token := sessiontest.NewRefreshToken(helper.t, func(p *session.RefreshTokenRestoreParams) {
 		p.SessionID = sess.ID()
+		p.Hash = secret.Hash()
 		p.ExpiresAt = helper.FakeClock.Now().Add(time.Hour)
 		if tokenOverride != nil {
 			tokenOverride(p)
 		}
 	})
-	helper.FakeRefreshTokenResolver.Insert(fixtureRaw, token)
+	helper.FakeRefreshTokenReader.Insert(token)
 
-	return Fixture{Session: sess, Token: token, Raw: fixtureRaw}
+	return Fixture{Session: sess, Token: token, Raw: secret.Value()}
 }
 
 func (helper *TestHelper) AssertNoAccessTokenIssued() {

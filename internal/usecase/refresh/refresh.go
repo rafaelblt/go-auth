@@ -13,13 +13,12 @@ import (
 )
 
 type Refresh struct {
-	sessions         port.SessionReader
-	accessIssuer     port.AccessTokenIssuer
-	refreshResolver  port.RefreshTokenResolver
-	refreshGenerator port.RefreshTokenGenerator
-	uow              port.UnitOfWork
-	clock            port.Clock
-	refreshTTL       time.Duration
+	sessions     port.SessionReader
+	accessIssuer port.AccessTokenIssuer
+	tokens       port.RefreshTokenReader
+	uow          port.UnitOfWork
+	clock        port.Clock
+	refreshTTL   time.Duration
 }
 
 type Input struct {
@@ -56,7 +55,6 @@ var ErrSessionRevoked = usecase.NewErrorWithReason(
 )
 
 type accessIssued = port.AccessTokenIssued
-type refreshGenerated = port.RefreshTokenGenerated
 
 func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
 	now := uc.clock.Now()
@@ -94,13 +92,17 @@ func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
 }
 
 func (uc *Refresh) resolveToken(ctx context.Context, raw string) (*session.RefreshToken, error) {
-	token, err := uc.refreshResolver.Resolve(ctx, raw)
+	secret, err := session.ParseRefreshTokenSecret(raw)
 	if err != nil {
-		if errors.Is(err, session.ErrTokenInvalid) {
-			return nil, ErrTokenInvalid
-		}
-		e := fmt.Errorf("unexpected error from refresh token resolver: %w", err)
-		return nil, e
+		return nil, ErrTokenInvalid
+	}
+
+	token, err := uc.tokens.FindByHash(ctx, secret.Hash())
+	if err != nil {
+		return nil, fmt.Errorf("find refresh token by hash failed: %w", err)
+	}
+	if token == nil {
+		return nil, ErrTokenInvalid
 	}
 	return token, nil
 }
@@ -139,12 +141,12 @@ func (uc *Refresh) rotate(
 	used *session.RefreshToken,
 	now time.Time,
 ) (Output, error) {
-	accessData, refreshData, err := uc.generateTokens(sess.UserID())
+	accessData, err := uc.issueAccessToken(sess.UserID())
 	if err != nil {
 		return Output{}, err
 	}
 
-	newToken, err := uc.createToken(refreshData.Hash, sess.ID(), used.ID(), now)
+	newToken, newSecret, err := uc.createToken(sess.ID(), used.ID(), now)
 	if err != nil {
 		return Output{}, err
 	}
@@ -160,48 +162,39 @@ func (uc *Refresh) rotate(
 			ExpiresAt: accessData.ExpiresAt,
 		},
 		RefreshToken: usecase.RefreshTokenDTO{
-			Value:     refreshData.Raw,
+			Value:     newSecret.Value(),
 			ExpiresAt: newToken.ExpiresAt(),
 		},
 	}
 	return output, nil
 }
 
-func (uc *Refresh) generateTokens(userID user.ID) (accessIssued, refreshGenerated, error) {
+func (uc *Refresh) issueAccessToken(userID user.ID) (accessIssued, error) {
 	accessToken, err := uc.accessIssuer.Issue(port.AccessTokenPayload{
 		UserID: userID,
 	})
 	if err != nil {
-		e := fmt.Errorf("access token issuer failed: %w", err)
-		return accessIssued{}, refreshGenerated{}, e
+		return accessIssued{}, fmt.Errorf("access token issuer failed: %w", err)
 	}
-
-	refreshToken, err := uc.refreshGenerator.Generate()
-	if err != nil {
-		e := fmt.Errorf("refresh token generator failed: %w", err)
-		return accessIssued{}, refreshGenerated{}, e
-	}
-
-	return accessToken, refreshToken, nil
+	return accessToken, nil
 }
 
 func (uc *Refresh) createToken(
-	hash session.RefreshTokenHash,
 	sessionID session.SessionID,
 	parentID session.RefreshTokenID,
 	now time.Time,
-) (*session.RefreshToken, error) {
-	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
+) (*session.RefreshToken, session.RefreshTokenSecret, error) {
+	token, secret, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: sessionID,
-		Hash:      hash,
 		ParentID:  &parentID,
 		CreatedAt: now,
 		ExpiresAt: now.Add(uc.refreshTTL),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("new refresh token failed: %w", err)
+		e := fmt.Errorf("new refresh token failed: %w", err)
+		return nil, session.RefreshTokenSecret{}, e
 	}
-	return token, nil
+	return token, secret, nil
 }
 
 func (uc *Refresh) saveTokens(ctx context.Context, used, new *session.RefreshToken) error {

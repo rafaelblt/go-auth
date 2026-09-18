@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/domain/password"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
@@ -211,14 +212,17 @@ func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {
 	assert.Equal(t, issued.ExpiresAt, output.AccessToken.ExpiresAt)
 }
 
-func TestLogin_GeneratesAndReturnsRefreshToken(t *testing.T) {
+func TestLogin_ReturnsSecretOfSavedRefreshToken(t *testing.T) {
 	helper := NewTestHelper(t)
 
 	output, err := helper.UseCase().Execute(context.Background(), helper.ValidInput())
 	require.NoError(t, err)
 
-	generated := testutil.Only(t, helper.FakeRefreshTokenGenerator.Generated())
-	assert.Equal(t, generated.Raw, output.RefreshToken.Value)
+	token := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
+	secret, err := session.ParseRefreshTokenSecret(output.RefreshToken.Value)
+	require.NoError(t, err)
+	assert.Equal(t, token.Hash(), secret.Hash())
+	assert.Equal(t, token.ExpiresAt(), output.RefreshToken.ExpiresAt)
 }
 
 func TestLogin_ShouldSaveSession(t *testing.T) {
@@ -238,11 +242,9 @@ func TestLogin_ShouldSaveRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 
 	sess := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Adds())
-	generated := testutil.Only(t, helper.FakeRefreshTokenGenerator.Generated())
 	token := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
 
 	assert.Equal(t, sess.ID(), token.SessionID())
-	assert.Equal(t, generated.Hash, token.Hash())
 	assert.False(t, token.HasParent())
 	assert.Equal(t, helper.FakeClock.Now(), token.CreatedAt())
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), token.ExpiresAt())

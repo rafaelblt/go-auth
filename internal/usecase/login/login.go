@@ -23,15 +23,14 @@ type Output struct {
 }
 
 type Login struct {
-	users            port.UserReader
-	passwords        port.PasswordReader
-	pwdChecker       port.PasswordChecker
-	accessIssuer     port.AccessTokenIssuer
-	refreshGenerator port.RefreshTokenGenerator
-	uow              port.UnitOfWork
-	clock            port.Clock
-	refreshTTL       time.Duration
-	dummyHash        password.Hashed
+	users        port.UserReader
+	passwords    port.PasswordReader
+	pwdChecker   port.PasswordChecker
+	accessIssuer port.AccessTokenIssuer
+	uow          port.UnitOfWork
+	clock        port.Clock
+	refreshTTL   time.Duration
+	dummyHash    password.Hashed
 }
 
 var ErrInvalidCredentials = usecase.NewError(
@@ -89,14 +88,8 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("access token issuer failed: %w", err)
 	}
 
-	generatedRefresh, err := uc.refreshGenerator.Generate()
-	if err != nil {
-		return Output{}, fmt.Errorf("refresh token generator failed: %w", err)
-	}
-
-	refreshToken, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
+	refreshToken, refreshSecret, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: sess.ID(),
-		Hash:      generatedRefresh.Hash,
 		ParentID:  nil,
 		CreatedAt: now,
 		ExpiresAt: now.Add(uc.refreshTTL),
@@ -128,7 +121,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 			ExpiresAt: issuedAccess.ExpiresAt,
 		},
 		RefreshToken: usecase.RefreshTokenDTO{
-			Value:     generatedRefresh.Raw,
+			Value:     refreshSecret.Value(),
 			ExpiresAt: refreshToken.ExpiresAt(),
 		},
 	}

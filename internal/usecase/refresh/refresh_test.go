@@ -7,6 +7,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,15 +31,18 @@ func TestRefresh_IssuesAccessToken(t *testing.T) {
 	assert.Equal(t, issued.ExpiresAt, out.AccessToken.ExpiresAt)
 }
 
-func TestRefresh_GeneratesAndReturnsRefreshToken(t *testing.T) {
+func TestRefresh_ReturnsSecretOfAddedRefreshToken(t *testing.T) {
 	helper := NewTestHelper(t)
 	in := helper.ValidInput()
 
 	out, err := helper.UseCase().Execute(context.Background(), in)
 
 	require.NoError(t, err)
-	generated := testutil.Only(t, helper.FakeRefreshTokenGenerator.Generated())
-	assert.Equal(t, generated.Raw, out.RefreshToken.Value)
+	added := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
+	secret, err := session.ParseRefreshTokenSecret(out.RefreshToken.Value)
+	require.NoError(t, err)
+	assert.Equal(t, added.Hash(), secret.Hash())
+	assert.NotEqual(t, in.RefreshToken, out.RefreshToken.Value)
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), out.RefreshToken.ExpiresAt)
 }
 
@@ -56,20 +60,19 @@ func TestRefresh_MarksUsedRefreshToken(t *testing.T) {
 	assert.Equal(t, fixture.Token.ID(), marked.ID())
 }
 
-func TestRefresh_AddGeneratedRefreshToken(t *testing.T) {
+func TestRefresh_AddsNewRefreshToken(t *testing.T) {
 	helper := NewTestHelper(t)
 	fixture := helper.Seed()
 
 	_, err := helper.UseCase().Execute(context.Background(), fixture.Input())
 
 	require.NoError(t, err)
-	expectedHash := testutil.Only(t, helper.FakeRefreshTokenGenerator.Generated()).Hash
 	added := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
 
 	addedParentID, hasParent := added.ParentID()
 	require.True(t, hasParent)
 	assert.Equal(t, fixture.Token.ID(), addedParentID)
-	assert.Equal(t, expectedHash, added.Hash())
+	assert.False(t, fixture.Token.Hash().Equal(added.Hash()))
 	assert.Equal(t, fixture.Token.SessionID(), added.SessionID())
 	assert.Equal(t, helper.FakeClock.Now(), added.CreatedAt())
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), added.ExpiresAt())
@@ -81,6 +84,18 @@ func TestRefresh_ReturnsTokenInvalidError(t *testing.T) {
 	helper := NewTestHelper(t)
 
 	out, err := helper.UseCase().Execute(context.Background(), refresh.Input{RefreshToken: "INVALID TOKEN"})
+
+	assert.ErrorIs(t, err, refresh.ErrTokenInvalid)
+	assert.Zero(t, out)
+	helper.AssertNoAccessTokenIssued()
+	helper.AssertNoWrites()
+}
+
+func TestRefresh_ReturnsTokenInvalidError_WhenTokenIsNotStored(t *testing.T) {
+	helper := NewTestHelper(t)
+	in := refresh.Input{RefreshToken: sessiontest.NewRefreshTokenSecret(t).Value()}
+
+	out, err := helper.UseCase().Execute(context.Background(), in)
 
 	assert.ErrorIs(t, err, refresh.ErrTokenInvalid)
 	assert.Zero(t, out)
@@ -184,12 +199,12 @@ func TestRefresh_ReturnsError_WhenRevokingSessionOfTokenAlreadyUsedFails(t *test
 
 // UNEXPECTED ERRORS
 
-func TestRefresh_ReturnsError_WhenRefreshTokenResolverFails(t *testing.T) {
+func TestRefresh_ReturnsError_WhenRefreshTokenReaderFails(t *testing.T) {
 	helper := NewTestHelper(t)
 	in := helper.ValidInput()
 
 	expectedErr := errors.New("internal error")
-	helper.FakeRefreshTokenResolver.SetError(expectedErr)
+	helper.FakeRefreshTokenReader.SetError(expectedErr)
 
 	out, err := helper.UseCase().Execute(context.Background(), in)
 
@@ -234,21 +249,6 @@ func TestRefresh_ReturnsError_WhenAccessTokenIssuerFails(t *testing.T) {
 
 	expectedErr := errors.New("internal error")
 	helper.FakeAccessTokenIssuer.SetError(expectedErr)
-
-	out, err := helper.UseCase().Execute(context.Background(), in)
-
-	assert.Zero(t, out)
-	assert.ErrorIs(t, err, expectedErr)
-	AssertUnexpectedError(t, err)
-	helper.AssertNoWrites()
-}
-
-func TestRefresh_ReturnsError_WhenRefreshTokenGeneratorFails(t *testing.T) {
-	helper := NewTestHelper(t)
-	in := helper.ValidInput()
-
-	expectedErr := errors.New("internal error")
-	helper.FakeRefreshTokenGenerator.SetError(expectedErr)
 
 	out, err := helper.UseCase().Execute(context.Background(), in)
 

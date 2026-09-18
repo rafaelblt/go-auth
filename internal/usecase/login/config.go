@@ -9,13 +9,12 @@ import (
 )
 
 type Config struct {
-	UserReader            port.UserReader
-	PasswordReader        port.PasswordReader
-	PasswordChecker       port.PasswordChecker
-	AccessTokenIssuer     port.AccessTokenIssuer
-	RefreshTokenGenerator port.RefreshTokenGenerator
-	UnitOfWork            port.UnitOfWork
-	Clock                 port.Clock
+	UserReader        port.UserReader
+	PasswordReader    port.PasswordReader
+	PasswordChecker   port.PasswordChecker
+	AccessTokenIssuer port.AccessTokenIssuer
+	UnitOfWork        port.UnitOfWork
+	Clock             port.Clock
 
 	RefreshTokenTTL time.Duration
 
@@ -37,9 +36,6 @@ func New(cfg Config) (Login, error) {
 	if cfg.AccessTokenIssuer == nil {
 		return Login{}, errors.New("access token issuer cannot be nil")
 	}
-	if cfg.RefreshTokenGenerator == nil {
-		return Login{}, errors.New("refresh token generator cannot be nil")
-	}
 	if cfg.UnitOfWork == nil {
 		return Login{}, errors.New("unit of work cannot be nil")
 	}
@@ -53,15 +49,14 @@ func New(cfg Config) (Login, error) {
 		return Login{}, errors.New("dummy password hash cannot be zero")
 	}
 	uc := Login{
-		users:            cfg.UserReader,
-		passwords:        cfg.PasswordReader,
-		pwdChecker:       cfg.PasswordChecker,
-		accessIssuer:     cfg.AccessTokenIssuer,
-		refreshGenerator: cfg.RefreshTokenGenerator,
-		uow:              cfg.UnitOfWork,
-		clock:            cfg.Clock,
-		refreshTTL:       cfg.RefreshTokenTTL,
-		dummyHash:        cfg.DummyPasswordHash,
+		users:        cfg.UserReader,
+		passwords:    cfg.PasswordReader,
+		pwdChecker:   cfg.PasswordChecker,
+		accessIssuer: cfg.AccessTokenIssuer,
+		uow:          cfg.UnitOfWork,
+		clock:        cfg.Clock,
+		refreshTTL:   cfg.RefreshTokenTTL,
+		dummyHash:    cfg.DummyPasswordHash,
 	}
 	return uc, nil
 }

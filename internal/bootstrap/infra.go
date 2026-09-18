@@ -12,26 +12,23 @@ import (
 	"github.com/rafaelblt/go-auth/internal/infra/jwt"
 	"github.com/rafaelblt/go-auth/internal/infra/jwt/ed25519"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
-	"github.com/rafaelblt/go-auth/internal/infra/refreshtoken"
 	"github.com/rafaelblt/go-auth/internal/port"
 )
 
 type infraDeps struct {
 	pool *pgxpool.Pool
 
-	Clock                 *infra.SystemClock
-	UnitOfWork            *postgres.UnitOfWork
-	Users                 *postgres.UserRepo
-	Passwords             *postgres.PasswordRepo
-	Sessions              *postgres.SessionRepo
-	RefreshTokens         *postgres.RefreshTokenRepo
-	PasswordHasher        *bcrypt.Hasher
-	Ed25519KeyStore       *ed25519.KeyStoreInMemory
-	Ed25519Keyring        *ed25519.Keyring
-	Ed25519Signer         *ed25519.Signer
-	AccessTokenService    *jwt.AccessTokenService
-	RefreshTokenGenerator *refreshtoken.Generator
-	RefreshTokenResolver  *refreshtoken.Resolver
+	Clock              *infra.SystemClock
+	UnitOfWork         *postgres.UnitOfWork
+	Users              *postgres.UserRepo
+	Passwords          *postgres.PasswordRepo
+	Sessions           *postgres.SessionRepo
+	RefreshTokens      *postgres.RefreshTokenRepo
+	PasswordHasher     *bcrypt.Hasher
+	Ed25519KeyStore    *ed25519.KeyStoreInMemory
+	Ed25519Keyring     *ed25519.Keyring
+	Ed25519Signer      *ed25519.Signer
+	AccessTokenService *jwt.AccessTokenService
 }
 
 func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
@@ -102,18 +99,6 @@ func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
 		return infraDeps{}, err
 	}
 	deps.AccessTokenService = accessTokens
-
-	refreshGenerator, err := buildRefreshTokenGenerator()
-	if err != nil {
-		return infraDeps{}, err
-	}
-	deps.RefreshTokenGenerator = refreshGenerator
-
-	refreshResolver, err := buildRefreshTokenResolver(refreshTokens)
-	if err != nil {
-		return infraDeps{}, err
-	}
-	deps.RefreshTokenResolver = refreshResolver
 
 	return deps, nil
 }
@@ -205,19 +190,4 @@ func buildAccessTokenService(signer jwt.Signer, clock port.Clock, exp time.Durat
 		return nil, fmt.Errorf("new access token service failed: %w", err)
 	}
 	return service, nil
-}
-
-func buildRefreshTokenGenerator() (*refreshtoken.Generator, error) {
-	generator := refreshtoken.NewGenerator()
-	return generator, nil
-}
-
-func buildRefreshTokenResolver(reader port.RefreshTokenReader) (*refreshtoken.Resolver, error) {
-	resolver, err := refreshtoken.NewResolver(refreshtoken.ResolverConfig{
-		RefreshTokenReader: reader,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("new refresh token resolver failed: %w", err)
-	}
-	return resolver, nil
 }

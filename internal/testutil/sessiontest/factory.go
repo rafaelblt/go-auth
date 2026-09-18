@@ -53,6 +53,22 @@ func NewRefreshToken(t *testing.T, override func(p *session.RefreshTokenRestoreP
 	return entity
 }
 
+// NewRefreshTokenSecret returns a fresh secret. It goes through
+// session.NewRefreshToken, the only way the domain hands one out, and drops
+// the token.
+func NewRefreshTokenSecret(t *testing.T) session.RefreshTokenSecret {
+	t.Helper()
+
+	now := time.Now()
+	_, secret, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
+		SessionID: session.NewSessionID(),
+		CreatedAt: now,
+		ExpiresAt: now,
+	})
+	require.NoError(t, err)
+	return secret
+}
+
 // NewRefreshTokenHash returns a valid hash derived from seed, so equal seeds
 // give equal hashes and different seeds give different ones.
 func NewRefreshTokenHash(t *testing.T, seed string) session.RefreshTokenHash {

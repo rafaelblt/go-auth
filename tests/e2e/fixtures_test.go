@@ -1,9 +1,6 @@
 package e2e
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"testing"
 	"time"
 
@@ -100,15 +97,15 @@ func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, stri
 
 	sess := f.CreateSession(t)
 
-	raw, hash := f.generateRefreshTokenAndHash(t)
+	secret := sessiontest.NewRefreshTokenSecret(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = hash
+		p.Hash = secret.Hash()
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 	})
 	f.SaveRefreshToken(t, token)
 
-	return token, raw
+	return token, secret.Value()
 }
 
 func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToken, string) {
@@ -116,15 +113,15 @@ func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToke
 
 	sess := f.CreateSession(t)
 
-	raw, hash := f.generateRefreshTokenAndHash(t)
+	secret := sessiontest.NewRefreshTokenSecret(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = hash
+		p.Hash = secret.Hash()
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC()
 	})
 	f.SaveRefreshToken(t, token)
 
-	return token, raw
+	return token, secret.Value()
 }
 
 func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.RefreshToken, string) {
@@ -132,16 +129,16 @@ func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.Refresh
 
 	sess := f.CreateSession(t)
 
-	raw, hash := f.generateRefreshTokenAndHash(t)
+	secret := sessiontest.NewRefreshTokenSecret(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = hash
+		p.Hash = secret.Hash()
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 		p.UsedAt = shared.Ptr(time.Now().UTC())
 	})
 	f.SaveRefreshToken(t, token)
 
-	return token, raw
+	return token, secret.Value()
 }
 
 func (f *Fixtures) CreateRefreshTokenWithSessionRevoked(t *testing.T) (*session.RefreshToken, string) {
@@ -149,26 +146,13 @@ func (f *Fixtures) CreateRefreshTokenWithSessionRevoked(t *testing.T) (*session.
 
 	sess := f.CreateSessionRevoked(t)
 
-	raw, hash := f.generateRefreshTokenAndHash(t)
+	secret := sessiontest.NewRefreshTokenSecret(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = hash
+		p.Hash = secret.Hash()
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 	})
 	f.SaveRefreshToken(t, token)
 
-	return token, raw
-}
-
-func (f *Fixtures) generateRefreshTokenAndHash(t *testing.T) (string, session.RefreshTokenHash) {
-	token := make([]byte, 16)
-
-	_, err := rand.Read(token)
-	require.NoError(t, err, "rand read failed")
-
-	sum := sha256.Sum256(token)
-	hash, err := session.NewRefreshTokenHash(sum[:])
-	require.NoError(t, err, "new refresh token hash failed")
-
-	return base64.RawURLEncoding.EncodeToString(token), hash
+	return token, secret.Value()
 }

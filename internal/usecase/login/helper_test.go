@@ -14,30 +14,28 @@ import (
 )
 
 type TestHelper struct {
-	t                         *testing.T
-	FakeUserReader            *porttest.FakeUserReader
-	FakePasswordReader        *porttest.FakePasswordReader
-	FakePasswordChecker       *porttest.FakePasswordChecker
-	FakeAccessTokenIssuer     *porttest.FakeAccessTokenIssuer
-	FakeRefreshTokenGenerator *porttest.FakeRefreshTokenGenerator
-	FakeUnitOfWork            *porttest.FakeUnitOfWork
-	FakeClock                 *porttest.FakeClock
-	RefreshTokenTTL           time.Duration
-	DummyPasswordHash         password.Hashed
+	t                     *testing.T
+	FakeUserReader        *porttest.FakeUserReader
+	FakePasswordReader    *porttest.FakePasswordReader
+	FakePasswordChecker   *porttest.FakePasswordChecker
+	FakeAccessTokenIssuer *porttest.FakeAccessTokenIssuer
+	FakeUnitOfWork        *porttest.FakeUnitOfWork
+	FakeClock             *porttest.FakeClock
+	RefreshTokenTTL       time.Duration
+	DummyPasswordHash     password.Hashed
 }
 
 func NewTestHelper(t *testing.T) TestHelper {
 	helper := TestHelper{
-		t:                         t,
-		FakeUserReader:            porttest.NewFakeUserReader(),
-		FakePasswordReader:        porttest.NewFakePasswordReader(),
-		FakePasswordChecker:       porttest.NewFakePasswordChecker(),
-		FakeAccessTokenIssuer:     porttest.NewFakeAccessTokenIssuer(),
-		FakeRefreshTokenGenerator: porttest.NewFakeRefreshTokenGenerator(),
-		FakeUnitOfWork:            porttest.NewFakeUnitOfWork(),
-		FakeClock:                 porttest.NewFakeClock(),
-		RefreshTokenTTL:           24 * time.Hour,
-		DummyPasswordHash:         passwordtest.MustHashed(t, "dummy-hash"),
+		t:                     t,
+		FakeUserReader:        porttest.NewFakeUserReader(),
+		FakePasswordReader:    porttest.NewFakePasswordReader(),
+		FakePasswordChecker:   porttest.NewFakePasswordChecker(),
+		FakeAccessTokenIssuer: porttest.NewFakeAccessTokenIssuer(),
+		FakeUnitOfWork:        porttest.NewFakeUnitOfWork(),
+		FakeClock:             porttest.NewFakeClock(),
+		RefreshTokenTTL:       24 * time.Hour,
+		DummyPasswordHash:     passwordtest.MustHashed(t, "dummy-hash"),
 	}
 	return helper
 }
@@ -45,15 +43,14 @@ func NewTestHelper(t *testing.T) TestHelper {
 func (helper TestHelper) UseCase() login.Login {
 	helper.t.Helper()
 	uc, err := login.New(login.Config{
-		UserReader:            helper.FakeUserReader,
-		PasswordReader:        helper.FakePasswordReader,
-		PasswordChecker:       helper.FakePasswordChecker,
-		AccessTokenIssuer:     helper.FakeAccessTokenIssuer,
-		RefreshTokenGenerator: helper.FakeRefreshTokenGenerator,
-		UnitOfWork:            helper.FakeUnitOfWork,
-		Clock:                 helper.FakeClock,
-		RefreshTokenTTL:       helper.RefreshTokenTTL,
-		DummyPasswordHash:     helper.DummyPasswordHash,
+		UserReader:        helper.FakeUserReader,
+		PasswordReader:    helper.FakePasswordReader,
+		PasswordChecker:   helper.FakePasswordChecker,
+		AccessTokenIssuer: helper.FakeAccessTokenIssuer,
+		UnitOfWork:        helper.FakeUnitOfWork,
+		Clock:             helper.FakeClock,
+		RefreshTokenTTL:   helper.RefreshTokenTTL,
+		DummyPasswordHash: helper.DummyPasswordHash,
 	})
 	require.NoError(helper.t, err)
 	return uc

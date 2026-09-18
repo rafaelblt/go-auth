@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -36,7 +37,6 @@ type RefreshToken struct {
 
 type RefreshTokenCreationParams struct {
 	SessionID SessionID
-	Hash      RefreshTokenHash
 	ParentID  *RefreshTokenID
 	CreatedAt time.Time
 	ExpiresAt time.Time
@@ -53,29 +53,33 @@ type RefreshTokenRestoreParams struct {
 	UpdatedAt time.Time
 }
 
-func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, error) {
+// NewRefreshToken returns the token together with its secret. The token keeps
+// only the hash, so the returned secret is the one chance to hand it out.
+func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, RefreshTokenSecret, error) {
 	if params.SessionID.IsZero() {
-		return nil, errors.New("session id zero")
-	}
-	if params.Hash.IsZero() {
-		return nil, errors.New("hash zero")
+		return nil, RefreshTokenSecret{}, errors.New("session id zero")
 	}
 	if params.ParentID != nil && params.ParentID.IsZero() {
-		return nil, errors.New("parent id zero")
+		return nil, RefreshTokenSecret{}, errors.New("parent id zero")
 	}
 	if params.CreatedAt.After(params.ExpiresAt) {
-		return nil, errors.New("created at after expires at")
+		return nil, RefreshTokenSecret{}, errors.New("created at after expires at")
+	}
+	secret, err := newRefreshTokenSecret()
+	if err != nil {
+		e := fmt.Errorf("refresh token secret creation failed: %w", err)
+		return nil, RefreshTokenSecret{}, e
 	}
 	token := RefreshToken{
 		id:        NewRefreshTokenID(),
 		sessionID: params.SessionID,
-		hash:      params.Hash,
+		hash:      secret.Hash(),
 		parentID:  shared.ClonePtr(params.ParentID),
 		expiresAt: params.ExpiresAt,
 		createdAt: params.CreatedAt,
 		updatedAt: params.CreatedAt,
 	}
-	return &token, nil
+	return &token, secret, nil
 }
 
 func RestoreRefreshToken(params RefreshTokenRestoreParams) (*RefreshToken, error) {

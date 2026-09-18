@@ -62,15 +62,14 @@ func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
 	}
 
 	uc, err := login.New(login.Config{
-		UserReader:            deps.Users,
-		PasswordReader:        deps.Passwords,
-		PasswordChecker:       deps.PasswordHasher,
-		AccessTokenIssuer:     deps.AccessTokenService,
-		RefreshTokenGenerator: deps.RefreshTokenGenerator,
-		UnitOfWork:            deps.UnitOfWork,
-		Clock:                 deps.Clock,
-		RefreshTokenTTL:       cfg.RefreshTokenTTL(),
-		DummyPasswordHash:     dummyHash,
+		UserReader:        deps.Users,
+		PasswordReader:    deps.Passwords,
+		PasswordChecker:   deps.PasswordHasher,
+		AccessTokenIssuer: deps.AccessTokenService,
+		UnitOfWork:        deps.UnitOfWork,
+		Clock:             deps.Clock,
+		RefreshTokenTTL:   cfg.RefreshTokenTTL(),
+		DummyPasswordHash: dummyHash,
 	})
 	if err != nil {
 		return login.Login{}, fmt.Errorf("login creation failed: %w", err)
@@ -95,13 +94,12 @@ func newDummyPasswordHash(hasher port.PasswordHasher) (password.Hashed, error) {
 
 func buildRefresh(cfg config.Config, deps infraDeps) (*refresh.Refresh, error) {
 	uc, err := refresh.New(refresh.Config{
-		SessionReader:         deps.Sessions,
-		AccessTokenIssuer:     deps.AccessTokenService,
-		RefreshTokenResolver:  deps.RefreshTokenResolver,
-		RefreshTokenGenerator: deps.RefreshTokenGenerator,
-		UnitOfWork:            deps.UnitOfWork,
-		Clock:                 deps.Clock,
-		RefreshTokenTTL:       cfg.RefreshTokenTTL(),
+		SessionReader:      deps.Sessions,
+		AccessTokenIssuer:  deps.AccessTokenService,
+		RefreshTokenReader: deps.RefreshTokens,
+		UnitOfWork:         deps.UnitOfWork,
+		Clock:              deps.Clock,
+		RefreshTokenTTL:    cfg.RefreshTokenTTL(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("refresh creation failed: %w", err)
