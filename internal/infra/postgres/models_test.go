@@ -357,7 +357,7 @@ func TestMapRefreshTokenToEntity(t *testing.T) {
 			model: refreshTokenModel{
 				ID:        shared.NewEntityID().String(),
 				SessionID: shared.NewEntityID().String(),
-				Hash:      []byte{2, 0, 3, 0},
+				Hash:      sessiontest.NewRefreshTokenHash(t, "model").Value(),
 				CreatedAt: time.Now().UTC(),
 				ExpiresAt: time.Now().UTC(),
 			},
@@ -368,7 +368,7 @@ func TestMapRefreshTokenToEntity(t *testing.T) {
 				ID:        shared.NewEntityID().String(),
 				SessionID: shared.NewEntityID().String(),
 				ParentID:  shared.Ptr(shared.NewEntityID().String()),
-				Hash:      []byte{2, 0, 3, 0},
+				Hash:      sessiontest.NewRefreshTokenHash(t, "model").Value(),
 				UsedAt:    shared.Ptr(time.Now().UTC()),
 				CreatedAt: time.Now().UTC(),
 				ExpiresAt: time.Now().UTC(),

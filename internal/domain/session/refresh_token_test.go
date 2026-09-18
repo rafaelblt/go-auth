@@ -21,7 +21,7 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "session id zero",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.SessionID{},
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -43,7 +43,7 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "parent id zero",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.RefreshTokenID{}),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -54,7 +54,7 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "created at after expires at",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now().Add(time.Minute),
 				ExpiresAt: time.Now(),
@@ -65,7 +65,7 @@ func TestNewRefreshToken(t *testing.T) {
 			desc: "valid case",
 			params: session.RefreshTokenCreationParams{
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -99,7 +99,7 @@ func TestNewRefreshToken_ClonesParentID(t *testing.T) {
 	provided := shared.Ptr(session.NewRefreshTokenID())
 	token, err := session.NewRefreshToken(session.RefreshTokenCreationParams{
 		SessionID: session.NewSessionID(),
-		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+		Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 		ParentID:  provided,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
@@ -125,7 +125,7 @@ func TestRestoreRefreshToken(t *testing.T) {
 			params: session.RefreshTokenRestoreParams{
 				ID:        session.RefreshTokenID{},
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -138,7 +138,7 @@ func TestRestoreRefreshToken(t *testing.T) {
 			params: session.RefreshTokenRestoreParams{
 				ID:        session.NewRefreshTokenID(),
 				SessionID: session.SessionID{},
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -164,7 +164,7 @@ func TestRestoreRefreshToken(t *testing.T) {
 			params: session.RefreshTokenRestoreParams{
 				ID:        session.NewRefreshTokenID(),
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.RefreshTokenID{}),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -177,7 +177,7 @@ func TestRestoreRefreshToken(t *testing.T) {
 			params: session.RefreshTokenRestoreParams{
 				ID:        session.NewRefreshTokenID(),
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  nil,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -189,7 +189,7 @@ func TestRestoreRefreshToken(t *testing.T) {
 			params: session.RefreshTokenRestoreParams{
 				ID:        session.NewRefreshTokenID(),
 				SessionID: session.NewSessionID(),
-				Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+				Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 				ParentID:  shared.Ptr(session.NewRefreshTokenID()),
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now(),
@@ -224,7 +224,7 @@ func TestRestoreRefreshToken_ClonesParentID(t *testing.T) {
 	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
-		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+		Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 		ParentID:  provided,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
@@ -243,7 +243,7 @@ func TestRestoreRefreshToken_ClonesUsedAt(t *testing.T) {
 	token, err := session.RestoreRefreshToken(session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
-		Hash:      sessiontest.MustRefreshTokenHash(t, []byte{1}),
+		Hash:      sessiontest.NewRefreshTokenHash(t, "hash"),
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now(),
 		UsedAt:    provided,

@@ -77,12 +77,12 @@ func refreshTokenPair(t *testing.T, sess *session.Session) (root, child *session
 
 	root = sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
 		p.SessionID = sess.ID()
-		p.Hash = sessiontest.MustRefreshTokenHash(t, []byte("root hash"))
+		p.Hash = sessiontest.NewRefreshTokenHash(t, "root")
 		p.UsedAt = shared.Ptr(time.Date(1990, 4, 24, 12, 33, 0, 0, time.UTC))
 	})
 	child = sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
 		p.SessionID = sess.ID()
-		p.Hash = sessiontest.MustRefreshTokenHash(t, []byte("child hash"))
+		p.Hash = sessiontest.NewRefreshTokenHash(t, "child")
 		p.ParentID = shared.Ptr(root.ID())
 	})
 
@@ -152,7 +152,7 @@ func TestCheckRefreshTokenExists(t *testing.T) {
 			p.ParentID = shared.Ptr(session.NewRefreshTokenID())
 		}), false},
 		{"hash differs", refreshTokenWith(t, child, func(p *session.RefreshTokenRestoreParams) {
-			p.Hash = sessiontest.MustRefreshTokenHash(t, []byte("other hash"))
+			p.Hash = sessiontest.NewRefreshTokenHash(t, "other")
 		}), false},
 		{"expires at differs", refreshTokenWith(t, child, func(p *session.RefreshTokenRestoreParams) {
 			p.ExpiresAt = p.ExpiresAt.Add(time.Second)

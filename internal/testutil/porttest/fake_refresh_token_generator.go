@@ -1,6 +1,8 @@
 package porttest
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/rafaelblt/go-auth/internal/domain/session"
@@ -20,7 +22,7 @@ func (rtg *FakeRefreshTokenGenerator) Generate() (port.RefreshTokenGenerated, er
 	if rtg.err != nil {
 		return port.RefreshTokenGenerated{}, rtg.err
 	}
-	hash, err := session.NewRefreshTokenHash([]byte{2, 0, 0, 4})
+	hash, err := session.NewRefreshTokenHash(bytes.Repeat([]byte{2}, sha256.Size))
 	if err != nil {
 		e := fmt.Errorf("refresh token hash creation failed: %w", err)
 		return port.RefreshTokenGenerated{}, e

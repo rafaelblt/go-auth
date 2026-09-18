@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,12 +17,22 @@ func TestNewRefreshTokenHash(t *testing.T) {
 	}{
 		{
 			desc:      "valid case",
-			input:     []byte{1, 2, 3, 4, 5},
+			input:     bytes.Repeat([]byte{1}, sha256.Size),
 			expectErr: false,
 		},
 		{
 			desc:      "empty",
 			input:     []byte{},
+			expectErr: true,
+		},
+		{
+			desc:      "shorter than sha256 size",
+			input:     bytes.Repeat([]byte{1}, sha256.Size-1),
+			expectErr: true,
+		},
+		{
+			desc:      "longer than sha256 size",
+			input:     bytes.Repeat([]byte{1}, sha256.Size+1),
 			expectErr: true,
 		},
 	}
@@ -40,7 +51,7 @@ func TestNewRefreshTokenHash(t *testing.T) {
 }
 
 func TestNewRefreshTokenHash_CloneBytes(t *testing.T) {
-	v := []byte{1, 2, 3, 4, 5}
+	v := bytes.Repeat([]byte{1}, sha256.Size)
 
 	hash, err := NewRefreshTokenHash(v)
 	require.NoError(t, err)
@@ -50,11 +61,11 @@ func TestNewRefreshTokenHash_CloneBytes(t *testing.T) {
 }
 
 func TestRefreshTokenHash_Value_ReturnsClone(t *testing.T) {
-	hash, err := NewRefreshTokenHash([]byte{1, 2, 3, 4, 5})
+	hash, err := NewRefreshTokenHash(bytes.Repeat([]byte{1}, sha256.Size))
 	require.NoError(t, err)
 
 	value := hash.Value()
 	value[0] = 9
 
-	assert.Equal(t, []byte{1, 2, 3, 4, 5}, hash.value, "byte slice is not cloned")
+	assert.Equal(t, bytes.Repeat([]byte{1}, sha256.Size), hash.value, "byte slice is not cloned")
 }

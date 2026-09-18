@@ -218,7 +218,7 @@ func TestRefreshTokenRepo_FindByHash_ReturnsNil_WhenHashNotExists(t *testing.T) 
 	helper := NewRefreshTokenRepoTestHelper(t)
 	repo := helper.Repo()
 
-	hash := sessiontest.MustRefreshTokenHash(t, []byte{6, 7})
+	hash := sessiontest.NewRefreshTokenHash(t, "missing")
 	found, err := repo.FindByHash(t.Context(), hash)
 
 	assert.NoError(t, err)

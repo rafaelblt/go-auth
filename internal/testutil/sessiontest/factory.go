@@ -1,6 +1,7 @@
 package sessiontest
 
 import (
+	"crypto/sha256"
 	"testing"
 	"time"
 
@@ -35,7 +36,7 @@ func NewRefreshToken(t *testing.T, override func(p *session.RefreshTokenRestoreP
 	params := session.RefreshTokenRestoreParams{
 		ID:        session.NewRefreshTokenID(),
 		SessionID: session.NewSessionID(),
-		Hash:      MustRefreshTokenHash(t, []byte{0, 1, 0, 7, 2, 0, 2, 6}),
+		Hash:      NewRefreshTokenHash(t, "default"),
 		ParentID:  nil,
 		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
 		UsedAt:    nil,
@@ -50,4 +51,15 @@ func NewRefreshToken(t *testing.T, override func(p *session.RefreshTokenRestoreP
 	entity, err := session.RestoreRefreshToken(params)
 	require.NoError(t, err)
 	return entity
+}
+
+// NewRefreshTokenHash returns a valid hash derived from seed, so equal seeds
+// give equal hashes and different seeds give different ones.
+func NewRefreshTokenHash(t *testing.T, seed string) session.RefreshTokenHash {
+	t.Helper()
+
+	sum := sha256.Sum256([]byte(seed))
+	hash, err := session.NewRefreshTokenHash(sum[:])
+	require.NoError(t, err)
+	return hash
 }

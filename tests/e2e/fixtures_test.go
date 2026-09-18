@@ -102,7 +102,7 @@ func (f *Fixtures) CreateRefreshToken(t *testing.T) (*session.RefreshToken, stri
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.Hash = hash
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 	})
@@ -118,7 +118,7 @@ func (f *Fixtures) CreateRefreshTokenExpired(t *testing.T) (*session.RefreshToke
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.Hash = hash
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC()
 	})
@@ -134,7 +134,7 @@ func (f *Fixtures) CreateRefreshTokenAlreadyUsed(t *testing.T) (*session.Refresh
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.Hash = hash
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 		p.UsedAt = shared.Ptr(time.Now().UTC())
@@ -151,7 +151,7 @@ func (f *Fixtures) CreateRefreshTokenWithSessionRevoked(t *testing.T) (*session.
 
 	raw, hash := f.generateRefreshTokenAndHash(t)
 	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
-		p.Hash = sessiontest.MustRefreshTokenHash(t, hash)
+		p.Hash = hash
 		p.SessionID = sess.ID()
 		p.ExpiresAt = time.Now().UTC().Add(time.Hour)
 	})
@@ -160,13 +160,15 @@ func (f *Fixtures) CreateRefreshTokenWithSessionRevoked(t *testing.T) (*session.
 	return token, raw
 }
 
-func (f *Fixtures) generateRefreshTokenAndHash(t *testing.T) (string, []byte) {
+func (f *Fixtures) generateRefreshTokenAndHash(t *testing.T) (string, session.RefreshTokenHash) {
 	token := make([]byte, 16)
 
 	_, err := rand.Read(token)
 	require.NoError(t, err, "rand read failed")
 
 	sum := sha256.Sum256(token)
+	hash, err := session.NewRefreshTokenHash(sum[:])
+	require.NoError(t, err, "new refresh token hash failed")
 
-	return base64.RawURLEncoding.EncodeToString(token), sum[:]
+	return base64.RawURLEncoding.EncodeToString(token), hash
 }
