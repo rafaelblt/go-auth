@@ -40,6 +40,7 @@ The service shape and how layers depend on each other. How it works:
 | 0020 | [Two token types](0020-two-token-types.md) | Accepted |
 | 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | Accepted |
 | 0048 | [A duplicate username is reported by the user writer](0048-duplicate-username-reported-by-the-writer.md) | Accepted |
+| 0049 | [The refresh token secret belongs to the domain](0049-refresh-token-secret-in-the-domain.md) | Accepted |
 
 ### Domain
 
@@ -61,6 +62,7 @@ How it works: [Domain model](../../architecture/domain-model.md).
 | 0013 | [Username as a separate entity](0013-username-as-separate-entity.md) | Proposed |
 | 0014 | [`Issues` rather than `error` from input constructors](0014-input-constructors-return-issues.md) | Accepted |
 | 0048 | [A duplicate username is reported by the user writer](0048-duplicate-username-reported-by-the-writer.md) | Accepted |
+| 0049 | [The refresh token secret belongs to the domain](0049-refresh-token-secret-in-the-domain.md) | Accepted |
 
 ### Validation
 
@@ -98,6 +100,7 @@ Token formats, signing, rotation and reuse detection. How it works:
 | 0045 | [Login verifies a dummy hash when the account is missing](0045-login-dummy-hash.md) | Accepted |
 | 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | Accepted |
 | 0047 | [A refresh that loses the race for its token is reuse](0047-lost-refresh-race-is-reuse.md) | Accepted |
+| 0049 | [The refresh token secret belongs to the domain](0049-refresh-token-secret-in-the-domain.md) | Accepted |
 
 ### API
 
