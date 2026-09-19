@@ -59,7 +59,7 @@ type RefreshTokenDTO struct {
 }
 
 // MapRefreshTokenToDTO takes the secret apart from the token because the token
-// keeps only its hash. Both come from the same session.NewRefreshToken call.
+// keeps only its hash.
 func MapRefreshTokenToDTO(token *session.RefreshToken, secret session.RefreshTokenSecret) RefreshTokenDTO {
 	if token == nil {
 		panic("cannot map a nil refresh token to dto")
