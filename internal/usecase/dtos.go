@@ -3,6 +3,7 @@ package usecase
 import (
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
 )
@@ -55,6 +56,25 @@ func (dto AccessTokenDTO) IsZero() bool { return dto.Value == "" }
 type RefreshTokenDTO struct {
 	Value     string
 	ExpiresAt time.Time
+}
+
+// MapRefreshTokenToDTO takes the secret apart from the token because the token
+// keeps only its hash. Both come from the same session.NewRefreshToken call.
+func MapRefreshTokenToDTO(token *session.RefreshToken, secret session.RefreshTokenSecret) RefreshTokenDTO {
+	if token == nil {
+		panic("cannot map a nil refresh token to dto")
+	}
+	if token.IsZero() {
+		panic("cannot map a zero refresh token to dto")
+	}
+	if secret.IsZero() {
+		panic("cannot map a zero refresh token secret to dto")
+	}
+	dto := RefreshTokenDTO{
+		Value:     secret.Value(),
+		ExpiresAt: token.ExpiresAt(),
+	}
+	return dto
 }
 
 func (dto RefreshTokenDTO) IsZero() bool { return dto.Value == "" }

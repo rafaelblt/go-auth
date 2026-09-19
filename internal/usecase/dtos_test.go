@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
@@ -69,4 +70,45 @@ func TestMapAccessTokenIssuedToDTO_PanicsWithZeroToken(t *testing.T) {
 		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
 	}
 	assert.Panics(t, func() { usecase.MapAccessTokenIssuedToDTO(issued) })
+}
+
+func TestMapRefreshTokenToDTO(t *testing.T) {
+	token := sessiontest.NewRefreshToken(t, nil)
+	secret := sessiontest.NewRefreshTokenSecret(t)
+
+	dto := usecase.MapRefreshTokenToDTO(token, secret)
+
+	assert.Equal(t, secret.Value(), dto.Value)
+	assert.Equal(t, token.ExpiresAt(), dto.ExpiresAt)
+}
+
+func TestMapRefreshTokenToDTO_Panics(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		token  *session.RefreshToken
+		secret session.RefreshTokenSecret
+	}{
+		{
+			desc:   "token nil",
+			token:  nil,
+			secret: sessiontest.NewRefreshTokenSecret(t),
+		},
+		{
+			desc:   "token zero",
+			token:  &session.RefreshToken{},
+			secret: sessiontest.NewRefreshTokenSecret(t),
+		},
+		{
+			desc:   "secret zero",
+			token:  sessiontest.NewRefreshToken(t, nil),
+			secret: session.RefreshTokenSecret{},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Panics(t, func() {
+				usecase.MapRefreshTokenToDTO(tC.token, tC.secret)
+			})
+		})
+	}
 }
