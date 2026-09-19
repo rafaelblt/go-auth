@@ -2,8 +2,11 @@ package usecase_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain/user"
+	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
@@ -47,4 +50,23 @@ func TestMapUserToDTO(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMapAccessTokenIssuedToDTO(t *testing.T) {
+	issued := port.AccessTokenIssued{
+		Token:     sessiontest.MustAccessToken(t, "access"),
+		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
+	}
+
+	dto := usecase.MapAccessTokenIssuedToDTO(issued)
+
+	assert.Equal(t, issued.Token.Value(), dto.Value)
+	assert.Equal(t, issued.ExpiresAt, dto.ExpiresAt)
+}
+
+func TestMapAccessTokenIssuedToDTO_PanicsWithZeroToken(t *testing.T) {
+	issued := port.AccessTokenIssued{
+		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
+	}
+	assert.Panics(t, func() { usecase.MapAccessTokenIssuedToDTO(issued) })
 }
