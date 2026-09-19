@@ -157,14 +157,8 @@ func (uc *Refresh) rotate(
 	}
 
 	output := Output{
-		AccessToken: usecase.AccessTokenDTO{
-			Value:     accessData.Token.Value(),
-			ExpiresAt: accessData.ExpiresAt,
-		},
-		RefreshToken: usecase.RefreshTokenDTO{
-			Value:     newSecret.Value(),
-			ExpiresAt: newToken.ExpiresAt(),
-		},
+		AccessToken:  usecase.MapAccessTokenIssuedToDTO(accessData),
+		RefreshToken: usecase.MapRefreshTokenToDTO(newToken, newSecret),
 	}
 	return output, nil
 }
