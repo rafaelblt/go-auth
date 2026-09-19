@@ -91,7 +91,7 @@ func TestRegister_ReturnsOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotZero(t, output)
-	assert.Equal(t, input.Username, output.User.Username)
+	assert.Equal(t, input.Username, output.User.Username())
 }
 
 func TestRegister_ReturnsError_WhenUsernameAlreadyExists(t *testing.T) {
@@ -128,7 +128,7 @@ func TestRegister_ShouldUseClock(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotZero(t, output)
-	assert.Equal(t, helper.FakeClock.Now(), output.User.CreatedAt)
+	assert.Equal(t, helper.FakeClock.Now(), output.User.CreatedAt())
 }
 
 func TestRegister_SavesNewUser(t *testing.T) {

@@ -19,11 +19,11 @@ func mapUserDTO(dto usecase.UserDTO) user {
 		panic("the mapUserDTO() func received a zero UserDTO")
 	}
 	user := user{
-		ID:        dto.ID,
-		Username:  dto.Username,
-		Status:    dto.Status,
-		CreatedAt: dto.CreatedAt,
-		UpdatedAt: dto.UpdatedAt,
+		ID:        dto.ID(),
+		Username:  dto.Username(),
+		Status:    dto.Status(),
+		CreatedAt: dto.CreatedAt(),
+		UpdatedAt: dto.UpdatedAt(),
 	}
 	return user
 }
@@ -38,8 +38,8 @@ func mapAccessTokenDTO(dto usecase.AccessTokenDTO) accessToken {
 		panic("the mapAccessTokenDTO() func received a zero AccessTokenDTO")
 	}
 	token := accessToken{
-		Value:     dto.Value,
-		ExpiresAt: dto.ExpiresAt,
+		Value:     dto.Value(),
+		ExpiresAt: dto.ExpiresAt(),
 	}
 	return token
 }
@@ -54,7 +54,7 @@ func mapRefreshTokenDTO(dto usecase.RefreshTokenDTO) refreshToken {
 	if dto.IsZero() {
 		panic("the mapRefreshTokenDTO() func received a zero RefreshTokenDTO")
 	}
-	token.Value = dto.Value
-	token.ExpiresAt = dto.ExpiresAt
+	token.Value = dto.Value()
+	token.ExpiresAt = dto.ExpiresAt()
 	return token
 }

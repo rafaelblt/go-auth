@@ -9,14 +9,19 @@ import (
 )
 
 type UserDTO struct {
-	ID        string
-	Username  string
-	Status    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	id        string
+	username  string
+	status    string
+	createdAt time.Time
+	updatedAt time.Time
 }
 
-func (dto UserDTO) IsZero() bool { return dto.ID == "" }
+func (dto UserDTO) ID() string           { return dto.id }
+func (dto UserDTO) Username() string     { return dto.username }
+func (dto UserDTO) Status() string       { return dto.status }
+func (dto UserDTO) CreatedAt() time.Time { return dto.createdAt }
+func (dto UserDTO) UpdatedAt() time.Time { return dto.updatedAt }
+func (dto UserDTO) IsZero() bool         { return dto.id == "" }
 
 func MapUserToDTO(user *user.User) UserDTO {
 	if user == nil {
@@ -26,37 +31,43 @@ func MapUserToDTO(user *user.User) UserDTO {
 		panic("cannot map a zero user to dto")
 	}
 	dto := UserDTO{
-		ID:        user.ID().Value().String(),
-		Username:  user.Username().String(),
-		Status:    user.Status().String(),
-		CreatedAt: user.CreatedAt(),
-		UpdatedAt: user.UpdatedAt(),
+		id:        user.ID().Value().String(),
+		username:  user.Username().String(),
+		status:    user.Status().String(),
+		createdAt: user.CreatedAt(),
+		updatedAt: user.UpdatedAt(),
 	}
 	return dto
 }
 
 type AccessTokenDTO struct {
-	Value     string
-	ExpiresAt time.Time
+	value     string
+	expiresAt time.Time
 }
+
+func (dto AccessTokenDTO) Value() string        { return dto.value }
+func (dto AccessTokenDTO) ExpiresAt() time.Time { return dto.expiresAt }
+func (dto AccessTokenDTO) IsZero() bool         { return dto.value == "" }
 
 func MapAccessTokenIssuedToDTO(issued port.AccessTokenIssued) AccessTokenDTO {
 	if issued.Token.IsZero() {
 		panic("cannot map a zero access token to dto")
 	}
 	dto := AccessTokenDTO{
-		Value:     issued.Token.Value(),
-		ExpiresAt: issued.ExpiresAt,
+		value:     issued.Token.Value(),
+		expiresAt: issued.ExpiresAt,
 	}
 	return dto
 }
 
-func (dto AccessTokenDTO) IsZero() bool { return dto.Value == "" }
-
 type RefreshTokenDTO struct {
-	Value     string
-	ExpiresAt time.Time
+	value     string
+	expiresAt time.Time
 }
+
+func (dto RefreshTokenDTO) Value() string        { return dto.value }
+func (dto RefreshTokenDTO) ExpiresAt() time.Time { return dto.expiresAt }
+func (dto RefreshTokenDTO) IsZero() bool         { return dto.value == "" }
 
 // MapRefreshTokenToDTO takes the secret apart from the token because the token
 // keeps only its hash.
@@ -71,10 +82,8 @@ func MapRefreshTokenToDTO(token *session.RefreshToken, secret session.RefreshTok
 		panic("cannot map a zero refresh token secret to dto")
 	}
 	dto := RefreshTokenDTO{
-		Value:     secret.Value(),
-		ExpiresAt: token.ExpiresAt(),
+		value:     secret.Value(),
+		expiresAt: token.ExpiresAt(),
 	}
 	return dto
 }
-
-func (dto RefreshTokenDTO) IsZero() bool { return dto.Value == "" }

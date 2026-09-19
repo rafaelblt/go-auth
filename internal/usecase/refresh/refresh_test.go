@@ -27,8 +27,8 @@ func TestRefresh_IssuesAccessToken(t *testing.T) {
 	assert.Equal(t, fixture.Session.UserID(), payload.UserID)
 
 	issued := testutil.Only(t, helper.FakeAccessTokenIssuer.Issueds())
-	assert.Equal(t, issued.Token.Value(), out.AccessToken.Value)
-	assert.Equal(t, issued.ExpiresAt, out.AccessToken.ExpiresAt)
+	assert.Equal(t, issued.Token.Value(), out.AccessToken.Value())
+	assert.Equal(t, issued.ExpiresAt, out.AccessToken.ExpiresAt())
 }
 
 func TestRefresh_ReturnsSecretOfAddedRefreshToken(t *testing.T) {
@@ -39,11 +39,11 @@ func TestRefresh_ReturnsSecretOfAddedRefreshToken(t *testing.T) {
 
 	require.NoError(t, err)
 	added := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
-	secret, err := session.ParseRefreshTokenSecret(out.RefreshToken.Value)
+	secret, err := session.ParseRefreshTokenSecret(out.RefreshToken.Value())
 	require.NoError(t, err)
 	assert.Equal(t, added.Hash(), secret.Hash())
-	assert.NotEqual(t, in.RefreshToken, out.RefreshToken.Value)
-	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), out.RefreshToken.ExpiresAt)
+	assert.NotEqual(t, in.RefreshToken, out.RefreshToken.Value())
+	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), out.RefreshToken.ExpiresAt())
 }
 
 func TestRefresh_MarksUsedRefreshToken(t *testing.T) {

@@ -208,8 +208,8 @@ func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {
 	assert.Equal(t, usr.ID(), payload.UserID)
 
 	issued := testutil.Only(t, helper.FakeAccessTokenIssuer.Issueds())
-	assert.Equal(t, issued.Token.Value(), output.AccessToken.Value)
-	assert.Equal(t, issued.ExpiresAt, output.AccessToken.ExpiresAt)
+	assert.Equal(t, issued.Token.Value(), output.AccessToken.Value())
+	assert.Equal(t, issued.ExpiresAt, output.AccessToken.ExpiresAt())
 }
 
 func TestLogin_ReturnsSecretOfSavedRefreshToken(t *testing.T) {
@@ -219,10 +219,10 @@ func TestLogin_ReturnsSecretOfSavedRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 
 	token := testutil.Only(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
-	secret, err := session.ParseRefreshTokenSecret(output.RefreshToken.Value)
+	secret, err := session.ParseRefreshTokenSecret(output.RefreshToken.Value())
 	require.NoError(t, err)
 	assert.Equal(t, token.Hash(), secret.Hash())
-	assert.Equal(t, token.ExpiresAt(), output.RefreshToken.ExpiresAt)
+	assert.Equal(t, token.ExpiresAt(), output.RefreshToken.ExpiresAt())
 }
 
 func TestLogin_ShouldSaveSession(t *testing.T) {

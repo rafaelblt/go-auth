@@ -15,11 +15,11 @@ func TestMapUserDTO(t *testing.T) {
 	user := mapUserDTO(dto)
 
 	assert.NotZero(t, user)
-	assert.Equal(t, dto.ID, user.ID)
-	assert.Equal(t, dto.Username, user.Username)
-	assert.Equal(t, dto.Status, user.Status)
-	assert.Equal(t, dto.CreatedAt, user.CreatedAt)
-	assert.Equal(t, dto.UpdatedAt, user.UpdatedAt)
+	assert.Equal(t, dto.ID(), user.ID)
+	assert.Equal(t, dto.Username(), user.Username)
+	assert.Equal(t, dto.Status(), user.Status)
+	assert.Equal(t, dto.CreatedAt(), user.CreatedAt)
+	assert.Equal(t, dto.UpdatedAt(), user.UpdatedAt)
 }
 
 func TestMapUserDTO_PanicsWithZeroDTO(t *testing.T) {
@@ -33,8 +33,8 @@ func TestMapAccessTokenDTO(t *testing.T) {
 	retrieved := mapAccessTokenDTO(dto)
 
 	require.NotZero(t, retrieved)
-	assert.Equal(t, dto.Value, retrieved.Value)
-	assert.Equal(t, dto.ExpiresAt, retrieved.ExpiresAt)
+	assert.Equal(t, dto.Value(), retrieved.Value)
+	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
 }
 
 func TestMapAccessTokenDTO_PanicsWithZeroDTO(t *testing.T) {
@@ -48,8 +48,8 @@ func TestMapRefreshTokenDTO(t *testing.T) {
 	retrieved := mapRefreshTokenDTO(dto)
 
 	require.NotZero(t, retrieved)
-	assert.Equal(t, dto.Value, retrieved.Value)
-	assert.Equal(t, dto.ExpiresAt, retrieved.ExpiresAt)
+	assert.Equal(t, dto.Value(), retrieved.Value)
+	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
 }
 
 func TestMapRefreshTokenDTO_PanicsWithZeroDTO(t *testing.T) {

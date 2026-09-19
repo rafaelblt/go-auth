@@ -52,12 +52,12 @@ func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	actualBody := resp.Body.(loginResponseBody)
 	expectedBody := loginResponseBody{
 		AccessToken: accessToken{
-			Value:     output.AccessToken.Value,
-			ExpiresAt: output.AccessToken.ExpiresAt,
+			Value:     output.AccessToken.Value(),
+			ExpiresAt: output.AccessToken.ExpiresAt(),
 		},
 		RefreshToken: refreshToken{
-			Value:     output.RefreshToken.Value,
-			ExpiresAt: output.RefreshToken.ExpiresAt,
+			Value:     output.RefreshToken.Value(),
+			ExpiresAt: output.RefreshToken.ExpiresAt(),
 		},
 	}
 	assert.Equal(t, expectedBody, actualBody)

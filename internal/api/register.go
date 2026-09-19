@@ -41,5 +41,5 @@ func registerEncoder(out register.Output) response {
 }
 
 func registerSuccessLog(ctx context.Context, out register.Output) {
-	loggerFrom(ctx).Info("success register", "user_id", out.User.ID)
+	loggerFrom(ctx).Info("success register", "user_id", out.User.ID())
 }

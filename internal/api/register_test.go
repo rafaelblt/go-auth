@@ -48,11 +48,11 @@ func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
 	actualBody := resp.Body.(registerResponseBody)
 	expectedBody := registerResponseBody{
 		User: user{
-			ID:        output.User.ID,
-			Username:  output.User.Username,
-			Status:    output.User.Status,
-			CreatedAt: output.User.CreatedAt,
-			UpdatedAt: output.User.UpdatedAt,
+			ID:        output.User.ID(),
+			Username:  output.User.Username(),
+			Status:    output.User.Status(),
+			CreatedAt: output.User.CreatedAt(),
+			UpdatedAt: output.User.UpdatedAt(),
 		},
 	}
 	assert.Equal(t, expectedBody, actualBody)

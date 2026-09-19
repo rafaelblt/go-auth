@@ -43,11 +43,11 @@ func TestMapUserToDTO(t *testing.T) {
 				})
 			} else {
 				dto := usecase.MapUserToDTO(tC.user)
-				assert.Equal(t, tC.user.ID().Value().String(), dto.ID)
-				assert.Equal(t, tC.user.Username().String(), dto.Username)
-				assert.Equal(t, tC.user.Status().String(), dto.Status)
-				assert.Equal(t, tC.user.CreatedAt(), dto.CreatedAt)
-				assert.Equal(t, tC.user.UpdatedAt(), dto.UpdatedAt)
+				assert.Equal(t, tC.user.ID().Value().String(), dto.ID())
+				assert.Equal(t, tC.user.Username().String(), dto.Username())
+				assert.Equal(t, tC.user.Status().String(), dto.Status())
+				assert.Equal(t, tC.user.CreatedAt(), dto.CreatedAt())
+				assert.Equal(t, tC.user.UpdatedAt(), dto.UpdatedAt())
 			}
 		})
 	}
@@ -61,8 +61,8 @@ func TestMapAccessTokenIssuedToDTO(t *testing.T) {
 
 	dto := usecase.MapAccessTokenIssuedToDTO(issued)
 
-	assert.Equal(t, issued.Token.Value(), dto.Value)
-	assert.Equal(t, issued.ExpiresAt, dto.ExpiresAt)
+	assert.Equal(t, issued.Token.Value(), dto.Value())
+	assert.Equal(t, issued.ExpiresAt, dto.ExpiresAt())
 }
 
 func TestMapAccessTokenIssuedToDTO_PanicsWithZeroToken(t *testing.T) {
@@ -78,8 +78,8 @@ func TestMapRefreshTokenToDTO(t *testing.T) {
 
 	dto := usecase.MapRefreshTokenToDTO(token, secret)
 
-	assert.Equal(t, secret.Value(), dto.Value)
-	assert.Equal(t, token.ExpiresAt(), dto.ExpiresAt)
+	assert.Equal(t, secret.Value(), dto.Value())
+	assert.Equal(t, token.ExpiresAt(), dto.ExpiresAt())
 }
 
 func TestMapRefreshTokenToDTO_Panics(t *testing.T) {
