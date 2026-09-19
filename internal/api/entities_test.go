@@ -2,16 +2,15 @@ package api
 
 import (
 	"testing"
-	"time"
 
-	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMapUserDTO(t *testing.T) {
-	dto := usecase.MapUserToDTO(usertest.NewUser(t, nil))
+	dto := apitest.NewUserDTO(t, nil)
 
 	user := mapUserDTO(dto)
 
@@ -29,10 +28,7 @@ func TestMapUserDTO_PanicsWithZeroDTO(t *testing.T) {
 }
 
 func TestMapAccessTokenDTO(t *testing.T) {
-	dto := usecase.AccessTokenDTO{
-		Value:     "Value",
-		ExpiresAt: time.Now().UTC(),
-	}
+	dto := apitest.NewAccessTokenDTO(t)
 
 	retrieved := mapAccessTokenDTO(dto)
 
@@ -47,10 +43,7 @@ func TestMapAccessTokenDTO_PanicsWithZeroDTO(t *testing.T) {
 }
 
 func TestMapRefreshTokenDTO(t *testing.T) {
-	dto := usecase.RefreshTokenDTO{
-		Value:     "Value",
-		ExpiresAt: time.Now().UTC(),
-	}
+	dto := apitest.NewRefreshTokenDTO(t)
 
 	retrieved := mapRefreshTokenDTO(dto)
 

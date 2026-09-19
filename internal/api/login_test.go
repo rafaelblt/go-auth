@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,14 +41,8 @@ func TestLoginDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	output := login.Output{
-		AccessToken: usecase.AccessTokenDTO{
-			Value:     "raw access token value",
-			ExpiresAt: time.Now().UTC().AddDate(100, 10, 1),
-		},
-		RefreshToken: usecase.RefreshTokenDTO{
-			Value:     "raw refresh token value",
-			ExpiresAt: time.Now().UTC().AddDate(200, 20, 2),
-		},
+		AccessToken:  apitest.NewAccessTokenDTO(t),
+		RefreshToken: apitest.NewRefreshTokenDTO(t),
 	}
 
 	resp := loginEncoder(output)

@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,14 +38,8 @@ func TestRefreshDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 
 func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 	output := refresh.Output{
-		AccessToken: usecase.AccessTokenDTO{
-			Value:     "raw access token value",
-			ExpiresAt: time.Now().UTC().AddDate(500, 50, 5),
-		},
-		RefreshToken: usecase.RefreshTokenDTO{
-			Value:     "raw refresh token value",
-			ExpiresAt: time.Now().UTC().AddDate(800, 80, 8),
-		},
+		AccessToken:  apitest.NewAccessTokenDTO(t),
+		RefreshToken: apitest.NewRefreshTokenDTO(t),
 	}
 
 	resp := refreshEncoder(output)

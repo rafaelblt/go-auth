@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,15 +39,7 @@ func TestRegisterDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 }
 
 func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
-	output := register.Output{
-		User: usecase.UserDTO{
-			ID:        "da0-gk-0akg=0-1q",
-			Username:  "-paskdgf-k-30kgfadg",
-			Status:    "inactive",
-			CreatedAt: time.Now().UTC(),
-			UpdatedAt: time.Now().UTC(),
-		},
-	}
+	output := register.Output{User: apitest.NewUserDTO(t, nil)}
 
 	resp := registerEncoder(output)
 
