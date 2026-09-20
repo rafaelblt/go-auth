@@ -9,51 +9,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnv_Resolve_ReturnsDefault_WhenOptionalEnvIsMissing(t *testing.T) {
-	fallback := "default fallback"
-	ev := env[string]{
-		Key:     "GENERIC_VAR_OPTIONAL_MISSING",
-		Default: fallback,
-		Parser:  stringEnvParser,
-	}
-
-	value, err := ev.Resolve()
-
-	require.NoError(t, err)
-	assert.Equal(t, fallback, value)
-}
-
-func TestEnv_Resolve_ReturnsZero_WhenOptionalEnvWithoutDefaultIsMissing(t *testing.T) {
+func TestEnv_Resolve_ReturnsNil_WhenEnvIsMissing(t *testing.T) {
 	ev := env[int]{
-		Key:    "GENERIC_VAR_OPTIONAL_WITHOUT_DEFAULT",
+		Key:    "GENERIC_VAR_MISSING",
 		Parser: intEnvParser,
 	}
 
 	value, err := ev.Resolve()
 
 	require.NoError(t, err)
-	assert.Equal(t, 0, value)
-}
-
-func TestEnv_Resolve_ReturnsError_WhenRequiredEnvIsMissing(t *testing.T) {
-	key := "GENERIC_VAR_REQUIRED_MISSING"
-	ev := env[string]{
-		Key:      key,
-		Required: true,
-		Parser:   stringEnvParser,
-	}
-
-	value, err := ev.Resolve()
-
-	assert.Zero(t, value)
-	assert.ErrorIs(t, err, errEnvRequired)
+	assert.Nil(t, value)
 }
 
 func TestEnv_Resolve_ReturnsPreset_WhenEnvMatches(t *testing.T) {
 	presetKey := "prod"
 	presetValue := 5432
 	envKey := "GENERIC_VAR_PRESET"
-	t.Setenv(envKey, fmt.Sprint(presetKey))
+	t.Setenv(envKey, presetKey)
 
 	ev := env[int]{
 		Key:     envKey,
@@ -64,7 +36,8 @@ func TestEnv_Resolve_ReturnsPreset_WhenEnvMatches(t *testing.T) {
 	value, err := ev.Resolve()
 
 	require.NoError(t, err)
-	assert.Equal(t, presetValue, value)
+	require.NotNil(t, value)
+	assert.Equal(t, presetValue, *value)
 }
 
 func TestEnv_Resolve_ParsesEnvValue(t *testing.T) {
@@ -80,7 +53,24 @@ func TestEnv_Resolve_ParsesEnvValue(t *testing.T) {
 	value, err := ev.Resolve()
 
 	require.NoError(t, err)
-	assert.Equal(t, expected, value)
+	require.NotNil(t, value)
+	assert.Equal(t, expected, *value)
+}
+
+func TestEnv_Resolve_ParsesEmptyEnvValue(t *testing.T) {
+	key := "GENERIC_VAR_EMPTY"
+	t.Setenv(key, "")
+
+	ev := env[string]{
+		Key:    key,
+		Parser: stringEnvParser,
+	}
+
+	value, err := ev.Resolve()
+
+	require.NoError(t, err)
+	require.NotNil(t, value)
+	assert.Empty(t, *value)
 }
 
 func TestEnv_Resolve_ReturnsErrorFromParser(t *testing.T) {
@@ -97,7 +87,7 @@ func TestEnv_Resolve_ReturnsErrorFromParser(t *testing.T) {
 
 	value, err := ev.Resolve()
 
-	assert.Zero(t, value)
+	assert.Nil(t, value)
 	assert.ErrorIs(t, err, expectedErr)
 }
 

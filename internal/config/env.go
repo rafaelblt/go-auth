@@ -5,38 +5,35 @@ import (
 	"os"
 )
 
+// env converts one environment variable from its raw string into T. It does
+// not judge whether the value makes sense for the app: a variable that is not
+// set resolves to nil, and NewConfig decides whether that means a default or
+// a missing required value.
 type env[T any] struct {
-	Key      string
-	Required bool
-	Default  T
-	Parser   func(string) (T, error)
-	Presets  map[string]T
+	Key     string
+	Parser  func(string) (T, error)
+	Presets map[string]T
 }
 
-func (ev env[T]) Resolve() (T, error) {
+func (ev env[T]) Resolve() (*T, error) {
 	ev.validate()
-	var zero T
 
-	value, ok := ev.lookup()
+	raw, ok := ev.lookup()
 	if !ok {
-		if ev.Required {
-			return zero, errEnvRequired
-		} else {
-			return ev.Default, nil
-		}
+		return nil, nil
 	}
 
-	preset, ok := ev.checkPreset(value)
+	preset, ok := ev.checkPreset(raw)
 	if ok {
-		return preset, nil
+		return &preset, nil
 	}
 
-	parsed, err := ev.Parser(value)
+	parsed, err := ev.Parser(raw)
 	if err != nil {
-		return zero, err
+		return nil, err
 	}
 
-	return parsed, nil
+	return &parsed, nil
 }
 
 func (ev env[T]) validate() {

@@ -13,27 +13,23 @@ const (
 )
 
 var envDatabaseURL = env[string]{
-	Key:      "DATABASE_URL",
-	Required: true,
-	Parser:   stringEnvParser,
+	Key:    "DATABASE_URL",
+	Parser: stringEnvParser,
 }
 
 var envAddress = env[string]{
-	Key:      "ADDRESS",
-	Required: true,
-	Parser:   stringEnvParser,
+	Key:    "ADDRESS",
+	Parser: stringEnvParser,
 }
 
 var envAutoMigrate = env[bool]{
-	Key:     "AUTO_MIGRATE",
-	Default: defaultAutoMigrate,
-	Parser:  boolEnvParser,
+	Key:    "AUTO_MIGRATE",
+	Parser: boolEnvParser,
 }
 
 var envBcryptCost = env[int]{
-	Key:     "BCRYPT_COST",
-	Default: defaultBcryptCost,
-	Parser:  intEnvParser,
+	Key:    "BCRYPT_COST",
+	Parser: intEnvParser,
 	Presets: map[string]int{
 		"FAST":   10,
 		"NORMAL": defaultBcryptCost,
@@ -42,9 +38,8 @@ var envBcryptCost = env[int]{
 }
 
 var envAccessTokenTTL = env[time.Duration]{
-	Key:     "ACCESS_TOKEN_TTL",
-	Default: defaultAccessTokenTTL,
-	Parser:  durationEnvParser,
+	Key:    "ACCESS_TOKEN_TTL",
+	Parser: durationEnvParser,
 	Presets: map[string]time.Duration{
 		"SHORT":  10 * time.Minute,
 		"NORMAL": defaultAccessTokenTTL,
@@ -53,9 +48,8 @@ var envAccessTokenTTL = env[time.Duration]{
 }
 
 var envRefreshTokenTTL = env[time.Duration]{
-	Key:     "REFRESH_TOKEN_TTL",
-	Default: defaultRefreshTokenTTL,
-	Parser:  durationEnvParser,
+	Key:    "REFRESH_TOKEN_TTL",
+	Parser: durationEnvParser,
 	Presets: map[string]time.Duration{
 		"SHORT":  24 * time.Hour,
 		"NORMAL": defaultRefreshTokenTTL,
@@ -64,7 +58,6 @@ var envRefreshTokenTTL = env[time.Duration]{
 }
 
 var envLogFormat = env[LogFormat]{
-	Key:     "LOG_FORMAT",
-	Default: defaultLogFormat,
-	Parser:  logFormatEnvParser,
+	Key:    "LOG_FORMAT",
+	Parser: logFormatEnvParser,
 }

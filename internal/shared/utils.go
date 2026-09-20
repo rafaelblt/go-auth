@@ -19,3 +19,11 @@ func PtrFromOk[T any](v T, ok bool) *T {
 	}
 	return &v
 }
+
+func Deref[T any](p *T) T {
+	if p == nil {
+		var zero T
+		return zero
+	}
+	return *p
+}

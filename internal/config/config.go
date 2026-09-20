@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
@@ -21,16 +22,6 @@ const (
 	fieldLogFormat       = "log_format"
 )
 
-var envKeyByField = map[string]string{
-	fieldAddress:         envAddress.Key,
-	fieldDatabaseURL:     envDatabaseURL.Key,
-	fieldAutoMigrate:     envAutoMigrate.Key,
-	fieldBcryptCost:      envBcryptCost.Key,
-	fieldAccessTokenTTL:  envAccessTokenTTL.Key,
-	fieldRefreshTokenTTL: envRefreshTokenTTL.Key,
-	fieldLogFormat:       envLogFormat.Key,
-}
-
 type Config struct {
 	address         string
 	databaseURL     string
@@ -44,7 +35,7 @@ type Config struct {
 type ConfigParams struct {
 	Address         string
 	DatabaseURL     string
-	AutoMigrate     bool
+	AutoMigrate     *bool
 	BcryptCost      *int
 	AccessTokenTTL  *time.Duration
 	RefreshTokenTTL *time.Duration
@@ -63,6 +54,8 @@ func NewConfig(params ConfigParams) (Config, error) {
 		validation.Required[string](),
 	))
 
+	autoMigrate := resolveParam(acc, fieldAutoMigrate, params.AutoMigrate,
+		defaultAutoMigrate)
 	bcryptCost := resolveParam(acc, fieldBcryptCost, params.BcryptCost,
 		defaultBcryptCost, validation.Positive[int]())
 	accessTokenTTL := resolveParam(acc, fieldAccessTokenTTL, params.AccessTokenTTL,
@@ -79,7 +72,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 	cfg := Config{
 		address:         params.Address,
 		databaseURL:     params.DatabaseURL,
-		autoMigrate:     params.AutoMigrate,
+		autoMigrate:     autoMigrate,
 		bcryptCost:      bcryptCost,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
@@ -106,74 +99,33 @@ func resolveParam[T any](
 }
 
 func LoadConfig() (Config, error) {
-	errs := make([]error, 0)
+	load := newEnvLoad()
 
-	databaseURL, errs := resolveEnv(envDatabaseURL, errs)
-	address, errs := resolveEnv(envAddress, errs)
-	autoMigrate, errs := resolveEnv(envAutoMigrate, errs)
-	bcryptCost, errs := resolveEnv(envBcryptCost, errs)
-	refreshTokenTTL, errs := resolveEnv(envRefreshTokenTTL, errs)
-	accessTokenTTL, errs := resolveEnv(envAccessTokenTTL, errs)
-	logFormat, errs := resolveEnv(envLogFormat, errs)
-
-	if len(errs) > 0 {
-		e := fmt.Errorf("failed to load environment variables: %w", errors.Join(errs...))
-		return Config{}, e
-	}
+	address := resolveEnv(load, envAddress, fieldAddress)
+	databaseURL := resolveEnv(load, envDatabaseURL, fieldDatabaseURL)
+	autoMigrate := resolveEnv(load, envAutoMigrate, fieldAutoMigrate)
+	bcryptCost := resolveEnv(load, envBcryptCost, fieldBcryptCost)
+	accessTokenTTL := resolveEnv(load, envAccessTokenTTL, fieldAccessTokenTTL)
+	refreshTokenTTL := resolveEnv(load, envRefreshTokenTTL, fieldRefreshTokenTTL)
+	logFormat := resolveEnv(load, envLogFormat, fieldLogFormat)
 
 	cfg, err := NewConfig(ConfigParams{
-		Address:         address,
-		DatabaseURL:     databaseURL,
+		Address:         shared.Deref(address),
+		DatabaseURL:     shared.Deref(databaseURL),
 		AutoMigrate:     autoMigrate,
-		BcryptCost:      &bcryptCost,
-		AccessTokenTTL:  &accessTokenTTL,
-		RefreshTokenTTL: &refreshTokenTTL,
-		LogFormat:       &logFormat,
+		BcryptCost:      bcryptCost,
+		AccessTokenTTL:  accessTokenTTL,
+		RefreshTokenTTL: refreshTokenTTL,
+		LogFormat:       logFormat,
 	})
-	if err != nil {
-		joined := errors.Join(translateToEnvKeys(err)...)
-		e := fmt.Errorf("invalid environment variable values: %w", joined)
+
+	errs := load.merge(err)
+	if len(errs) > 0 {
+		e := fmt.Errorf("invalid environment configuration: %w", errors.Join(errs...))
 		return Config{}, e
 	}
 
 	return cfg, nil
-}
-
-func resolveEnv[T any](ev env[T], errs []error) (T, []error) {
-	value, err := ev.Resolve()
-	if err != nil {
-		e := fmt.Errorf("'%s': %w", ev.Key, err)
-		errs = append(errs, e)
-	}
-	return value, errs
-}
-
-// translateToEnvKeys rewrites the field errors NewConfig reports in terms of
-// the environment variable that carried each value. An error of another shape
-// is passed through untouched.
-func translateToEnvKeys(err error) []error {
-	var verr validation.ValidationError
-	if !errors.As(err, &verr) {
-		return []error{err}
-	}
-
-	fieldErrs := verr.Errors()
-	errs := make([]error, 0, len(fieldErrs))
-
-	for _, fieldErr := range fieldErrs {
-		e := fmt.Errorf("'%s': %s", envKeyOf(fieldErr.Field()), fieldErr.Issue())
-		errs = append(errs, e)
-	}
-
-	return errs
-}
-
-func envKeyOf(field string) string {
-	key, ok := envKeyByField[field]
-	if !ok {
-		return field
-	}
-	return key
 }
 
 func (c Config) IsZero() bool {

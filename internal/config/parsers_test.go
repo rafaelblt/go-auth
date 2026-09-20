@@ -202,28 +202,3 @@ func TestLogFormatEnvParser(t *testing.T) {
 		})
 	}
 }
-
-func TestLogFormatEnvParser_ReturnsError(t *testing.T) {
-	testCases := []struct {
-		desc  string
-		value string
-	}{
-		{
-			desc:  "unknown",
-			value: "xml",
-		},
-		{
-			desc:  "empty",
-			value: "",
-		},
-	}
-
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			value, err := logFormatEnvParser(tC.value)
-
-			assert.Error(t, err)
-			assert.Zero(t, value)
-		})
-	}
-}

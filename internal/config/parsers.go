@@ -38,10 +38,8 @@ func boolEnvParser(val string) (bool, error) {
 	}
 }
 
+// logFormatEnvParser only converts. Whether the format is one the app knows
+// is decided by NewConfig, which can also report the accepted values.
 func logFormatEnvParser(val string) (LogFormat, error) {
-	f := LogFormat(strings.ToLower(val))
-	if !f.valid() {
-		return "", fmt.Errorf("invalid log format value %q", val)
-	}
-	return f, nil
+	return LogFormat(strings.ToLower(val)), nil
 }

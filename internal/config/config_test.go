@@ -153,7 +153,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	params := ConfigParams{
 		Address:         "add ress vlaue",
 		DatabaseURL:     "db url vlaue",
-		AutoMigrate:     true,
+		AutoMigrate:     shared.Ptr(true),
 		BcryptCost:      shared.Ptr(8),
 		AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 		RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
@@ -166,7 +166,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	assert.False(t, cfg.IsZero())
 	assert.Equal(t, params.Address, cfg.Address())
 	assert.Equal(t, params.DatabaseURL, cfg.DatabaseURL())
-	assert.Equal(t, params.AutoMigrate, cfg.AutoMigrate())
+	assert.Equal(t, *params.AutoMigrate, cfg.AutoMigrate())
 	assert.Equal(t, *params.BcryptCost, cfg.BcryptCost())
 	assert.Equal(t, *params.AccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, *params.RefreshTokenTTL, cfg.RefreshTokenTTL())
@@ -292,4 +292,23 @@ func TestLoadConfig_ReportsTheEnvironmentVariableKey(t *testing.T) {
 	assert.Contains(t, err.Error(), envBcryptCost.Key)
 	assert.Contains(t, err.Error(), envAccessTokenTTL.Key)
 	assert.Contains(t, err.Error(), validation.CodeNotPositive)
+}
+
+func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
+	t.Setenv(envBcryptCost.Key, "twelve")
+	t.Setenv(envAccessTokenTTL.Key, "-5m")
+	t.Setenv(envLogFormat.Key, "xml")
+
+	_, err := LoadConfig()
+
+	require.Error(t, err)
+	msg := err.Error()
+	assert.Contains(t, msg, envAddress.Key)
+	assert.Contains(t, msg, envDatabaseURL.Key)
+	assert.Contains(t, msg, envBcryptCost.Key)
+	assert.Contains(t, msg, envAccessTokenTTL.Key)
+	assert.Contains(t, msg, envLogFormat.Key)
+	assert.Contains(t, msg, validation.CodeRequired)
+	assert.Contains(t, msg, validation.CodeNotPositive)
+	assert.Contains(t, msg, validation.CodeNotAllowed)
 }
