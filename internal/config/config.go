@@ -111,7 +111,8 @@ func LoadConfig() (Config, error) {
 		LogFormat:       &logFormat,
 	})
 	if err != nil {
-		panic(fmt.Sprintf("config loaded from environment variables invalid for new config: %s", err))
+		e := fmt.Errorf("configuration from environment variables invalid: %w", err)
+		return Config{}, e
 	}
 
 	return cfg, nil

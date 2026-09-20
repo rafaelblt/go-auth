@@ -53,6 +53,12 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
 }
 
+func setRequiredEnvs(t *testing.T) {
+	t.Helper()
+	t.Setenv(envAddress.Key, "add ress vlaue")
+	t.Setenv(envDatabaseURL.Key, "db url vlaue")
+}
+
 func TestLoadConfig_ReturnsError(t *testing.T) {
 	testCases := []struct {
 		desc  string
@@ -85,6 +91,48 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 		{
 			desc:  "log format unknown",
 			setup: func(t *testing.T) { t.Setenv(envLogFormat.Key, "xml") },
+		},
+		{
+			desc: "bcrypt cost zero",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envBcryptCost.Key, "0")
+			},
+		},
+		{
+			desc: "bcrypt cost negative",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envBcryptCost.Key, "-1")
+			},
+		},
+		{
+			desc: "access token ttl zero",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envAccessTokenTTL.Key, "0s")
+			},
+		},
+		{
+			desc: "access token ttl negative",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envAccessTokenTTL.Key, "-5m")
+			},
+		},
+		{
+			desc: "refresh token ttl zero",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envRefreshTokenTTL.Key, "0s")
+			},
+		},
+		{
+			desc: "refresh token ttl negative",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envRefreshTokenTTL.Key, "-1h")
+			},
 		},
 	}
 
