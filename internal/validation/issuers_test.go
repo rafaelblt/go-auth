@@ -117,3 +117,24 @@ func TestIssuers_AreNotEqualForDifferentUnits(t *testing.T) {
 	assert.NotEqual(t, IssueTooLong(32, UnitCodePoint), IssueTooLong(32, UnitByte))
 	assert.NotEqual(t, IssueTooShort(3, UnitCodePoint), IssueTooShort(3, UnitByte))
 }
+
+func TestIssueRequired(t *testing.T) {
+	iss := IssueRequired()
+
+	assert.Equal(t, CodeRequired, iss.Code())
+	assert.Empty(t, iss.Details())
+}
+
+func TestIssueNotPositive(t *testing.T) {
+	iss := IssueNotPositive()
+
+	assert.Equal(t, CodeNotPositive, iss.Code())
+	assert.Empty(t, iss.Details())
+}
+
+func TestIssueNotAllowed(t *testing.T) {
+	iss := IssueNotAllowed("json", "text")
+
+	assert.Equal(t, CodeNotAllowed, iss.Code())
+	assert.Equal(t, "json, text", iss.Details()[KeyAllowed])
+}

@@ -67,3 +67,27 @@ func AllowedChars(allowed shared.Set[rune]) Validator[string] {
 		return nil
 	}
 }
+
+func Required[T comparable]() Validator[T] {
+	var zero T
+
+	return func(value T) *Issue {
+		if value == zero {
+			return shared.Ptr(IssueRequired())
+		}
+		return nil
+	}
+}
+
+type Number interface {
+	~int | ~int64 | ~float64
+}
+
+func Positive[T Number]() Validator[T] {
+	return func(value T) *Issue {
+		if value <= 0 {
+			return shared.Ptr(IssueNotPositive())
+		}
+		return nil
+	}
+}
