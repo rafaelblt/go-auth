@@ -31,51 +31,62 @@ type infraDeps struct {
 	AccessTokenService *jwt.AccessTokenService
 }
 
-func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
-	deps := infraDeps{}
+func (deps infraDeps) close() {
+	if deps.pool != nil {
+		deps.pool.Close()
+	}
+}
+
+func newInfra(ctx context.Context, cfg config.Config) (deps infraDeps, err error) {
+	defer func() {
+		if err != nil {
+			deps.close()
+			deps = infraDeps{}
+		}
+	}()
 
 	clock := infra.NewSystemClock()
 	deps.Clock = clock
 
 	pool, err := buildPool(ctx, cfg.DatabaseURL())
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.pool = pool
 
 	uow, err := buildUnitOfWork(pool)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.UnitOfWork = uow
 
 	users, err := buildUserRepo(pool)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.Users = users
 
 	passwords, err := buildPasswordRepo(pool)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.Passwords = passwords
 
 	sessions, err := buildSessionRepo(pool)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.Sessions = sessions
 
 	refreshTokens, err := buildRefreshTokenRepo(pool)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.RefreshTokens = refreshTokens
 
 	hasher, err := buildPasswordHasher(cfg.BcryptCost())
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.PasswordHasher = hasher
 
@@ -84,19 +95,19 @@ func newInfra(ctx context.Context, cfg config.Config) (infraDeps, error) {
 
 	keyring, err := buildEd25519Keyring(ctx, keystore)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.Ed25519Keyring = keyring
 
 	signer, err := buildEd25519Signer(keyring, clock)
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.Ed25519Signer = signer
 
 	accessTokens, err := buildAccessTokenService(signer, clock, cfg.AccessTokenTTL())
 	if err != nil {
-		return infraDeps{}, err
+		return deps, err
 	}
 	deps.AccessTokenService = accessTokens
 

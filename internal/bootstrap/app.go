@@ -23,7 +23,7 @@ type App struct {
 	deps   dependencies
 }
 
-func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
+func NewApp(ctx context.Context, cfg config.Config) (_ *App, err error) {
 	if cfg.IsZero() {
 		return nil, errors.New("config invalid: not built")
 	}
@@ -32,6 +32,11 @@ func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			infra.close()
+		}
+	}()
 
 	if cfg.AutoMigrate() {
 		if err = autoMigrate(cfg.DatabaseURL()); err != nil {
@@ -46,7 +51,6 @@ func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
 
 	uc, err := newUsecases(cfg, infra)
 	if err != nil {
-		infra.pool.Close()
 		return nil, err
 	}
 
@@ -54,7 +58,6 @@ func NewApp(ctx context.Context, cfg config.Config) (*App, error) {
 
 	router, err := newRouter(ctx, deps)
 	if err != nil {
-		infra.pool.Close()
 		return nil, err
 	}
 
@@ -124,6 +127,6 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 }
 
 func (app *App) Close() error {
-	app.deps.Infra.pool.Close()
+	app.deps.Infra.close()
 	return nil
 }
