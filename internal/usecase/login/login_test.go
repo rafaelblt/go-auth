@@ -11,6 +11,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
+	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,10 +32,11 @@ func TestLogin_ReturnsOutput_WhenInputIsValid(t *testing.T) {
 	assert.NotZero(t, output.RefreshToken)
 }
 
-func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
+func TestLogin_ReturnsMalformedError_WhenInputIsInvalid(t *testing.T) {
 	testCases := []struct {
-		desc  string
-		input login.Input
+		desc        string
+		input       login.Input
+		expectedErr error
 	}{
 		{
 			desc: "username too short",
@@ -42,6 +44,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: strings.Repeat("a", user.UsernameMinLen-1),
 				Password: "12345678",
 			},
+			expectedErr: login.ErrUsernameMalformed,
 		},
 		{
 			desc: "username too long",
@@ -49,6 +52,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: strings.Repeat("a", user.UsernameMaxLen+1),
 				Password: "12345678",
 			},
+			expectedErr: login.ErrUsernameMalformed,
 		},
 		{
 			desc: "password too short",
@@ -56,6 +60,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: "username",
 				Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
+			expectedErr: login.ErrPasswordMalformed,
 		},
 		{
 			desc: "password too long",
@@ -63,6 +68,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: "username",
 				Password: strings.Repeat("a", password.PlainMaxBytes+1),
 			},
+			expectedErr: login.ErrPasswordMalformed,
 		},
 		{
 			desc: "username and password too short",
@@ -70,6 +76,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: strings.Repeat("a", user.UsernameMinLen-1),
 				Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
+			expectedErr: login.ErrUsernameMalformed,
 		},
 		{
 			desc: "username and password too long",
@@ -77,6 +84,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 				Username: strings.Repeat("a", user.UsernameMaxLen+1),
 				Password: strings.Repeat("a", password.PlainMaxBytes+1),
 			},
+			expectedErr: login.ErrUsernameMalformed,
 		},
 	}
 	for _, tC := range testCases {
@@ -85,12 +93,34 @@ func TestLogin_ReturnsInvalidCredentials_WhenInputIsInvalid(t *testing.T) {
 			output, err := helper.UseCase().Execute(context.Background(), tC.input)
 			assert.Zero(t, output)
 			require.Error(t, err)
-			assert.ErrorIs(t, err, login.ErrInvalidCredentials)
+			assert.ErrorIs(t, err, tC.expectedErr)
 		})
 	}
 }
 
-func TestLogin_ReturnsInvalidCredentials_WhenUsernameNotExists(t *testing.T) {
+// Every rejection answers the client with one code, so nothing tells a
+// malformed username from an unknown user or a wrong password. Only the
+// reason, which stays on the server, tells them apart.
+func TestLogin_RejectionsShareOneCodeAndDifferInReason(t *testing.T) {
+	rejections := []usecase.UseCaseError{
+		login.ErrUsernameMalformed,
+		login.ErrPasswordMalformed,
+		login.ErrUserNotFound,
+		login.ErrPasswordNotFound,
+		login.ErrPasswordMismatch,
+	}
+
+	reasons := map[string]bool{}
+	for _, rejection := range rejections {
+		assert.Equal(t, "INVALID_CREDENTIALS", rejection.Code())
+		assert.Equal(t, usecase.ErrorKindUnauthorized, rejection.Kind())
+		assert.NotEmpty(t, rejection.Reason())
+		reasons[rejection.Reason()] = true
+	}
+	assert.Len(t, reasons, len(rejections))
+}
+
+func TestLogin_ReturnsUserNotFoundError_WhenUsernameNotExists(t *testing.T) {
 	helper := NewTestHelper(t)
 
 	output, err := helper.UseCase().Execute(context.Background(), login.Input{
@@ -100,10 +130,10 @@ func TestLogin_ReturnsInvalidCredentials_WhenUsernameNotExists(t *testing.T) {
 
 	require.Error(t, err)
 	require.Zero(t, output)
-	assert.ErrorIs(t, err, login.ErrInvalidCredentials)
+	assert.ErrorIs(t, err, login.ErrUserNotFound)
 }
 
-func TestLogin_ReturnsInvalidCredentials_WhenPasswordIsIncorrect(t *testing.T) {
+func TestLogin_ReturnsPasswordMismatchError_WhenPasswordIsIncorrect(t *testing.T) {
 	helper := NewTestHelper(t)
 	usr, pwd := helper.GetUserAndPassword()
 
@@ -114,10 +144,10 @@ func TestLogin_ReturnsInvalidCredentials_WhenPasswordIsIncorrect(t *testing.T) {
 
 	require.Error(t, err)
 	require.Zero(t, output)
-	assert.ErrorIs(t, err, login.ErrInvalidCredentials)
+	assert.ErrorIs(t, err, login.ErrPasswordMismatch)
 }
 
-func TestLogin_ReturnsInvalidCredentials_WhenPasswordNotExists(t *testing.T) {
+func TestLogin_ReturnsPasswordNotFoundError_WhenPasswordNotExists(t *testing.T) {
 	helper := NewTestHelper(t)
 	usr := usertest.NewUser(t, nil)
 	helper.FakeUserReader.InsertUser(usr)
@@ -129,7 +159,7 @@ func TestLogin_ReturnsInvalidCredentials_WhenPasswordNotExists(t *testing.T) {
 
 	require.Error(t, err)
 	require.Zero(t, output)
-	assert.ErrorIs(t, err, login.ErrInvalidCredentials)
+	assert.ErrorIs(t, err, login.ErrPasswordNotFound)
 }
 
 func TestLogin_VerifiesDummyHash_WhenUsernameNotExists(t *testing.T) {
@@ -140,7 +170,7 @@ func TestLogin_VerifiesDummyHash_WhenUsernameNotExists(t *testing.T) {
 	}
 
 	_, err := helper.UseCase().Execute(context.Background(), input)
-	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+	require.ErrorIs(t, err, login.ErrUserNotFound)
 
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.Equal(t, input.Password, call.Plain.Value())
@@ -157,7 +187,7 @@ func TestLogin_VerifiesDummyHash_WhenPasswordNotExists(t *testing.T) {
 	}
 
 	_, err := helper.UseCase().Execute(context.Background(), input)
-	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+	require.ErrorIs(t, err, login.ErrPasswordNotFound)
 
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.Equal(t, input.Password, call.Plain.Value())
@@ -172,7 +202,7 @@ func TestLogin_VerifiesOnlyStoredHash_WhenPasswordIsIncorrect(t *testing.T) {
 		Username: usr.Username().String(),
 		Password: pwd.Value() + "INCORRECT",
 	})
-	require.ErrorIs(t, err, login.ErrInvalidCredentials)
+	require.ErrorIs(t, err, login.ErrPasswordMismatch)
 
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.NotEqual(t, helper.DummyPasswordHash, call.Hash)
@@ -191,7 +221,7 @@ func TestLogin_ReturnsError_WhenDummyVerificationFails(t *testing.T) {
 
 	assert.Zero(t, output)
 	assert.ErrorIs(t, err, expectedErr)
-	assert.NotErrorIs(t, err, login.ErrInvalidCredentials)
+	assert.NotErrorIs(t, err, login.ErrUserNotFound)
 }
 
 func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {

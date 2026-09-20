@@ -33,18 +33,44 @@ type Login struct {
 	dummyHash    password.Hashed
 }
 
-var ErrInvalidCredentials = usecase.NewError(
-	"INVALID_CREDENTIALS", usecase.ErrorKindUnauthorized,
+var ErrUsernameMalformed = usecase.NewErrorWithReason(
+	"INVALID_CREDENTIALS",
+	usecase.ErrorKindUnauthorized,
+	"malformed username",
+)
+
+var ErrPasswordMalformed = usecase.NewErrorWithReason(
+	"INVALID_CREDENTIALS",
+	usecase.ErrorKindUnauthorized,
+	"malformed password",
+)
+
+var ErrUserNotFound = usecase.NewErrorWithReason(
+	"INVALID_CREDENTIALS",
+	usecase.ErrorKindUnauthorized,
+	"user not found",
+)
+
+var ErrPasswordNotFound = usecase.NewErrorWithReason(
+	"INVALID_CREDENTIALS",
+	usecase.ErrorKindUnauthorized,
+	"password not found",
+)
+
+var ErrPasswordMismatch = usecase.NewErrorWithReason(
+	"INVALID_CREDENTIALS",
+	usecase.ErrorKindUnauthorized,
+	"password mismatch",
 )
 
 func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	username, issues := user.NewUsername(input.Username)
 	if !issues.IsEmpty() {
-		return Output{}, ErrInvalidCredentials
+		return Output{}, ErrUsernameMalformed
 	}
 	plain, issues := password.NewPlain(input.Password)
 	if !issues.IsEmpty() {
-		return Output{}, ErrInvalidCredentials
+		return Output{}, ErrPasswordMalformed
 	}
 
 	usr, err := uc.users.FindByUsername(ctx, username)
@@ -52,7 +78,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("find user by username failed: %w", err)
 	}
 	if usr == nil {
-		return Output{}, uc.rejectWithDummyVerify(plain)
+		return Output{}, uc.rejectWithDummyVerify(plain, ErrUserNotFound)
 	}
 
 	pwd, err := uc.passwords.FindByUserID(ctx, usr.ID())
@@ -60,7 +86,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("find password by user id failed: %w", err)
 	}
 	if pwd == nil {
-		return Output{}, uc.rejectWithDummyVerify(plain)
+		return Output{}, uc.rejectWithDummyVerify(plain, ErrPasswordNotFound)
 	}
 
 	ok, err := uc.pwdChecker.Verify(plain, pwd.Hash())
@@ -68,7 +94,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return Output{}, fmt.Errorf("password verification failed: %w", err)
 	}
 	if !ok {
-		return Output{}, ErrInvalidCredentials
+		return Output{}, ErrPasswordMismatch
 	}
 
 	now := uc.clock.Now()
@@ -123,11 +149,12 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 }
 
 // rejectWithDummyVerify spends the time of a real password check before
-// rejecting, so response time does not reveal whether the account exists.
-func (uc Login) rejectWithDummyVerify(plain password.Plain) error {
+// returning rejection, so response time does not reveal whether the account
+// exists.
+func (uc Login) rejectWithDummyVerify(plain password.Plain, rejection error) error {
 	_, err := uc.pwdChecker.Verify(plain, uc.dummyHash)
 	if err != nil {
 		return fmt.Errorf("dummy password verification failed: %w", err)
 	}
-	return ErrInvalidCredentials
+	return rejection
 }
