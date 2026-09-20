@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/validation"
@@ -25,6 +26,7 @@ func translateError(ctx context.Context, err error) response {
 
 func translateUseCaseError(ctx context.Context, uerr usecase.UseCaseError) response {
 	logger := loggerFrom(ctx)
+	logUseCaseError(logger, uerr)
 
 	status, ok := kindStatusCatalog[uerr.Kind()]
 	if !ok {
@@ -47,6 +49,17 @@ func translateUseCaseError(ctx context.Context, uerr usecase.UseCaseError) respo
 		Body:       body,
 	}
 	return resp
+}
+
+// logUseCaseError records what the client is not told: the reason behind an
+// error whose code is deliberately generic. Errors without one carry it in
+// their code already, so the field is left out rather than logged empty.
+func logUseCaseError(logger *slog.Logger, uerr usecase.UseCaseError) {
+	attrs := []any{"code", uerr.Code(), "kind", uerr.Kind()}
+	if reason := uerr.Reason(); reason != "" {
+		attrs = append(attrs, "reason", reason)
+	}
+	logger.Info("use case error", attrs...)
 }
 
 func translateValidationError(ctx context.Context, verr validation.ValidationError) response {
