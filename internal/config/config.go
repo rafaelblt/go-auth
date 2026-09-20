@@ -4,7 +4,32 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/rafaelblt/go-auth/internal/validation"
 )
+
+// Fields tagged on the errors NewConfig returns. LoadConfig maps them back to
+// the environment variable that carried the value, so a user configuring the
+// app through the environment reads the key they actually set.
+const (
+	fieldAddress         = "address"
+	fieldDatabaseURL     = "database_url"
+	fieldAutoMigrate     = "auto_migrate"
+	fieldBcryptCost      = "bcrypt_cost"
+	fieldAccessTokenTTL  = "access_token_ttl"
+	fieldRefreshTokenTTL = "refresh_token_ttl"
+	fieldLogFormat       = "log_format"
+)
+
+var envKeyByField = map[string]string{
+	fieldAddress:         envAddress.Key,
+	fieldDatabaseURL:     envDatabaseURL.Key,
+	fieldAutoMigrate:     envAutoMigrate.Key,
+	fieldBcryptCost:      envBcryptCost.Key,
+	fieldAccessTokenTTL:  envAccessTokenTTL.Key,
+	fieldRefreshTokenTTL: envRefreshTokenTTL.Key,
+	fieldLogFormat:       envLogFormat.Key,
+}
 
 type Config struct {
 	address         string
@@ -27,50 +52,28 @@ type ConfigParams struct {
 }
 
 func NewConfig(params ConfigParams) (Config, error) {
-	errs := make([]error, 0)
+	acc := validation.NewAccumulator()
 
-	if params.Address == "" {
-		errs = append(errs, errors.New("address empty"))
-	}
-	if params.DatabaseURL == "" {
-		errs = append(errs, errors.New("database url empty"))
-	}
+	acc.Add(fieldAddress, validation.Validate(
+		params.Address,
+		validation.Required[string](),
+	))
+	acc.Add(fieldDatabaseURL, validation.Validate(
+		params.DatabaseURL,
+		validation.Required[string](),
+	))
 
-	bcryptCost := defaultBcryptCost
-	if params.BcryptCost != nil {
-		if *params.BcryptCost <= 0 {
-			errs = append(errs, errors.New("bcrypt cost zero or negative"))
-		}
-		bcryptCost = *params.BcryptCost
-	}
+	bcryptCost := resolveParam(acc, fieldBcryptCost, params.BcryptCost,
+		defaultBcryptCost, validation.Positive[int]())
+	accessTokenTTL := resolveParam(acc, fieldAccessTokenTTL, params.AccessTokenTTL,
+		defaultAccessTokenTTL, validation.Positive[time.Duration]())
+	refreshTokenTTL := resolveParam(acc, fieldRefreshTokenTTL, params.RefreshTokenTTL,
+		defaultRefreshTokenTTL, validation.Positive[time.Duration]())
+	logFormat := resolveParam(acc, fieldLogFormat, params.LogFormat,
+		defaultLogFormat, allowedLogFormat())
 
-	accessTokenTTL := defaultAccessTokenTTL
-	if params.AccessTokenTTL != nil {
-		if *params.AccessTokenTTL <= 0 {
-			errs = append(errs, errors.New("access token ttl zero or negative"))
-		}
-		accessTokenTTL = *params.AccessTokenTTL
-	}
-
-	refreshTokenTTL := defaultRefreshTokenTTL
-	if params.RefreshTokenTTL != nil {
-		if *params.RefreshTokenTTL <= 0 {
-			errs = append(errs, errors.New("refresh token ttl zero or negative"))
-		}
-		refreshTokenTTL = *params.RefreshTokenTTL
-	}
-
-	logFormat := defaultLogFormat
-	if params.LogFormat != nil {
-		if !params.LogFormat.valid() {
-			errs = append(errs, fmt.Errorf("log format %q unknown", *params.LogFormat))
-		}
-		logFormat = *params.LogFormat
-	}
-
-	if len(errs) > 0 {
-		e := fmt.Errorf("invalid config params: %w", errors.Join(errs...))
-		return Config{}, e
+	if err := acc.Err(); err != nil {
+		return Config{}, err
 	}
 
 	cfg := Config{
@@ -83,6 +86,23 @@ func NewConfig(params ConfigParams) (Config, error) {
 		logFormat:       logFormat,
 	}
 	return cfg, nil
+}
+
+// resolveParam validates an optional param when it was provided, and falls
+// back to the default when it was not.
+func resolveParam[T any](
+	acc *validation.Accumulator,
+	field string,
+	param *T,
+	fallback T,
+	validators ...validation.Validator[T],
+) T {
+	if param == nil {
+		return fallback
+	}
+
+	acc.Add(field, validation.Validate(*param, validators...))
+	return *param
 }
 
 func LoadConfig() (Config, error) {
@@ -111,7 +131,8 @@ func LoadConfig() (Config, error) {
 		LogFormat:       &logFormat,
 	})
 	if err != nil {
-		e := fmt.Errorf("configuration from environment variables invalid: %w", err)
+		joined := errors.Join(translateToEnvKeys(err)...)
+		e := fmt.Errorf("invalid environment variable values: %w", joined)
 		return Config{}, e
 	}
 
@@ -125,6 +146,34 @@ func resolveEnv[T any](ev env[T], errs []error) (T, []error) {
 		errs = append(errs, e)
 	}
 	return value, errs
+}
+
+// translateToEnvKeys rewrites the field errors NewConfig reports in terms of
+// the environment variable that carried each value. An error of another shape
+// is passed through untouched.
+func translateToEnvKeys(err error) []error {
+	var verr validation.ValidationError
+	if !errors.As(err, &verr) {
+		return []error{err}
+	}
+
+	fieldErrs := verr.Errors()
+	errs := make([]error, 0, len(fieldErrs))
+
+	for _, fieldErr := range fieldErrs {
+		e := fmt.Errorf("'%s': %s", envKeyOf(fieldErr.Field()), fieldErr.Issue())
+		errs = append(errs, e)
+	}
+
+	return errs
+}
+
+func envKeyOf(field string) string {
+	key, ok := envKeyByField[field]
+	if !ok {
+		return field
+	}
+	return key
 }
 
 func (c Config) IsZero() bool {

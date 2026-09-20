@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
+	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -260,4 +261,35 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 
 func TestConfig_IsZero(t *testing.T) {
 	assert.True(t, Config{}.IsZero())
+}
+
+func TestNewConfig_ReturnsErrorsTaggedWithTheirField(t *testing.T) {
+	params := ConfigParams{BcryptCost: shared.Ptr(0)}
+
+	_, err := NewConfig(params)
+
+	var verr validation.ValidationError
+	require.ErrorAs(t, err, &verr)
+
+	codes := make(map[string]string)
+	for _, fieldErr := range verr.Errors() {
+		codes[fieldErr.Field()] = fieldErr.Issue().Code()
+	}
+
+	assert.Equal(t, validation.CodeRequired, codes[fieldAddress])
+	assert.Equal(t, validation.CodeRequired, codes[fieldDatabaseURL])
+	assert.Equal(t, validation.CodeNotPositive, codes[fieldBcryptCost])
+}
+
+func TestLoadConfig_ReportsTheEnvironmentVariableKey(t *testing.T) {
+	setRequiredEnvs(t)
+	t.Setenv(envBcryptCost.Key, "0")
+	t.Setenv(envAccessTokenTTL.Key, "-5m")
+
+	_, err := LoadConfig()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), envBcryptCost.Key)
+	assert.Contains(t, err.Error(), envAccessTokenTTL.Key)
+	assert.Contains(t, err.Error(), validation.CodeNotPositive)
 }
