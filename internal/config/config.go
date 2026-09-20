@@ -42,6 +42,15 @@ type ConfigParams struct {
 	LogFormat       *LogFormat
 }
 
+// Fallbacks for the params NewConfig accepts as optional.
+const (
+	defaultAutoMigrate     = false
+	defaultBcryptCost      = 12
+	defaultAccessTokenTTL  = 30 * time.Minute
+	defaultRefreshTokenTTL = 7 * 24 * time.Hour
+	defaultLogFormat       = LogFormatJSON
+)
+
 var (
 	requiredStringValidators = []validation.Validator[string]{
 		validation.Required[string](),

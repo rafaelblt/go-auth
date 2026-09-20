@@ -4,14 +4,6 @@ import (
 	"time"
 )
 
-const (
-	defaultAutoMigrate     = false
-	defaultBcryptCost      = 12
-	defaultAccessTokenTTL  = 30 * time.Minute
-	defaultRefreshTokenTTL = 7 * 24 * time.Hour
-	defaultLogFormat       = LogFormatJSON
-)
-
 var envDatabaseURL = env[string]{
 	Key:    "DATABASE_URL",
 	Parser: stringEnvParser,
