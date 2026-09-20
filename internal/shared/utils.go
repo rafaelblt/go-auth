@@ -21,9 +21,13 @@ func PtrFromOk[T any](v T, ok bool) *T {
 }
 
 func Deref[T any](p *T) T {
+	var zero T
+	return DerefOr(p, zero)
+}
+
+func DerefOr[T any](p *T, fallback T) T {
 	if p == nil {
-		var zero T
-		return zero
+		return fallback
 	}
 	return *p
 }

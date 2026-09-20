@@ -16,6 +16,10 @@ func (f LogFormat) valid() bool {
 	return f == LogFormatJSON || f == LogFormatText
 }
 
+var logFormatValidators = []validation.Validator[LogFormat]{
+	allowedLogFormat(),
+}
+
 func allowedLogFormat() validation.Validator[LogFormat] {
 	return func(value LogFormat) *validation.Issue {
 		if !value.valid() {

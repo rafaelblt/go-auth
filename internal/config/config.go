@@ -42,28 +42,32 @@ type ConfigParams struct {
 	LogFormat       *LogFormat
 }
 
+var (
+	requiredStringValidators = []validation.Validator[string]{
+		validation.Required[string](),
+	}
+	costValidators = []validation.Validator[int]{
+		validation.Positive[int](),
+	}
+	ttlValidators = []validation.Validator[time.Duration]{
+		validation.Positive[time.Duration](),
+	}
+)
+
 func NewConfig(params ConfigParams) (Config, error) {
+	autoMigrate := shared.DerefOr(params.AutoMigrate, defaultAutoMigrate)
+	bcryptCost := shared.DerefOr(params.BcryptCost, defaultBcryptCost)
+	accessTokenTTL := shared.DerefOr(params.AccessTokenTTL, defaultAccessTokenTTL)
+	refreshTokenTTL := shared.DerefOr(params.RefreshTokenTTL, defaultRefreshTokenTTL)
+	logFormat := shared.DerefOr(params.LogFormat, defaultLogFormat)
+
 	acc := validation.NewAccumulator()
-
-	acc.Add(fieldAddress, validation.Validate(
-		params.Address,
-		validation.Required[string](),
-	))
-	acc.Add(fieldDatabaseURL, validation.Validate(
-		params.DatabaseURL,
-		validation.Required[string](),
-	))
-
-	autoMigrate := resolveParam(acc, fieldAutoMigrate, params.AutoMigrate,
-		defaultAutoMigrate)
-	bcryptCost := resolveParam(acc, fieldBcryptCost, params.BcryptCost,
-		defaultBcryptCost, validation.Positive[int]())
-	accessTokenTTL := resolveParam(acc, fieldAccessTokenTTL, params.AccessTokenTTL,
-		defaultAccessTokenTTL, validation.Positive[time.Duration]())
-	refreshTokenTTL := resolveParam(acc, fieldRefreshTokenTTL, params.RefreshTokenTTL,
-		defaultRefreshTokenTTL, validation.Positive[time.Duration]())
-	logFormat := resolveParam(acc, fieldLogFormat, params.LogFormat,
-		defaultLogFormat, allowedLogFormat())
+	acc.Add(fieldAddress, validation.Validate(params.Address, requiredStringValidators...))
+	acc.Add(fieldDatabaseURL, validation.Validate(params.DatabaseURL, requiredStringValidators...))
+	acc.Add(fieldBcryptCost, validation.Validate(bcryptCost, costValidators...))
+	acc.Add(fieldAccessTokenTTL, validation.Validate(accessTokenTTL, ttlValidators...))
+	acc.Add(fieldRefreshTokenTTL, validation.Validate(refreshTokenTTL, ttlValidators...))
+	acc.Add(fieldLogFormat, validation.Validate(logFormat, logFormatValidators...))
 
 	if err := acc.Err(); err != nil {
 		return Config{}, err
@@ -79,23 +83,6 @@ func NewConfig(params ConfigParams) (Config, error) {
 		logFormat:       logFormat,
 	}
 	return cfg, nil
-}
-
-// resolveParam validates an optional param when it was provided, and falls
-// back to the default when it was not.
-func resolveParam[T any](
-	acc *validation.Accumulator,
-	field string,
-	param *T,
-	fallback T,
-	validators ...validation.Validator[T],
-) T {
-	if param == nil {
-		return fallback
-	}
-
-	acc.Add(field, validation.Validate(*param, validators...))
-	return *param
 }
 
 func LoadConfig() (Config, error) {
