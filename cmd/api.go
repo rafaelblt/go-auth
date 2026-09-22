@@ -41,7 +41,7 @@ func run() error {
 	logger.Info("running app...")
 	err = app.Run(ctx)
 	if err != nil {
-		logger.Error("stopping app...", "error", err)
+		logger.Error("app run failed", "error", err)
 		return err
 	}
 	logger.Info("stopping app...")
