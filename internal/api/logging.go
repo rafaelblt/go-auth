@@ -9,7 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const loggerKey = "logger"
+// loggerKeyType is unexported so that no other package can build a key that
+// compares equal to loggerKey and overwrite the request logger.
+type loggerKeyType struct{}
+
+var loggerKey = loggerKeyType{}
 
 type writerRecorder struct {
 	http.ResponseWriter
