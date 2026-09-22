@@ -18,6 +18,8 @@ type Input struct {
 }
 
 type Output struct {
+	UserID       string
+	SessionID    string
 	AccessToken  usecase.AccessTokenDTO
 	RefreshToken usecase.RefreshTokenDTO
 }
@@ -142,6 +144,8 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	}
 
 	output := Output{
+		UserID:       usr.ID().String(),
+		SessionID:    sess.ID().String(),
 		AccessToken:  usecase.MapAccessTokenIssuedToDTO(issuedAccess),
 		RefreshToken: usecase.MapRefreshTokenToDTO(refreshToken, refreshSecret),
 	}

@@ -26,6 +26,8 @@ type Input struct {
 }
 
 type Output struct {
+	UserID       string
+	SessionID    string
 	AccessToken  usecase.AccessTokenDTO
 	RefreshToken usecase.RefreshTokenDTO
 }
@@ -157,6 +159,8 @@ func (uc *Refresh) rotate(
 	}
 
 	output := Output{
+		UserID:       sess.UserID().String(),
+		SessionID:    sess.ID().String(),
 		AccessToken:  usecase.MapAccessTokenIssuedToDTO(accessData),
 		RefreshToken: usecase.MapRefreshTokenToDTO(newToken, newSecret),
 	}

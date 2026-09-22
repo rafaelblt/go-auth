@@ -31,6 +31,17 @@ func TestRefresh_IssuesAccessToken(t *testing.T) {
 	assert.Equal(t, issued.ExpiresAt, out.AccessToken.ExpiresAt())
 }
 
+func TestRefresh_ReturnsIDsOfSessionAndItsUser(t *testing.T) {
+	helper := NewTestHelper(t)
+	fixture := helper.Seed()
+
+	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
+
+	require.NoError(t, err)
+	assert.Equal(t, fixture.Session.UserID().String(), out.UserID)
+	assert.Equal(t, fixture.Session.ID().String(), out.SessionID)
+}
+
 func TestRefresh_ReturnsSecretOfAddedRefreshToken(t *testing.T) {
 	helper := NewTestHelper(t)
 	in := helper.ValidInput()

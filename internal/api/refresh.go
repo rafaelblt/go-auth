@@ -49,5 +49,7 @@ func refreshEncoder(out refresh.Output) response {
 }
 
 func refreshSuccessLog(ctx context.Context, out refresh.Output) {
-	loggerFrom(ctx).Info("success refresh") // TODO: add user id?
+	loggerFrom(ctx).Info("success refresh",
+		"user_id", out.UserID,
+		"session_id", out.SessionID)
 }

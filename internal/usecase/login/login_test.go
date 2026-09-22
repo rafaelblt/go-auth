@@ -242,6 +242,21 @@ func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {
 	assert.Equal(t, issued.ExpiresAt, output.AccessToken.ExpiresAt())
 }
 
+func TestLogin_ReturnsIDsOfUserAndSavedSession(t *testing.T) {
+	helper := NewTestHelper(t)
+	usr, pwd := helper.GetUserAndPassword()
+
+	output, err := helper.UseCase().Execute(context.Background(), login.Input{
+		Username: usr.Username().String(),
+		Password: pwd.Value(),
+	})
+	require.NoError(t, err)
+
+	sess := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Adds())
+	assert.Equal(t, usr.ID().String(), output.UserID)
+	assert.Equal(t, sess.ID().String(), output.SessionID)
+}
+
 func TestLogin_ReturnsSecretOfSavedRefreshToken(t *testing.T) {
 	helper := NewTestHelper(t)
 
