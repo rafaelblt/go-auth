@@ -12,6 +12,7 @@ import (
 )
 
 type dependencies struct {
+	Logger   *slog.Logger
 	Infra    infraDeps
 	UseCases usecases
 }
@@ -23,9 +24,12 @@ type App struct {
 	deps   dependencies
 }
 
-func NewApp(ctx context.Context, cfg config.Config) (_ *App, err error) {
+func NewApp(ctx context.Context, cfg config.Config, logger *slog.Logger) (_ *App, err error) {
 	if cfg.IsZero() {
 		return nil, errors.New("config invalid: not built")
+	}
+	if logger == nil {
+		return nil, errors.New("logger cannot be nil")
 	}
 
 	infra, err := newInfra(ctx, cfg)
@@ -54,7 +58,7 @@ func NewApp(ctx context.Context, cfg config.Config) (_ *App, err error) {
 		return nil, err
 	}
 
-	deps := dependencies{Infra: infra, UseCases: uc}
+	deps := dependencies{Logger: logger, Infra: infra, UseCases: uc}
 
 	router, err := newRouter(ctx, deps)
 	if err != nil {
@@ -116,7 +120,7 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 	var wg sync.WaitGroup
 	for _, t := range tasks {
 		wg.Go(func() {
-			runPeriodic(ctx, slog.Default(), t)
+			runPeriodic(ctx, app.deps.Logger, t)
 		})
 	}
 

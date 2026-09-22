@@ -31,7 +31,7 @@ func run() error {
 	slog.SetDefault(logger)
 
 	logger.Info("building app...")
-	app, err := bootstrap.NewApp(ctx, cfg)
+	app, err := bootstrap.NewApp(ctx, cfg, logger)
 	if err != nil {
 		logger.Error("app build failed", "error", err)
 		return err

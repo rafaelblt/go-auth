@@ -32,25 +32,27 @@ func loggerFrom(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
-func logging(next http.Handler, w http.ResponseWriter, r *http.Request) {
-	requestID := uuid.NewString()
-	start := time.Now().UTC()
+func logging(base *slog.Logger) middleware {
+	return func(next http.Handler, w http.ResponseWriter, r *http.Request) {
+		requestID := uuid.NewString()
+		start := time.Now().UTC()
 
-	logger := slog.With(
-		slog.String("request_id", requestID),
-		slog.String("method", r.Method),
-		slog.String("path", r.URL.Path),
-		slog.String("ip", r.RemoteAddr),
-	)
+		logger := base.With(
+			slog.String("request_id", requestID),
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.String("ip", r.RemoteAddr),
+		)
 
-	logger.Info("request received")
+		logger.Info("request received")
 
-	ctx := context.WithValue(r.Context(), loggerKey, logger)
-	wr := writerRecorder{w, http.StatusOK}
-	next.ServeHTTP(&wr, r.WithContext(ctx))
+		ctx := context.WithValue(r.Context(), loggerKey, logger)
+		wr := writerRecorder{w, http.StatusOK}
+		next.ServeHTTP(&wr, r.WithContext(ctx))
 
-	end := time.Now().UTC()
-	logger.Info("request finished",
-		slog.Int("status", wr.status),
-		slog.Duration("duration", end.Sub(start)))
+		end := time.Now().UTC()
+		logger.Info("request finished",
+			slog.Int("status", wr.status),
+			slog.Duration("duration", end.Sub(start)))
+	}
 }

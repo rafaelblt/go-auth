@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"slices"
 
@@ -17,6 +18,7 @@ type Config struct {
 }
 
 type Dependencies struct {
+	Logger            *slog.Logger
 	Register          registerUseCase
 	Login             loginUseCase
 	Refresh           refreshUseCase
@@ -24,6 +26,9 @@ type Dependencies struct {
 }
 
 func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
+	if cfg.Dependencies.Logger == nil {
+		return nil, errors.New("logger nil")
+	}
 	if cfg.Dependencies.Register == nil {
 		return nil, errors.New("register nil")
 	}
@@ -62,15 +67,15 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
-	chain := chainMiddlewares(mux)
+	chain := chainMiddlewares(mux, cfg.Dependencies.Logger)
 
 	return chain, nil
 }
 
-func chainMiddlewares(handler http.Handler) http.Handler {
+func chainMiddlewares(handler http.Handler, logger *slog.Logger) http.Handler {
 	type middleware func(http.Handler) http.Handler
 	middlewares := []middleware{
-		adaptMiddleware(logging),
+		adaptMiddleware(logging(logger)),
 		adaptMiddleware(recovery),
 	}
 
