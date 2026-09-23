@@ -50,6 +50,9 @@ You are reading or changing the source. Each layer has its own document; the
 
 ## Contributing
 
+Start with **[CONTRIBUTING.md](../CONTRIBUTING.md)** in the repository root,
+which routes to the documents below.
+
 - **[Commits](development/commits.md)**: the message format, the types and
   scopes, and what belongs in one commit.
 - **[Testing](development/testing.md)**: the test layers, how to run them, and

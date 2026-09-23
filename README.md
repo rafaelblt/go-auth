@@ -73,4 +73,16 @@ Full walkthrough: [Getting started](docs/getting-started.md).
 | [Error model](docs/api/errors.md) | Status codes and error codes |
 | [Verifying access tokens](docs/api/token-verification.md) | Validating a JWT in your own service, with the JWKS |
 | [Architecture](docs/architecture/overview.md) | Layers, packages, dependency rules |
+| [Code conventions](docs/architecture/conventions.md) | The patterns used throughout the code, and why |
+| [Testing](docs/development/testing.md) | The test layers, how to run them, the helpers |
 | [All documentation](docs/README.md) | Everything else |
+
+## Contributing
+
+Read [Code conventions](docs/architecture/conventions.md) before writing code,
+and [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and shape a
+commit.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
