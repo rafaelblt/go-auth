@@ -8,7 +8,7 @@ SQL.
 |---|---|
 | [Schema](schema.md) | The four tables, and what each constraint is for |
 | [Migrations](migrations.md) | The embedded `.sql` files, the version check, adding one |
-| [Repositories](repositories.md) | Repositories, mapping, conventions, the unit of work |
+| [Repositories](repositories.md) | Repositories, mapping, conventions, guarded writes, the unit of work |
 
 ## Connection pool
 
