@@ -254,6 +254,18 @@ Package names are singular nouns (`user`, `password`, `session`,
 `validation`), and are part of the type's name where it is used: `user.ID`,
 not `user.UserID`.
 
+**The exception is `session`**, the one package holding two entities. Its
+`Session` types keep the entity in their names — `session.SessionID`,
+`session.SessionCreationParams`, `session.SessionRestoreParams` — so that they
+read unambiguously next to `session.RefreshTokenID` and
+`session.RefreshTokenCreationParams`. A `session.ID` would not say which of the
+two it identified, and the two do appear in one signature:
+`RefreshTokenRestoreParams` carries both. A package with one entity uses the
+short form: `user.ID`, `password.ID`, `user.CreationParams`.
+
+The rule for a new package, then: drop the package name from the type unless the
+package holds more than one entity.
+
 ## Formatting
 
 Standard `gofmt`. Before committing:
