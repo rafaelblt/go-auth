@@ -29,7 +29,9 @@ The API listens on `http://localhost:8080`, and PostgreSQL on
 in the `goauth_pg_data` volume between restarts.
 
 This stack is for development only: the credentials are hard-coded, and
-`Dockerfile.dev` builds an image that contains the whole Go toolchain.
+`Dockerfile.dev` builds an image that contains the whole Go toolchain. For
+deployment, build the [production image](#the-production-image) from
+`Dockerfile`.
 
 ## Option B: from source
 
@@ -189,6 +191,42 @@ likely to matter:
 - The signing key is held in memory, so every restart invalidates all
   outstanding access tokens, and the service runs as
   [a single replica](limitations.md#one-replica-and-a-restart-invalidates-access-tokens).
+
+### The production image
+
+`Dockerfile`, not `Dockerfile.dev`, builds the image to deploy:
+
+```bash
+docker build -t go-auth .
+```
+
+It is multi-stage, and the runtime stage is `scratch`: the static binary, the CA
+certificates, a `passwd` entry, and nothing else. Around 12 MB, with no shell, no
+package manager and no Go toolchain. The migrations are embedded in the binary,
+so the image carries its own schema and needs no `.sql` files.
+
+Configure it entirely through the environment:
+
+```bash
+docker run --rm \
+  -e DATABASE_URL='postgres://user:password@host:5432/dbname?sslmode=require' \
+  -e ADDRESS='0.0.0.0:8080' \
+  -p 8080:8080 \
+  go-auth
+```
+
+`ADDRESS` must bind `0.0.0.0` inside a container, and a port above 1024, since
+the process runs as `nobody`. `EXPOSE 8080` in the `Dockerfile` is documentation:
+the port actually served is the one in `ADDRESS`.
+
+`AUTO_MIGRATE` is off by default, so the container will refuse to start until the
+schema matches the binary. Either set it, or
+[apply the migrations as a deploy step](#applying-migrations-as-a-deploy-step).
+
+There is no `/health` and no `/ready` endpoint
+([why](limitations.md#out-of-scope)). `running app...` on standard output is the
+readiness signal available; for a liveness probe, a TCP check against `ADDRESS` is
+the closest thing, and it will not notice a database that has gone away.
 
 ## Where to next
 
