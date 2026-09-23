@@ -183,22 +183,23 @@ answer `500`.
 | Message | Level | Extra fields | Means | What to do |
 |---|---|---|---|---|
 | `error kind not found in message catalog, using fallback` | `WARN` | `kind` | A `kind` is missing from `kindMessageCatalog`. The client still gets the right status, with the text `An error occurred.` | Add the `kind` to the catalog |
+| `error field not found in field catalog, using raw name` | `WARN` | `field` | A field is missing from `errorFieldCatalog`. The `422` body names it with its internal name, breaking the `snake_case` of every other field | Add the field to the catalog |
 | `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`. A real answer was turned into a `500` | Add the `kind` to the catalog |
 | `unexpected error for translation` | `ERROR` | `error` | An error reached the boundary that is neither a `UseCaseError` nor a `ValidationError`, usually from the database. `error` holds the text kept from the client | Read `error`. Usually the database: check it is reachable. Otherwise a missing translation, which is a bug |
 | `panic recovered` | `ERROR` | `panic` | A handler panicked. `panic` is the recovered value | Always a bug. The `request_id` gives the request that triggered it |
 | `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled. The client gets `500` with an empty body | Always a bug, in the type named by `body_type` |
 
-The first two are the same defect at two severities: a new `ErrorKind` was added
-without updating both of the catalogs keyed by `ErrorKind` in
-`internal/api/error_catalogs.go`.
+The first three are all the same kind of defect: something was added without
+updating one of the three catalogs in `internal/api/error_catalogs.go`. The two
+keyed by `ErrorKind` want a new `ErrorKind`; `errorFieldCatalog`, which maps a use
+case's field name to the name that goes in a `422` body, wants a newly validated
+field. None of the three fails in silence.
 
-That file holds a third catalog, `errorFieldCatalog`, which maps a use case's
-field name to the name that goes in a `422` body. **It has no line here**: when a
-field is missing from it, `translateError` falls back to the internal name and
-logs nothing. Nothing reaches that path today, since the only validated fields
-are register's two and both are in the catalog, but a validated field added
-without the catalog entry would answer `"Username"` instead of `"username"`,
-silently.
+Severity follows what the client gets. A missing status mapping turns a real
+answer into a `500`, so it is an `ERROR`. A missing message or field name still
+answers correctly, with worse text, so both are `WARN`. Nothing reaches the field
+path today: the only validated fields are register's two, and both are in the
+catalog.
 
 ### Startup and shutdown
 

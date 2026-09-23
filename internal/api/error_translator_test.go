@@ -11,6 +11,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,7 +175,12 @@ func TestTranslateValidationError(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			resp := translateValidationError(t.Context(), tC.err)
+			// A buffered logger, not t.Context(): none of these field names is
+			// in errorFieldCatalog, so each one warns, and the warnings would
+			// otherwise reach the test output.
+			ctx, _ := contextWithLoggedLines(t)
+
+			resp := translateValidationError(ctx, tC.err)
 			assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 
 			require.IsType(t, validationErrorBody{}, resp.Body)
@@ -193,4 +199,39 @@ func TestTranslateValidationError(t *testing.T) {
 			assert.Equal(t, expected, body.Errors)
 		})
 	}
+}
+
+// A field missing from errorFieldCatalog is answered with its internal name,
+// which breaks the snake_case of every other field in the body. Nothing reaches
+// that path today, so the warning is what would make it visible if something
+// did.
+func TestTranslateValidationError_WarnsOnFieldNotInCatalog(t *testing.T) {
+	ctx, buf := contextWithLoggedLines(t)
+	verr := validation.NewValidationError(
+		validation.NewFieldError("Email", validation.IssueRequired()),
+	)
+
+	resp := translateValidationError(ctx, verr)
+
+	require.IsType(t, validationErrorBody{}, resp.Body)
+	body := resp.Body.(validationErrorBody)
+	assert.Equal(t, "Email", testutil.Only(t, body.Errors).Field)
+
+	lines := loggedLines(t, buf)
+	require.NotEmpty(t, lines)
+	assert.Equal(t, "error field not found in field catalog, using raw name", lines[0]["msg"])
+	assert.Equal(t, "WARN", lines[0]["level"])
+	assert.Equal(t, "Email", lines[0]["field"])
+}
+
+func TestTranslateValidationError_DoesNotWarnForAKnownField(t *testing.T) {
+	ctx, buf := contextWithLoggedLines(t)
+	verr := validation.NewValidationError(
+		validation.NewFieldError(register.FieldUsername, validation.IssueRequired()),
+	)
+
+	translateValidationError(ctx, verr)
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "validation error", line["msg"])
 }

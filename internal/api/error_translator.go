@@ -63,6 +63,7 @@ func logUseCaseError(logger *slog.Logger, uerr usecase.UseCaseError) {
 }
 
 func translateValidationError(ctx context.Context, verr validation.ValidationError) response {
+	logger := loggerFrom(ctx)
 	fieldErrs := make([]fieldErrorData, len(verr.Errors()))
 	pairsToLog := make([]string, len(verr.Errors()))
 
@@ -70,6 +71,8 @@ func translateValidationError(ctx context.Context, verr validation.ValidationErr
 		issue := ferr.Issue()
 		field, ok := errorFieldCatalog[ferr.Field()]
 		if !ok {
+			logger.Warn("error field not found in field catalog, using raw name",
+				"field", ferr.Field())
 			field = ferr.Field()
 		}
 		fieldErr := fieldErrorData{
@@ -81,7 +84,7 @@ func translateValidationError(ctx context.Context, verr validation.ValidationErr
 		pairsToLog[i] = field + " " + issue.Code()
 	}
 
-	loggerFrom(ctx).Info("validation error", "pairs", pairsToLog)
+	logger.Info("validation error", "pairs", pairsToLog)
 	body := validationErrorBody{Errors: fieldErrs}
 	return validationError(body)
 }
