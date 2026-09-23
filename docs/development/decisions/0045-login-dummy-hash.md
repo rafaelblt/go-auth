@@ -3,17 +3,16 @@
 - **Status:** Accepted
 - **Date:** 2026-09-13
 - **Areas:** authentication
-- **Related:** [0028](0028-uniform-auth-errors.md), [0002](0002-ports-and-adapters.md)
+- **Related:** [Deliberately vague errors](../../api/errors.md#deliberately-vague-errors)
 
 ## Context
 
-[Uniform errors](0028-uniform-auth-errors.md) make every login failure return
+[Uniform errors](../../api/errors.md#deliberately-vague-errors) make every login failure return
 the same response, but not take the same time. Login used to return as soon as
 the user or its password row was missing, before the bcrypt comparison.
 Bcrypt is slow by design, so an unknown username answered hundreds of
 milliseconds faster than a wrong password, and response time alone revealed
-whether an account existed
-([issue 0001](../issues/0001-login-timing-reveals-username.md)).
+whether an account existed.
 
 The miss paths have to do the same work as a real check. The obstacle is that
 a bcrypt hash carries its cost, and `BCRYPT_COST` is configurable: a dummy
@@ -23,9 +22,10 @@ hash of any other cost takes a different time to verify.
 
 When `FindByUsername` finds no user, or `FindByUserID` finds no password,
 login calls `PasswordChecker.Verify` with the submitted password and a dummy
-hash, ignores the result, and returns `ErrInvalidCredentials`. An error from
-that call is returned as an unexpected error, since it can only mean the dummy
-hash is broken.
+hash, ignores the result, and returns the rejection for that miss
+(`ErrUserNotFound` or `ErrPasswordNotFound`, both answered as
+`INVALID_CREDENTIALS`). An error from that call is returned as an unexpected
+error, since it can only mean the dummy hash is broken.
 
 The dummy hash is a `password.Hashed` injected through
 `login.Config.DummyPasswordHash`. `internal/bootstrap` produces it at startup
@@ -61,7 +61,7 @@ are: their timing depends only on the input, and the format rules are public.
   round trip, small next to bcrypt and to network jitter, and accepted.
 - The dummy hash matches the configured cost, not the cost of every stored
   hash. After a `BCRYPT_COST` change the gap reopens for accounts hashed
-  before it ([issue 0012](../issues/0012-login-timing-after-bcrypt-cost-change.md)).
+  before it ([Limitations](../../limitations.md#login-timing-after-a-bcrypt_cost-change)).
 - This removes the timing signal from login only. Register still answers
   `409 USERNAME_ALREADY_EXISTS` for a taken username, so account existence is
   not secret; what limits enumeration through either endpoint is rate limiting.

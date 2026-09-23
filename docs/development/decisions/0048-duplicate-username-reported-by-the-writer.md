@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-17
 - **Areas:** architecture, domain
-- **Related:** [0003](0003-split-read-write-interfaces.md), [0010](0010-username-rules.md), [0046](0046-refresh-token-use-guarded-at-write.md)
+- **Related:** [0046](0046-refresh-token-use-guarded-at-write.md), [Register](../../architecture/usecases/register.md)
 
 ## Context
 
@@ -18,7 +18,6 @@ Before this record nothing translated that constraint violation. The insert
 failed, register treated the error as unexpected, and the loser of the race
 got `500 INTERNAL_SERVER_ERROR` instead of `409 USERNAME_ALREADY_EXISTS`. No
 duplicate user was created, so the outcome was safe and the answer was wrong.
-This was [issue 0003](../issues/0003-duplicate-username-insert-returns-500.md).
 
 Register used to recognise a "username already exists" error from the writer,
 and lost that check when it moved to its own package (f9a694d). No repository

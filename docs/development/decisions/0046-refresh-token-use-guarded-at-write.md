@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-13
 - **Areas:** authentication, architecture
-- **Related:** [0003](0003-split-read-write-interfaces.md), [0025](0025-rotate-on-every-refresh.md), [0026](0026-reuse-revokes-session.md), [0047](0047-lost-refresh-race-is-reuse.md)
+- **Related:** [0047](0047-lost-refresh-race-is-reuse.md), [Rotation](../../architecture/usecases/refresh.md#rotation), [Reuse detection](../../architecture/usecases/refresh.md#reuse-detection)
 
 ## Context
 

@@ -3,21 +3,20 @@
 - **Status:** Accepted
 - **Date:** 2026-09-18
 - **Areas:** architecture, domain, authentication
-- **Related:** [0002](0002-ports-and-adapters.md), [0007](0007-new-versus-restore.md), [0008](0008-value-rather-than-string.md), [0023](0023-random-refresh-tokens.md), [0024](0024-store-refresh-token-hash.md)
+- **Related:** [Token model](../../architecture/tokens.md#token-model), [Code conventions](../../architecture/conventions.md#value-objects)
 
 ## Context
 
-A refresh token's format is fixed by [0023](0023-random-refresh-tokens.md)
-(32 bytes from `crypto/rand`, base64url) and its storage by
-[0024](0024-store-refresh-token-hash.md) (only `SHA-256(token)`). Both
-lived in `internal/infra/refreshtoken`, behind two ports:
+A refresh token's format (32 bytes from `crypto/rand`, base64url) and its
+storage (only `SHA-256(token)`) are fixed by the
+[token model](../../architecture/tokens.md#token-model). Both lived in `internal/infra/refreshtoken`, behind two ports:
 `RefreshTokenGenerator`, which produced the raw token and its hash, and
 `RefreshTokenResolver`, which decoded a raw token, hashed it and called
 `RefreshTokenReader.FindByHash`.
 
 That package imported only the standard library and did no I/O of its own.
 It had no second implementation, and no plausible one: another length or
-encoding would be a change to 0023, not a different adapter. The ports
+encoding would be a change to the token format, not a different adapter. The ports
 bought nothing a port exists for.
 
 The split also left the domain incomplete. `RefreshTokenHash` was a domain
@@ -48,7 +47,7 @@ line or a restored token.
 client's string into a secret, checking the encoding and the length, and
 `Hash()` gives the lookup key. Like the other sensitive types, the secret
 exposes `Value()` rather than `String()`
-([0008](0008-value-rather-than-string.md)), so it never prints itself
+([conventions](../../architecture/conventions.md#value-rather-than-string)), so it never prints itself
 through a `%v`.
 
 **A zero secret panics.** `Value()` and `Hash()` panic on a zero secret, unlike
@@ -63,7 +62,7 @@ tests to tell it from the correct behaviour. The use case calls
 `RefreshTokenReader.FindByHash` itself: the lookup is I/O, which the domain
 does not do, and it was already a port. The name is `Parse`, not `Restore`:
 the secret is never stored, so there is nothing to restore
-([0007](0007-new-versus-restore.md)), and `Parse` is what the other string →
+([conventions](../../architecture/conventions.md#two-constructors)), and `Parse` is what the other string →
 value object constructors in the domain are called.
 
 **The hash is exactly a SHA-256 digest.** `NewRefreshTokenHash` requires
@@ -81,7 +80,7 @@ too; every stored hash already satisfies it.
   caller would assemble the token from parts, and nothing would stop it
   passing an unrelated hash.
 - **Keeping the raw token inside the hash or the entity, readable once** —
-  it mixes the credential with the digest 0024 exists to separate, a
+  it mixes the credential with the digest that storing only the hash separates, a
   "read once" flag does not survive copying a value type, and the secret
   would reach the writer and any log of the entity.
 

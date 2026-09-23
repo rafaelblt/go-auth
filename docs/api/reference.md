@@ -1,0 +1,234 @@
+# API reference
+
+Four endpoints. All request and response bodies are JSON.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/v1/auth/register` | Create a user |
+| `POST` | `/v1/auth/login` | Exchange credentials for a token pair |
+| `POST` | `/v1/auth/refresh` | Exchange a refresh token for a new pair |
+| `GET` | `/.well-known/jwks.json` | Public keys for verifying access tokens |
+
+## Conventions
+
+**Versioning.** The auth endpoints start with `/v1`. The JWKS endpoint has no
+version, because [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) fixes its
+path.
+
+**Content type.** Every response the service writes is
+`Content-Type: application/json`. Requests are parsed as JSON whatever
+`Content-Type` they send, but sending `application/json` is correct.
+
+**Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`
+returns `405 Method Not Allowed`, not `404`.
+
+**Unknown routes return plain text.** A `404` for an unknown path, and a `405`
+for a known path with the wrong method, come from Go's `http.ServeMux`, with a
+`text/plain` body instead of the JSON error shape. Do not assume every error
+response has a JSON body.
+
+**Timestamps.** RFC 3339, in UTC: `2026-09-08T12:00:00Z`.
+
+**Errors.** Two shapes, described in [Error model](errors.md).
+
+---
+
+## POST /v1/auth/register
+
+Creates a user with a username and a password. It does **not** log the user
+in and returns no tokens: call `/v1/auth/login` next.
+
+### Request
+
+```json
+{
+  "username": "alice",
+  "password": "correct-horse"
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `username` | string | 3–32 code points; only `a-z`, `0-9`, `.`, `_`, `-` |
+| `password` | string | at least 8 code points, at most 72 bytes |
+
+Usernames are lower-cased before they are checked and stored, so `Alice` and
+`alice` are the same user, stored as `alice`. Spaces are not trimmed: a
+leading or trailing space is a character outside the allowed set.
+
+Passwords are stored and compared exactly as sent: no trimming, no Unicode
+normalisation, and any character is allowed. The reasons for these rules are
+in the [Domain model](../architecture/domain/user.md#username).
+
+### Response: `200 OK`
+
+```json
+{
+  "user": {
+    "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+    "username": "alice",
+    "status": "active",
+    "created_at": "2026-09-08T12:00:00Z",
+    "updated_at": "2026-09-08T12:00:00Z"
+  }
+}
+```
+
+`status` is always `active`.
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `409` | `USERNAME_ALREADY_EXISTS` | The username is taken |
+| `422` | *(field errors)* | The username or the password is invalid |
+
+A validation error names every field at fault, so one request reports every
+problem:
+
+```json
+{
+  "errors": [
+    { "field": "username", "code": "TOO_SHORT", "details": { "min": 3, "unit": "code_point" } },
+    { "field": "password", "code": "TOO_SHORT", "details": { "min": 8, "unit": "code_point" } }
+  ]
+}
+```
+
+Usernames are unique even under concurrency: of any number of registrations
+of one username sent at the same moment, exactly one creates the account, and
+the others get `409 USERNAME_ALREADY_EXISTS`, as they would one after the
+other.
+
+---
+
+## POST /v1/auth/login
+
+Checks the credentials and opens a new session, returning an access token and
+a refresh token.
+
+### Request
+
+```json
+{
+  "username": "alice",
+  "password": "correct-horse"
+}
+```
+
+### Response: `200 OK`
+
+```json
+{
+  "access_token": {
+    "value": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2026-09-08T12:30:00Z"
+  },
+  "refresh_token": {
+    "value": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01",
+    "expires_at": "2026-09-15T12:00:00Z"
+  }
+}
+```
+
+`access_token.value` is a JWT. Send it to your own services, and verify it
+there ([how](token-verification.md)).
+
+`refresh_token.value` is 32 random bytes in base64url, not a JWT. It means
+nothing outside this service, which stores only its SHA-256 hash. Treat it as
+a password: keep it private, never log it, never put it in a URL.
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `401` | `INVALID_CREDENTIALS` | Any other failure |
+
+Every login failure gets the same response: a malformed username, an unknown
+username, a user without a password, and a wrong password. Login never returns
+`422`. Nothing in the response, or in how long it takes, tells an unknown
+username from a wrong password; see
+[Deliberately vague errors](errors.md#deliberately-vague-errors).
+
+---
+
+## POST /v1/auth/refresh
+
+Exchanges a valid refresh token for a new access token and a new refresh
+token. The token sent is spent in the process.
+
+### Request
+
+```json
+{
+  "refresh_token": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01"
+}
+```
+
+### Response: `200 OK`
+
+The same shape as the login response. **The refresh token you sent is now
+spent.** Replace your stored copy with the new one: sending the old one again
+revokes the whole session.
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `401` | `INVALID_TOKEN` | Any other failure |
+
+Every failure gets the same response: a token that never existed, one that
+expired, one already used, and one whose session was revoked. A caller cannot
+tell which it was, or whether reuse detection fired.
+
+**Reuse detection.** If the token was already used, the service revokes its
+whole session before answering `401`. The session's current refresh token
+stops working too, and the user has to log in again. Two concurrent refreshes
+with the same token count as reuse: one succeeds, the other revokes the
+session. Clients must follow the
+[client obligations](../architecture/usecases/refresh.md#client-obligations) to
+avoid logging their own users out.
+
+---
+
+## GET /.well-known/jwks.json
+
+Publishes the public keys that verify access tokens, as a
+[JWK Set](https://www.rfc-editor.org/rfc/rfc7517). It holds no secrets and
+needs no authentication.
+
+### Response: `200 OK`
+
+```json
+{
+  "keys": [
+    {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "use": "sig",
+      "alg": "EdDSA",
+      "kid": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `kty` | Key type: always `OKP` (octet key pair) |
+| `crv` | Curve: always `Ed25519` |
+| `x` | The public key, base64url without padding |
+| `use` | Always `sig`: the key verifies signatures |
+| `alg` | Always `EdDSA` |
+| `kid` | Key ID: the RFC 7638 thumbprint of the key |
+
+A token's `kid` header matches the `kid` of the key that signed it, so a
+verifier can pick the right key without trying each one.
+
+The document holds exactly one key, the one signing now, and the response has
+no cache headers. How to cache it, and what happens when the key rotates:
+[Fetching and caching keys](token-verification.md#fetching-and-caching-keys).
