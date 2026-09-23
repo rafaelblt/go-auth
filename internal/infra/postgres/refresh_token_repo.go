@@ -43,7 +43,7 @@ func (repo *RefreshTokenRepo) Add(ctx context.Context, token *session.RefreshTok
 // of the same token only one is applied. When nothing is updated, it checks
 // whether the token exists, so a missing token is not reported as a reuse.
 //
-// See docs/development/decisions/0046-refresh-token-use-guarded-at-write.md.
+// See docs/development/decisions/0050-refresh-token-use-is-settled-at-write.md.
 func (repo *RefreshTokenRepo) MarkUsed(ctx context.Context, token *session.RefreshToken) error {
 	model, err := mapRefreshTokenToModel(token)
 	if err != nil {

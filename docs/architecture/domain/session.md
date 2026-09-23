@@ -24,7 +24,7 @@ revoked changes nothing, so a second call cannot overwrite the time of the
 first. The guarantee stops at the entity. `SessionWriter.Update` is not
 guarded, so two concurrent requests that each read an active session and
 revoke it both write, and the later write wins; see
-[decision 0046](../../development/decisions/0046-refresh-token-use-guarded-at-write.md#consequences).
+[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md#consequences).
 
 ## RefreshToken
 
@@ -78,7 +78,7 @@ and never trip the alarm.
 
 `Use` decides in memory, on a token read before the write. Two concurrent
 refreshes can both pass it, so the write checks again; see
-[decision 0046](../../development/decisions/0046-refresh-token-use-guarded-at-write.md)
+[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)
 and [Refresh](../usecases/refresh.md).
 
 ## RefreshTokenSecret

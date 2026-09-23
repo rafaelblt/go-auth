@@ -92,7 +92,7 @@ CREATE TABLE refresh_tokens (
 - **`used_at`** is `NULL` until the token is spent. `RefreshTokenRepo.MarkUsed`
   sets it with `WHERE used_at IS NULL`, so of two concurrent uses only one is
   applied
-  ([decision 0046](../../development/decisions/0046-refresh-token-use-guarded-at-write.md)).
+  ([decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)).
 
 Nothing deletes rows from this table; see
 [Limitations](../../limitations.md#refresh-token-rows-are-never-deleted).

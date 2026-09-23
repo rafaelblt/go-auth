@@ -94,7 +94,7 @@ func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
 		// A concurrent refresh spent the token between the read and the write.
 		// Losing that race counts as reuse, exactly like a replay found on read.
 		//
-		// See docs/development/decisions/0047-lost-refresh-race-is-reuse.md.
+		// See docs/development/decisions/0050-refresh-token-use-is-settled-at-write.md.
 		return Output{}, uc.handleTokenReuse(ctx, sess, now)
 	}
 	return output, err

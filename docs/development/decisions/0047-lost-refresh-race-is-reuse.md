@@ -1,7 +1,7 @@
 # A refresh that loses the race for its token is reuse
 
-- **Status:** Accepted
-- **Date:** 2026-09-13
+- **Status:** Superseded by [0050](0050-refresh-token-use-is-settled-at-write.md)
+- **Date:** 2026-09-23
 - **Related:** [0046](0046-refresh-token-use-guarded-at-write.md), [Reuse detection](../../architecture/usecases/refresh.md#reuse-detection)
 
 ## Context

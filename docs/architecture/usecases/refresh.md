@@ -58,8 +58,8 @@ read before the transaction, so two requests with the same token can both
 pass it. The write settles it: `MarkUsed` updates the row only while `used_at`
 is still `NULL`, so exactly one request rotates. The other finds the token
 spent, and goes through reuse detection like any replay. See
-[decision 0046](../../development/decisions/0046-refresh-token-use-guarded-at-write.md)
-and [decision 0047](../../development/decisions/0047-lost-refresh-race-is-reuse.md).
+[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)
+and [decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md).
 
 Each new token gets a full `REFRESH_TOKEN_TTL`, so a session in use keeps
 moving its expiry forward, and has no maximum age.

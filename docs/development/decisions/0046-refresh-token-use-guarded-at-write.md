@@ -1,7 +1,7 @@
 # Refresh token use is guarded at write
 
-- **Status:** Accepted
-- **Date:** 2026-09-13
+- **Status:** Superseded by [0050](0050-refresh-token-use-is-settled-at-write.md)
+- **Date:** 2026-09-23
 - **Related:** [0047](0047-lost-refresh-race-is-reuse.md), [Rotation](../../architecture/usecases/refresh.md#rotation), [Reuse detection](../../architecture/usecases/refresh.md#reuse-detection)
 
 ## Context

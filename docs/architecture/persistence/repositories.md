@@ -103,7 +103,7 @@ it fails. A generic `Update` that silently refused when `used_at` was set would
 surprise its next caller.
 
 Where each of these was decided, with the alternatives weighed:
-[decision 0046](../../development/decisions/0046-refresh-token-use-guarded-at-write.md)
+[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)
 and [decision 0048](../../development/decisions/0048-duplicate-username-reported-by-the-writer.md).
 A new rule of this shape should link here rather than argue the premise again.
 

@@ -9,8 +9,8 @@ Only the metadata, Context, Decision and Invariant are required. Add
 Alternatives considered and Consequences when they have something to say, and
 delete them otherwise.
 
-State the title and the decision as facts about the system ("Refresh token
-use is guarded at write"), not as intentions ("Guard refresh token use").
+State the title and the decision as facts about the system ("A mapper is the
+only way to build a DTO"), not as intentions ("Protect the DTOs").
 -->
 
 - **Status:** Accepted <!-- Accepted | Deprecated | Superseded by [NNNN](NNNN-slug.md) -->
