@@ -39,15 +39,40 @@ go test $(go list ./... | grep -vE 'infra/postgres|infra/migrate|testutil|tests/
 
 ## Documentation tests
 
-`tests/docs` checks the documentation rules that are worth not having to
-remember. There is one: every decision record whose status is `Accepted` must be
-mentioned by some `.go` file, which is the rule the
-[decisions README](decisions/README.md#writing-one) states. It reads `docs/` and
-the `.go` files as text and does not compile anything, so it is instant and needs
-no database.
+`tests/docs` checks the rules that hold the documentation and the code together.
+It reads both as text and compiles nothing, so it is instant and needs no
+database.
 
-Keep this package small. A rule earns a test here when forgetting it is easy and
-the breakage is invisible; anything else belongs in a document.
+| Test | Rule |
+|---|---|
+| `TestMarkdownLinksResolve` | Every relative link between documents resolves, file **and** anchor |
+| `TestDocLinksInCodeCommentsResolve` | Every `docs/….md` path in a comment exists, anchor included |
+| `TestEveryPackageHasAPackageComment` | Every package says what it is and names its document |
+| `TestEveryAcceptedDecisionIsLinkedFromCode` | An `Accepted` record is mentioned by some `.go` file |
+| `TestSupersededDecisionsAreNotLinkedFromCode` | A superseded record is not, its references having been repointed |
+| `TestNoUseCaseLivesInTheUsecasePackageItself` | The invariant of [decision 0034](decisions/0034-protected-dtos.md) |
+
+All six guard the same kind of failure: something that stays correct only while
+someone remembers it, and whose breakage nothing else reports. A renamed heading
+leaves a dead anchor that reads fine until followed. A new package with no comment
+leaves the reader no route to `docs/`. A use case moved out of its subpackage
+leaves the DTOs' unexported fields looking protective while the mappers stop being
+the only way to build one.
+
+The last three come from the
+[decisions lifecycle](decisions/README.md#lifecycle) and from what the records
+themselves state as their **Invariant**, which is written to be checkable for
+exactly this reason.
+
+`helpers_test.go` holds what they share: walking the repository, stripping code
+blocks before looking for links, and turning a heading into the anchor GitHub
+would give it.
+
+**A rule earns a test here** when forgetting it is easy and the breakage
+invisible. A rule that the compiler, a domain test or a database constraint
+already enforces does not: the invariants of decisions 0045, 0048, 0049 and 0050
+are covered by use case tests, a unique index and an unexported constructor, and
+repeating them here would only add a second place to update.
 
 ## Writing a test
 

@@ -1,91 +1,121 @@
-// Package docs checks the few documentation rules that are worth not having to
-// remember. See docs/development/decisions/README.md.
 package docs
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-const (
-	decisionsDir = "../../docs/development/decisions"
-	codeRoot     = "../.."
-)
+const decisionsDir = "docs/development/decisions"
 
-// Every accepted record must be linked from a comment on the code it shaped.
-// The rule is in the decisions README; this is only so that forgetting it fails
-// instead of going unnoticed.
+// A record must be linked from a comment on the code it shaped, which the
+// decisions README requires. The code is where someone about to break a decision
+// is looking, and forgetting the link is silent.
 func TestEveryAcceptedDecisionIsLinkedFromCode(t *testing.T) {
-	code := readAllGoFiles(t)
+	code := allGoCode(t)
 
-	for _, name := range decisionFiles(t) {
-		if !isAccepted(t, filepath.Join(decisionsDir, name)) {
+	for _, record := range decisionRecords(t) {
+		if record.status != accepted {
 			continue
 		}
-		if !strings.Contains(code, name) {
-			t.Errorf("no .go file mentions %s;"+
-				" add a comment linking it from the code it shaped", name)
+		if !strings.Contains(code, record.name) {
+			t.Errorf("no .go file mentions %s; add a comment linking it from the"+
+				" code it shaped", record.name)
 		}
 	}
 }
 
-// decisionFiles returns the NNNN-slug.md file names, template.md and README.md
-// excluded.
-func decisionFiles(t *testing.T) []string {
-	t.Helper()
-	entries, err := os.ReadDir(decisionsDir)
-	if err != nil {
-		t.Fatalf("read decisions dir: %v", err)
-	}
+// Superseding a record means repointing what referred to it, so that the code
+// names the decision in force rather than the history behind it.
+func TestSupersededDecisionsAreNotLinkedFromCode(t *testing.T) {
+	code := allGoCode(t)
 
-	names := []string{}
-	for _, entry := range entries {
-		name := entry.Name()
-		if strings.HasSuffix(name, ".md") && name[0] >= '0' && name[0] <= '9' {
-			names = append(names, name)
+	for _, record := range decisionRecords(t) {
+		if record.status != superseded {
+			continue
+		}
+		if strings.Contains(code, record.name) {
+			t.Errorf("a .go file still mentions %s, which is superseded; point it"+
+				" at the record that replaced it", record.name)
 		}
 	}
-	if len(names) == 0 {
-		t.Fatal("no decision records found")
-	}
-	return names
 }
 
-func isAccepted(t *testing.T, path string) bool {
+// The invariant of decision 0034: a mapper is the only way to build a DTO, and
+// that holds because every use case sits in a subpackage of internal/usecase,
+// where the DTOs' unexported fields are out of reach. A use case in
+// internal/usecase itself could fill a field by hand, the fields would still
+// look protective, and nothing else would notice. An Execute method in a
+// top-level file is what that would look like.
+func TestNoUseCaseLivesInTheUsecasePackageItself(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(repoRoot, "internal/usecase/*.go"))
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
+
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		if strings.Contains(readFile(t, path), ") Execute(") {
+			t.Errorf("%s declares Execute; a use case belongs in a subpackage of"+
+				" internal/usecase, or its DTOs stop going through a mapper"+
+				" (decision 0034)", rel(path))
+		}
+	}
+}
+
+type decisionStatus int
+
+const (
+	accepted decisionStatus = iota
+	superseded
+	other
+)
+
+type decisionRecord struct {
+	name   string // the file name, as a code comment would spell it
+	status decisionStatus
+}
+
+// decisionRecords returns the NNNN-slug.md records, with README.md and
+// template.md left out.
+func decisionRecords(t *testing.T) []decisionRecord {
 	t.Helper()
-	content, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
+	paths, err := filepath.Glob(filepath.Join(repoRoot, decisionsDir, "[0-9]*.md"))
+	require.NoError(t, err)
+	require.NotEmpty(t, paths, "no decision records found")
+
+	records := make([]decisionRecord, 0, len(paths))
+	for _, path := range paths {
+		records = append(records, decisionRecord{
+			name:   filepath.Base(path),
+			status: statusOf(readFile(t, path)),
+		})
 	}
-	return strings.Contains(string(content), "**Status:** Accepted")
+	return records
 }
 
-// readAllGoFiles concatenates every .go file in the repository, so that a
-// single Contains answers whether anything mentions a record.
-func readAllGoFiles(t *testing.T) string {
+func statusOf(record string) decisionStatus {
+	switch {
+	case strings.Contains(record, "**Status:** Accepted"):
+		return accepted
+	case strings.Contains(record, "**Status:** Superseded"):
+		return superseded
+	default:
+		return other
+	}
+}
+
+// allGoCode concatenates every .go file, so that one Contains answers whether
+// anything at all mentions a record.
+func allGoCode(t *testing.T) string {
 	t.Helper()
 	all := strings.Builder{}
 
-	err := filepath.WalkDir(codeRoot, func(path string, entry os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() && (entry.Name() == ".git" || entry.Name() == "ignore") {
-			return filepath.SkipDir
-		}
-		if !entry.IsDir() && strings.HasSuffix(path, ".go") {
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			all.Write(content)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk repository: %v", err)
+	for _, path := range goFiles(t) {
+		all.WriteString(readFile(t, path))
 	}
 	return all.String()
 }
