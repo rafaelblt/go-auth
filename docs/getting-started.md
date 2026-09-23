@@ -11,6 +11,10 @@ register → login → refresh cycle.
 | PostgreSQL | 16 or newer                                                  |
 | Docker     | for the development compose stack and the integration tests |
 
+16 is the floor, and it is the version the tests run against: the testcontainer
+is `postgres:16`. The development compose stack uses `postgres:17-alpine`, so
+both are exercised, 16 by the test suite and 17 by everyday development.
+
 ## Option A: Docker Compose
 
 `docker-compose.dev.yml` starts PostgreSQL and the API together, and applies
