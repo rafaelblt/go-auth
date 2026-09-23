@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-18
-- **Areas:** architecture, domain, authentication
 - **Related:** [Token model](../../architecture/tokens.md#token-model), [Code conventions](../../architecture/conventions.md#value-objects)
 
 ## Context

@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-19
-- **Areas:** architecture, api
 - **Related:** [Protected struct](../../architecture/conventions.md#protected-struct)
 
 ## Invariant

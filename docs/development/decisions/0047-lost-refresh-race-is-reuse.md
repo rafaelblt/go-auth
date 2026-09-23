@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-13
-- **Areas:** authentication
 - **Related:** [0046](0046-refresh-token-use-guarded-at-write.md), [Reuse detection](../../architecture/usecases/refresh.md#reuse-detection)
 
 ## Context

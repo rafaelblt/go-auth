@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-17
-- **Areas:** architecture, domain
 - **Related:** [0046](0046-refresh-token-use-guarded-at-write.md), [Register](../../architecture/usecases/register.md)
 
 ## Context

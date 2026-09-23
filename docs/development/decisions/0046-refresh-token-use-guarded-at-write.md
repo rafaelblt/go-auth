@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-13
-- **Areas:** authentication, architecture
 - **Related:** [0047](0047-lost-refresh-race-is-reuse.md), [Rotation](../../architecture/usecases/refresh.md#rotation), [Reuse detection](../../architecture/usecases/refresh.md#reuse-detection)
 
 ## Context

@@ -28,8 +28,7 @@ message years later.
 
 The **Invariant** column is what a change has to not break for the record to
 still hold. It is a summary, written for this index; the record itself is the
-argument. Each record also carries an `Areas` field, which this table used to
-repeat.
+argument.
 
 ## When to write one
 

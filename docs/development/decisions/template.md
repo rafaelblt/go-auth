@@ -15,7 +15,6 @@ use is guarded at write"), not as intentions ("Guard refresh token use").
 
 - **Status:** Accepted <!-- Accepted | Deprecated | Superseded by [NNNN](NNNN-slug.md) -->
 - **Date:** YYYY-MM-DD <!-- the day the status last changed -->
-- **Areas:** area <!-- one or more: architecture, domain, validation, authentication, api, configuration, testing -->
 - **Supersedes:** [NNNN](NNNN-slug.md) <!-- optional: delete if it replaces nothing -->
 - **Related:** [NNNN](NNNN-slug.md) <!-- optional: records or documentation a reader should also see -->
 

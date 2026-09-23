@@ -2,7 +2,6 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-13
-- **Areas:** authentication
 - **Related:** [Deliberately vague errors](../../api/errors.md#deliberately-vague-errors)
 
 ## Context
