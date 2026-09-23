@@ -2,9 +2,20 @@
 
 `internal/validation`
 
-The types for input rules. [`Username`](user.md#username) and
-[`Plain`](password.md#plain) use them, and the API reports their failures as
-`422` responses.
+The types for input rules, shared by two callers:
+
+- **the domain.** [`Username`](user.md#username) and
+  [`Plain`](password.md#plain) use them, and the API reports their failures as
+  `422` responses.
+- **`internal/config`.** The environment variables are validated with the same
+  `Issue`, the same validators and the same `Accumulator`, and the failures
+  become the [startup error](../../configuration.md#startup-validation). They
+  never reach HTTP.
+
+The package is documented here, next to the domain types that are its main
+caller, but it is not a domain package. Anything changed in it — the shape of
+`Issue`, of `ValidationError`, of the `Accumulator` — changes the startup error
+report too.
 
 ## Issue
 
@@ -28,11 +39,26 @@ A `Validator[T]` is `func(T) *Issue`, where `nil` means the value passed.
 Every caller wants the issue, so an `error` would only force an `errors.As`
 on each of them, and a `bool` would leave unclear which value means valid.
 
-| Validator            | Issue                |
-| -------------------- | -------------------- |
-| `MinLength(n, unit)` | `TOO_SHORT`          |
-| `MaxLength(n, unit)` | `TOO_LONG`           |
-| `AllowedChars(set)`  | `INVALID_CHARACTERS` |
+| Validator            | Issue                | `details`            | Used by |
+| -------------------- | -------------------- | -------------------- | ------- |
+| `MinLength(n, unit)` | `TOO_SHORT`          | `min`, `unit`        | domain  |
+| `MaxLength(n, unit)` | `TOO_LONG`           | `max`, `unit`        | domain  |
+| `AllowedChars(set)`  | `INVALID_CHARACTERS` | —                    | domain  |
+| `Required[T]()`      | `REQUIRED`           | —                    | config  |
+| `Positive[T]()`      | `NOT_POSITIVE`       | —                    | config  |
+
+The first three are the ones whose failures a client sees; they are the whole
+[validation code catalog](../../api/errors.md#validation-codes) of the API. The
+last two exist for `internal/config`: `Required` catches a missing
+`DATABASE_URL` or `ADDRESS`, and `Positive` catches a cost or a TTL that is zero
+or negative.
+
+`internal/config` also declares a validator of its own rather than using a
+generic one: `allowedLogFormat` checks `LOG_FORMAT` against the accepted values
+and returns `IssueNotAllowed`, whose code is `NOT_ALLOWED` and whose `details`
+carry `allowed`. A validator is just a `func(T) *Issue`, so a package can write
+one without this one knowing about it — which is why the table above lists what
+this package exports, not every validator in the codebase.
 
 `Validate(value, validators...)` runs every validator and collects every
 failure, so one call reports everything wrong with a value.
@@ -70,3 +96,7 @@ would need an `if err != nil` after every field. `Err()` returns a
 `ValidationError` holding every `FieldError`, or `nil` if every field passed.
 This is how registration reports a bad username and a bad password in one
 response.
+
+`internal/config` uses it the same way, over six fields instead of two, which is
+how a startup failure lists every misconfigured variable at once instead of the
+first one.
