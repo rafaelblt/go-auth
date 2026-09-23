@@ -19,17 +19,27 @@ type dependencies struct {
 
 type App struct {
 	router http.Handler
-	cfg    config.Config
 	addr   string
 	deps   dependencies
 }
 
-func NewApp(ctx context.Context, cfg config.Config, logger *slog.Logger) (_ *App, err error) {
+type AppParams struct {
+	Config config.Config
+
+	// Logger is optional: a nil one is built from Config's log format, which
+	// already decides what the logger would be.
+	Logger *slog.Logger
+}
+
+func NewApp(ctx context.Context, params AppParams) (_ *App, err error) {
+	cfg := params.Config
 	if cfg.IsZero() {
 		return nil, errors.New("config invalid: not built")
 	}
+
+	logger := params.Logger
 	if logger == nil {
-		return nil, errors.New("logger cannot be nil")
+		logger = newLogger(cfg.LogFormat())
 	}
 
 	infra, err := newInfra(ctx, cfg)

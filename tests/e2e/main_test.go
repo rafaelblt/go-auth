@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("new config failed: %s", err)
 	}
 
-	app, err := bootstrap.NewApp(ctx, cfg, bootstrap.NewLogger(cfg.LogFormat()))
+	app, err := bootstrap.NewApp(ctx, bootstrap.AppParams{Config: cfg})
 	if err != nil {
 		log.Fatalf("new app failed: %s", err)
 	}

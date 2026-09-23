@@ -8,7 +8,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/config"
 )
 
-func NewLogger(format config.LogFormat) *slog.Logger {
+func newLogger(format config.LogFormat) *slog.Logger {
 	var handler slog.Handler
 	switch format {
 	case config.LogFormatJSON:
