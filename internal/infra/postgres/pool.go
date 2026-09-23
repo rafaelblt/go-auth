@@ -1,3 +1,9 @@
+// Package postgres is the PostgreSQL adapter: the connection pool, one
+// repository per entity, the unit of work, and the schema version check. It is
+// the only code in the service that writes SQL.
+//
+// See docs/architecture/persistence/README.md and
+// docs/architecture/persistence/repositories.md.
 package postgres
 
 import (

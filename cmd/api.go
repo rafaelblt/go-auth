@@ -1,3 +1,7 @@
+// Command api is the go-auth service: it loads the configuration, builds the
+// logger, builds the app and runs it, and shuts it down on SIGINT or SIGTERM.
+//
+// See docs/architecture/startup.md.
 package main
 
 import (

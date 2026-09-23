@@ -1,3 +1,7 @@
+// Package postgrestest holds the helpers for tests that need a real database:
+// test pools, schema reset, and inserts that bypass the repositories.
+//
+// See docs/development/testing.md#test-databases.
 package postgrestest
 
 import (

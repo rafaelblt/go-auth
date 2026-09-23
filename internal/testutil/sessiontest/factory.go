@@ -1,3 +1,6 @@
+// Package sessiontest holds the Session and RefreshToken factories and musts.
+//
+// See docs/development/testing.md#factories-and-musts.
 package sessiontest
 
 import (

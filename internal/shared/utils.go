@@ -1,3 +1,7 @@
+// Package shared holds the helpers used across packages: EntityID, Set, Ptr,
+// ClonePtr and PtrFromOk.
+//
+// See docs/architecture/domain/README.md#shared-helpers.
 package shared
 
 func Ptr[T any](value T) *T {

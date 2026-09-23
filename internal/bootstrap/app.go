@@ -1,3 +1,9 @@
+// Package bootstrap is the composition root: it wires every dependency, checks
+// that the database schema matches the binary, and runs the HTTP server and the
+// background tasks. It is the only package that knows how the whole application
+// fits together.
+//
+// See docs/architecture/startup.md.
 package bootstrap
 
 import (

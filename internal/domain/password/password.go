@@ -1,3 +1,7 @@
+// Package password holds the Password entity and its value objects: the ID, the
+// Plain password as the user typed it, and the Hashed form that is stored.
+//
+// See docs/architecture/domain/password.md.
 package password
 
 import (

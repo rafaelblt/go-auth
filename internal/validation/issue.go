@@ -1,3 +1,10 @@
+// Package validation holds the types for input rules: the Issue that names one
+// broken rule, the validators that produce one, and the Accumulator that
+// collects the failures of several fields. It serves two callers: the domain,
+// whose failures the API answers with a 422, and config, whose failures become
+// the startup error.
+//
+// See docs/architecture/domain/validation.md.
 package validation
 
 import (

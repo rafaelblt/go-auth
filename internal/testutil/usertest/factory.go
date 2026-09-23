@@ -1,3 +1,6 @@
+// Package usertest holds the User factories and musts.
+//
+// See docs/development/testing.md#factories-and-musts.
 package usertest
 
 import (

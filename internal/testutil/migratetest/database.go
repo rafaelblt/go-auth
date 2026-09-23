@@ -1,3 +1,7 @@
+// Package migratetest provides a test database with the migrations already
+// applied. For one without them, use testutil.NewDatabase.
+//
+// See docs/development/testing.md#test-databases.
 package migratetest
 
 import (

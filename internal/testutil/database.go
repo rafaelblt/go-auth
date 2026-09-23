@@ -1,3 +1,8 @@
+// Package testutil holds the test helpers shared across packages: the test
+// database container, an HTTP client and JSON decoding. Its subpackages hold the
+// helpers specific to one layer.
+//
+// See docs/development/testing.md#helper-packages.
 package testutil
 
 import (

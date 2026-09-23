@@ -1,3 +1,8 @@
+// Package port declares the interfaces the inside of the application depends on,
+// so that nothing in usecase or domain names a concrete adapter. The
+// infrastructure implements them and is injected at startup.
+//
+// See docs/architecture/usecases/README.md#ports.
 package port
 
 import (

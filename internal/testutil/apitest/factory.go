@@ -1,3 +1,8 @@
+// Package apitest builds the DTOs the HTTP tests need. DTO fields are
+// unexported, so a test cannot write a DTO literal: these factories build a
+// domain entity and call the real mapper.
+//
+// See docs/development/testing.md#http-tests.
 package apitest
 
 import (

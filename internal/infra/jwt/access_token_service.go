@@ -1,3 +1,8 @@
+// Package jwt issues and validates access tokens, implementing
+// port.AccessTokenIssuer and port.AccessTokenValidator. The keys and the signing
+// itself are in the ed25519 subpackage.
+//
+// See docs/architecture/tokens.md.
 package jwt
 
 import (

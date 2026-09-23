@@ -1,3 +1,9 @@
+// Package ed25519 holds the signing keys: the key type, the keyring that serves
+// the current one, the in-memory key store, and the JWT signer. A key's ID is
+// its RFC 7638 thumbprint, derived from the key itself, so it needs no storage
+// of its own.
+//
+// See docs/architecture/tokens.md#signing-keys.
 package ed25519
 
 import (

@@ -1,3 +1,10 @@
+// Package session holds the Session and RefreshToken entities and their value
+// objects. Both live here because they change together: revoking a session
+// invalidates its tokens, and reuse detection reads a token and revokes its
+// session in one operation.
+//
+// See docs/architecture/domain/session.md, and docs/architecture/tokens.md for
+// what the two token types are for.
 package session
 
 import (

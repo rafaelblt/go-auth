@@ -1,3 +1,6 @@
+// Package passwordtest holds the Password factories and musts.
+//
+// See docs/development/testing.md#factories-and-musts.
 package passwordtest
 
 import (

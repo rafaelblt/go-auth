@@ -1,3 +1,8 @@
+// Package migrations embeds the SQL migration files, so a built binary carries
+// its own schema and needs no files on disk. Latest reports the version this
+// binary was built for.
+//
+// See docs/architecture/persistence/migrations.md.
 package migrations
 
 import (

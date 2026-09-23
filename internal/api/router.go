@@ -1,3 +1,9 @@
+// Package api is the HTTP layer: routing, JSON request and response bodies,
+// middleware, and turning errors into responses. The use cases never see an
+// http.Request.
+//
+// See docs/architecture/http.md, and docs/api/reference.md for the endpoints
+// themselves.
 package api
 
 import (

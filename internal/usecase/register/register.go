@@ -1,3 +1,7 @@
+// Package register creates an account. It does not log the user in: it creates
+// no session and no token.
+//
+// See docs/architecture/usecases/register.md.
 package register
 
 import (

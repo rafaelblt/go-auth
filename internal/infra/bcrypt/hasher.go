@@ -1,3 +1,8 @@
+// Package bcrypt hashes and verifies passwords, implementing
+// port.PasswordHasher and port.PasswordChecker. The work factor comes from the
+// configuration, and this package is what enforces bcrypt's own 4 to 31 range.
+//
+// See docs/configuration.md#bcrypt_cost.
 package bcrypt
 
 import (

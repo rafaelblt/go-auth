@@ -1,3 +1,10 @@
+// Package usecase holds what the use cases share: the DTOs their outputs carry,
+// the mappers that are the only way to build one, and UseCaseError. Each use
+// case itself lives in a subpackage, and that boundary is what makes a mapper
+// the only way to build a DTO that is not zero.
+//
+// See docs/architecture/usecases/README.md, and
+// docs/development/decisions/0034-protected-dtos.md.
 package usecase
 
 import (
