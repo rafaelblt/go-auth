@@ -92,6 +92,9 @@ func (uc *Refresh) Execute(ctx context.Context, in Input) (Output, error) {
 	output, err := uc.rotate(ctx, sess, token, now)
 	if errors.Is(err, session.ErrTokenAlreadyUsed) {
 		// A concurrent refresh spent the token between the read and the write.
+		// Losing that race counts as reuse, exactly like a replay found on read.
+		//
+		// See docs/development/decisions/0047-lost-refresh-race-is-reuse.md.
 		return Output{}, uc.handleTokenReuse(ctx, sess, now)
 	}
 	return output, err

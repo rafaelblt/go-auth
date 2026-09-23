@@ -160,7 +160,10 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 
 // rejectWithDummyVerify spends the time of a real password check before
 // returning rejection, so response time does not reveal whether the account
-// exists.
+// exists. The result of the check is deliberately discarded: the call is here
+// for the time it takes, and removing it reopens the timing difference.
+//
+// See docs/development/decisions/0045-login-dummy-hash.md.
 func (uc Login) rejectWithDummyVerify(plain password.Plain, rejection error) error {
 	_, err := uc.pwdChecker.Verify(plain, uc.dummyHash)
 	if err != nil {

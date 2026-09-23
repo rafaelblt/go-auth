@@ -54,7 +54,12 @@ type RefreshTokenRestoreParams struct {
 }
 
 // NewRefreshToken returns the token together with its secret. The token keeps
-// only the hash, so the returned secret is the one chance to hand it out.
+// only the hash, so the returned secret is the one chance to hand it out. The
+// params carry no hash, so a token's hash always comes from a real secret, and
+// the secret is a return value rather than a field so it never travels into a
+// writer, a log line or a restored token.
+//
+// See docs/development/decisions/0049-refresh-token-secret-in-the-domain.md.
 func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, RefreshTokenSecret, error) {
 	if params.SessionID.IsZero() {
 		return nil, RefreshTokenSecret{}, errors.New("session id zero")
