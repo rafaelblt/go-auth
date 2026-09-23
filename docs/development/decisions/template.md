@@ -5,9 +5,9 @@ Copy this file to NNNN-short-slug.md, using the next free number, and delete
 these comments as you fill it in. Write it together with the change it
 describes.
 
-Only the metadata, Context and Decision are required. Add Alternatives
-considered and Consequences when they have something to say, and delete them
-otherwise.
+Only the metadata, Context, Decision and Invariant are required. Add
+Alternatives considered and Consequences when they have something to say, and
+delete them otherwise.
 
 State the title and the decision as facts about the system ("Refresh token
 use is guarded at write"), not as intentions ("Guard refresh token use").
@@ -31,6 +31,20 @@ decided.
 
 <!--
 What was chosen, and why.
+-->
+
+## Invariant
+
+<!--
+One sentence: what a future change cannot break without invalidating this
+decision. Written as a property of the system, in the present tense, and concrete
+enough to become a test or a grep:
+
+"MarkUsed is the only write to refresh_tokens.used_at, and it applies only while
+the column is NULL."
+
+This is the line someone in a hurry reads instead of the whole record, so it also
+goes in the README's Records table.
 -->
 
 ## Alternatives considered
