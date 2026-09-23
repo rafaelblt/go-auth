@@ -63,7 +63,7 @@ leave it out when it spans several packages or the repository as a whole.
 | `infra/postgres`, `infra/bcrypt`, `infra/jwt`, `infra/migrate` | `internal/infra/*` |
 | `bootstrap`, `config`, `cmd` | `internal/bootstrap`, `internal/config`, `cmd` |
 | `testutil`, `apitest`, `porttest`, `postgrestest`, `usertest`, `passwordtest`, `sessiontest`, `migratetest` | `internal/testutil/...` |
-| `migrations`, `e2e` | `migrations`, `tests/e2e` |
+| `migrations`, `e2e`, `docstest` | `migrations`, `tests/e2e`, `tests/docs` |
 
 Write the shorter form when it is unambiguous: `session`, not
 `domain/session`. Write the longer form when the short one is not:

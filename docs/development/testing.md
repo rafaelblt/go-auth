@@ -1,6 +1,6 @@
 # Testing
 
-The tests run at five layers, and two of them need Docker.
+The tests run at six layers, and two of them need Docker.
 
 ## Layers
 
@@ -11,6 +11,7 @@ The tests run at five layers, and two of them need Docker.
 | HTTP | `internal/api` | no | instant |
 | Infrastructure | `internal/infra/postgres`, `internal/infra/migrate`, `internal/testutil/...` | **yes** | slow |
 | End to end | `tests/e2e` | **yes** | slow |
+| Documentation | `tests/docs` | no | instant |
 
 Domain, use case and HTTP tests use fakes throughout, and run in
 milliseconds. Infrastructure and end-to-end tests start a real PostgreSQL in a
@@ -35,6 +36,18 @@ go test $(go list ./... | grep -vE 'infra/postgres|infra/migrate|testutil|tests/
 ```
 
 `-short` does not skip anything: no test checks `testing.Short()`.
+
+## Documentation tests
+
+`tests/docs` checks the documentation rules that are worth not having to
+remember. There is one: every decision record whose status is `Accepted` must be
+mentioned by some `.go` file, which is the rule the
+[decisions README](decisions/README.md#writing-one) states. It reads `docs/` and
+the `.go` files as text and does not compile anything, so it is instant and needs
+no database.
+
+Keep this package small. A rule earns a test here when forgetting it is easy and
+the breakage is invisible; anything else belongs in a document.
 
 ## Writing a test
 
