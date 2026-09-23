@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 `go-auth` is a self-hosted authentication service: a standalone HTTP/JSON API
 over its own PostgreSQL database, issuing Ed25519 JWT access tokens and rotating,
