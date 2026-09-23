@@ -180,16 +180,25 @@ matching password row, which registration is written to make impossible.
 Every line here means something is wrong with the service. All but the first
 answer `500`.
 
-| Message | Level | Extra fields | Means |
-|---|---|---|---|
-| `error kind not found in message catalog, using fallback` | `WARN` | `kind` | A `kind` is missing from `kindMessageCatalog`. The client still gets the right status, with the text `An error occurred.` |
-| `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`. A real answer was turned into a `500` |
-| `unexpected error for translation` | `ERROR` | `error` | An error reached the boundary that is neither a `UseCaseError` nor a `ValidationError`, usually from the database. `error` holds the text kept from the client |
-| `panic recovered` | `ERROR` | `panic` | A handler panicked. `panic` is the recovered value |
-| `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled. The client gets `500` with an empty body |
+| Message | Level | Extra fields | Means | What to do |
+|---|---|---|---|---|
+| `error kind not found in message catalog, using fallback` | `WARN` | `kind` | A `kind` is missing from `kindMessageCatalog`. The client still gets the right status, with the text `An error occurred.` | Add the `kind` to the catalog |
+| `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`. A real answer was turned into a `500` | Add the `kind` to the catalog |
+| `unexpected error for translation` | `ERROR` | `error` | An error reached the boundary that is neither a `UseCaseError` nor a `ValidationError`, usually from the database. `error` holds the text kept from the client | Read `error`. Usually the database: check it is reachable. Otherwise a missing translation, which is a bug |
+| `panic recovered` | `ERROR` | `panic` | A handler panicked. `panic` is the recovered value | Always a bug. The `request_id` gives the request that triggered it |
+| `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled. The client gets `500` with an empty body | Always a bug, in the type named by `body_type` |
 
-The first two are the same defect at two severities: a new `ErrorKind` was
-added without updating both catalogs in `internal/api/error_catalogs.go`.
+The first two are the same defect at two severities: a new `ErrorKind` was added
+without updating both of the catalogs keyed by `ErrorKind` in
+`internal/api/error_catalogs.go`.
+
+That file holds a third catalog, `errorFieldCatalog`, which maps a use case's
+field name to the name that goes in a `422` body. **It has no line here**: when a
+field is missing from it, `translateError` falls back to the internal name and
+logs nothing. Nothing reaches that path today, since the only validated fields
+are register's two and both are in the catalog, but a validated field added
+without the catalog entry would answer `"Username"` instead of `"username"`,
+silently.
 
 ### Startup and shutdown
 
@@ -212,7 +221,8 @@ available, and a port already in use surfaces as `app run failed`.
 
 All carry `task`, the task's name. There is one task,
 `jwt_keyring_rotation`, which rotates the
-[signing key](tokens.md#signing-keys) every 7 days.
+[signing key](tokens.md#signing-keys) every 7 days, with a 3 second timeout per
+run.
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
@@ -222,7 +232,12 @@ All carry `task`, the task's name. There is one task,
 | `background task stopped` | `INFO` | — | The app's context was cancelled |
 
 A failed rotation is not retried before the next tick. `elapsed` compared with
-the task's timeout says whether the run failed or ran out of time.
+the task's timeout says whether the run failed or ran out of time: an `elapsed`
+at or just over 3s means it timed out, and a shorter one means the run itself
+returned an error.
+
+A rotation that keeps failing leaves the old key signing, which is not dangerous
+but means the key is older than the 7 days the design assumes.
 
 ## What is never logged
 

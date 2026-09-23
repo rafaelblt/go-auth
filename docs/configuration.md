@@ -196,6 +196,7 @@ starts half-configured.
 | HTTP idle timeout | 60s | `internal/bootstrap/app.go` |
 | Graceful shutdown timeout | 10s | `internal/bootstrap/app.go` |
 | Signing key rotation interval | 7 days | `internal/bootstrap/app.go` |
+| Background task timeout, per run | 3s | `internal/bootstrap/app.go` |
 | Schema version check timeout | 5s | `internal/bootstrap/schema.go` |
 | Username length | 3–32 code points | `internal/domain/user/username.go` |
 | Username characters | `a-z0-9._-` | `internal/domain/user/username.go` |
