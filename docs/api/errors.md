@@ -113,6 +113,29 @@ count code points with `[...str].length`, and bytes with
 
 `INVALID_CHARACTERS` does not say *which* character failed.
 
+These three are the complete set a response can carry. `internal/validation`
+defines others — `REQUIRED`, `NOT_POSITIVE`, `NOT_ALLOWED` — but they belong to
+the configuration check and appear only in the startup error, never in a
+response; see [Validation](../architecture/domain/validation.md#validators).
+
+### Messages
+
+For completeness, since the message is set by the error's class:
+
+| Status | `message` |
+|---|---|
+| `400` | `Request body is not valid JSON.` |
+| `401` | `Not authorized.` |
+| `409` | `A conflict error occurred.` |
+| `500` | `An internal error occurred.` |
+
+The `401` and `409` texts come from the error's `kind`, so they cover every code
+of that class: a wrong password and a spent refresh token read the same. The
+`400` and `500` texts belong to one code each.
+
+Do not depend on any of them. They are listed so that it is obvious one text
+serves several codes, which is the reason to branch on `code`.
+
 ## Deliberately vague errors
 
 Two endpoints say less than they know, on purpose.
