@@ -19,7 +19,7 @@ message years later.
 
 | | # | Decision | Invariant it creates |
 |---|---|---|---|
-| 1 | 0034 | [DTOs are protected structs](0034-protected-dtos.md) | Every use case lives in a *subpackage* of `internal/usecase`, and the DTOs and their mappers in `internal/usecase` itself. The guarantee is that boundary. |
+| 1 | 0034 | [A mapper is the only way to build a DTO](0034-protected-dtos.md) | Every use case lives in a *subpackage* of `internal/usecase`, and the DTOs and their mappers in `internal/usecase` itself. The guarantee is that boundary. |
 | 2 | 0045 | [Login verifies a dummy hash when the account is missing](0045-login-dummy-hash.md) | Every login failure past the format checks pays a bcrypt comparison, against a hash of the configured cost. |
 | 3 | 0046 | [Refresh token use is guarded at write](0046-refresh-token-use-guarded-at-write.md) | `MarkUsed` is the only write to `refresh_tokens.used_at`, applies only while the column is `NULL`, and decides on `RowsAffected`. |
 | 4 | 0047 | [A refresh that loses the race for its token is reuse](0047-lost-refresh-race-is-reuse.md) | `session.ErrTokenAlreadyUsed` revokes the session whatever its origin. No path answers `401` for a spent token without revoking. |

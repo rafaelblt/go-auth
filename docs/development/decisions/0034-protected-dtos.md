@@ -1,8 +1,17 @@
-# DTOs are protected structs
+# A mapper is the only way to build a DTO
 
 - **Status:** Accepted
 - **Date:** 2026-09-19
-- **Areas:** api
+- **Areas:** architecture, api
+- **Related:** [Protected struct](../../architecture/conventions.md#protected-struct)
+
+## Invariant
+
+Every use case lives in a *subpackage* of `internal/usecase`, and the DTOs and
+their mappers live in `internal/usecase` itself. That package boundary is the
+guarantee: it is what stops a use case filling a DTO field by hand. Moving a use
+case up into `internal/usecase` would leave the unexported fields in place and
+the guarantee gone.
 
 ## Context
 
