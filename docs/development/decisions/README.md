@@ -98,9 +98,22 @@ several commits — which 0048 did. It also keeps `docs` meaning what
 
 - **An accepted record is not rewritten.** To change a decision, write a new
   record with **Supersedes** pointing at the old one, and set the old one's
-  status to `Superseded by [NNNN](NNNN-slug.md)`. The only other edits allowed
-  on an accepted record are the date that goes with a status change, and fixes
-  to typos or broken links.
+  status to `Superseded by [NNNN](NNNN-slug.md)`.
+
+  The rule is about the decision, not the prose. These edits are allowed on an
+  accepted record, because none of them changes what was decided:
+
+  - the date that goes with a status change;
+  - fixes to typos and broken links;
+  - a **title** that describes the wrong thing. A title states the decision, so
+    one that states the surrounding convention instead, or the change rather
+    than the resulting property, misfiles the record and invites deleting it as
+    a duplicate. 0034 was retitled for exactly that reason;
+  - adding the **Invariant** section to a record written before it was required.
+
+  Anything that changes the argument — the context, the decision, the
+  alternatives, the consequences — is a new record, even when the old one looks
+  wrong. A record that was mistaken is part of why the next one exists.
 - **When a record stops being Accepted**, update its status in
   [Records](#records), and repoint the links to it from the main documentation
   and the code.

@@ -18,6 +18,20 @@ only way to build a DTO"), not as intentions ("Protect the DTOs").
 - **Supersedes:** [NNNN](NNNN-slug.md) <!-- optional: delete if it replaces nothing -->
 - **Related:** [NNNN](NNNN-slug.md) <!-- optional: records or documentation a reader should also see -->
 
+## Invariant
+
+<!--
+One sentence: what a future change cannot break without invalidating this
+decision. Written as a property of the system, in the present tense, and concrete
+enough to become a test or a grep:
+
+"MarkUsed is the only write to refresh_tokens.used_at, and it applies only while
+the column is NULL."
+
+This is the line someone in a hurry reads instead of the whole record, which is
+why it comes first, and why it also goes in the README's Records table.
+-->
+
 ## Context
 
 <!--
@@ -30,20 +44,6 @@ decided.
 
 <!--
 What was chosen, and why.
--->
-
-## Invariant
-
-<!--
-One sentence: what a future change cannot break without invalidating this
-decision. Written as a property of the system, in the present tense, and concrete
-enough to become a test or a grep:
-
-"MarkUsed is the only write to refresh_tokens.used_at, and it applies only while
-the column is NULL."
-
-This is the line someone in a hurry reads instead of the whole record, so it also
-goes in the README's Records table.
 -->
 
 ## Alternatives considered

@@ -4,6 +4,14 @@
 - **Date:** 2026-09-17
 - **Related:** [0046](0046-refresh-token-use-guarded-at-write.md), [Register](../../architecture/usecases/register.md)
 
+## Invariant
+
+`UserRepo.Add` applies only while the username is free, through
+`ON CONFLICT (username) DO NOTHING`, and returns
+`user.ErrUsernameAlreadyExists` when it inserted nothing. It decides on
+`RowsAffected`, never on the driver's error, and it depends on the unique index
+on `users.username`.
+
 ## Context
 
 Register checks whether the username is free, hashes the password, then

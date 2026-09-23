@@ -4,6 +4,15 @@
 - **Date:** 2026-09-13
 - **Related:** [Deliberately vague errors](../../api/errors.md#deliberately-vague-errors)
 
+## Invariant
+
+Every login failure past the format checks pays a bcrypt comparison, against a
+hash of the configured cost. The calls that exist only for the time they take are
+in `rejectWithDummyVerify`, and the hash comes from
+`login.Config.DummyPasswordHash`, which `internal/bootstrap` builds with the
+configured hasher. Dropping either call, or hard-coding a hash of a fixed cost,
+reopens the timing difference.
+
 ## Context
 
 [Uniform errors](../../api/errors.md#deliberately-vague-errors) make every login failure return

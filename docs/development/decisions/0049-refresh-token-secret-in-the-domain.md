@@ -4,6 +4,14 @@
 - **Date:** 2026-09-18
 - **Related:** [Token model](../../architecture/tokens.md#token-model), [Code conventions](../../architecture/conventions.md#value-objects)
 
+## Invariant
+
+A new refresh token's hash only ever comes from a secret generated inside
+`NewRefreshToken`. `RefreshTokenCreationParams` carries no hash field and the
+secret's constructor is unexported, so no caller can assemble a token from parts
+or pass a hash of its own. The secret is a return value rather than a field, so
+it never reaches a writer, a log line or a restored token.
+
 ## Context
 
 A refresh token's format (32 bytes from `crypto/rand`, base64url) and its
