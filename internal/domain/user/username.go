@@ -12,8 +12,8 @@ type Username struct {
 }
 
 const (
-	UsernameMinLen = 3
-	UsernameMaxLen = 32
+	UsernameMinCodePoints = 3
+	UsernameMaxCodePoints = 32
 )
 
 var usernameAllowedChars = shared.NewSetFrom(
@@ -21,8 +21,8 @@ var usernameAllowedChars = shared.NewSetFrom(
 )
 
 var usernameValidators = []validation.Validator[string]{
-	validation.MinLength(UsernameMinLen, validation.UnitCodePoint),
-	validation.MaxLength(UsernameMaxLen, validation.UnitCodePoint),
+	validation.MinLength(UsernameMinCodePoints, validation.UnitCodePoint),
+	validation.MaxLength(UsernameMaxCodePoints, validation.UnitCodePoint),
 	validation.AllowedChars(usernameAllowedChars),
 }
 

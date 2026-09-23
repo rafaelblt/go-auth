@@ -16,7 +16,7 @@ import (
 func TestRegister_ReturnsValidationError_WhenUsernameIsInvalid(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
-		Username: strings.Repeat("a", user.UsernameMinLen-1),
+		Username: strings.Repeat("a", user.UsernameMinCodePoints-1),
 		Password: helper.ValidPlainPassword().Value(),
 	}
 
@@ -27,7 +27,7 @@ func TestRegister_ReturnsValidationError_WhenUsernameIsInvalid(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldUsername,
-		validation.IssueTooShort(user.UsernameMinLen, validation.UnitCodePoint),
+		validation.IssueTooShort(user.UsernameMinCodePoints, validation.UnitCodePoint),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -35,7 +35,7 @@ func TestRegister_ReturnsValidationError_WhenUsernameIsInvalid(t *testing.T) {
 func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
-		Username: strings.Repeat("a", user.UsernameMaxLen+1),
+		Username: strings.Repeat("a", user.UsernameMaxCodePoints+1),
 		Password: helper.ValidPlainPassword().Value(),
 	}
 
@@ -46,7 +46,7 @@ func TestRegister_ReturnsValidationError_WithUsernameTooLong(t *testing.T) {
 	require.ErrorAs(t, err, &verr)
 	expected := []validation.FieldError{validation.NewFieldError(
 		register.FieldUsername,
-		validation.IssueTooLong(user.UsernameMaxLen, validation.UnitCodePoint),
+		validation.IssueTooLong(user.UsernameMaxCodePoints, validation.UnitCodePoint),
 	)}
 	assert.ElementsMatch(t, expected, verr.Errors())
 }
@@ -92,7 +92,7 @@ func TestRegister_ReturnsValidationError_WithPasswordTooShort(t *testing.T) {
 func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
-		Username: strings.Repeat("a", user.UsernameMinLen-1),
+		Username: strings.Repeat("a", user.UsernameMinCodePoints-1),
 		Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 	}
 
@@ -104,7 +104,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 	expected := []validation.FieldError{
 		validation.NewFieldError(
 			register.FieldUsername,
-			validation.IssueTooShort(user.UsernameMinLen, validation.UnitCodePoint),
+			validation.IssueTooShort(user.UsernameMinCodePoints, validation.UnitCodePoint),
 		),
 		validation.NewFieldError(
 			register.FieldPassword,
@@ -117,7 +117,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooShort(t *test
 func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := register.Input{
-		Username: strings.Repeat("a", user.UsernameMaxLen+1),
+		Username: strings.Repeat("a", user.UsernameMaxCodePoints+1),
 		Password: strings.Repeat("a", password.PlainMaxBytes+1),
 	}
 
@@ -129,7 +129,7 @@ func TestRegister_ReturnsValidationError_WithUsernameAndPasswordTooLong(t *testi
 	expected := []validation.FieldError{
 		validation.NewFieldError(
 			register.FieldUsername,
-			validation.IssueTooLong(user.UsernameMaxLen, validation.UnitCodePoint),
+			validation.IssueTooLong(user.UsernameMaxCodePoints, validation.UnitCodePoint),
 		),
 		validation.NewFieldError(
 			register.FieldPassword,

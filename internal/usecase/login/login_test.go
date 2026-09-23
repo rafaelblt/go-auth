@@ -41,7 +41,7 @@ func TestLogin_ReturnsMalformedError_WhenInputIsInvalid(t *testing.T) {
 		{
 			desc: "username too short",
 			input: login.Input{
-				Username: strings.Repeat("a", user.UsernameMinLen-1),
+				Username: strings.Repeat("a", user.UsernameMinCodePoints-1),
 				Password: "12345678",
 			},
 			expectedErr: login.ErrUsernameMalformed,
@@ -49,7 +49,7 @@ func TestLogin_ReturnsMalformedError_WhenInputIsInvalid(t *testing.T) {
 		{
 			desc: "username too long",
 			input: login.Input{
-				Username: strings.Repeat("a", user.UsernameMaxLen+1),
+				Username: strings.Repeat("a", user.UsernameMaxCodePoints+1),
 				Password: "12345678",
 			},
 			expectedErr: login.ErrUsernameMalformed,
@@ -73,7 +73,7 @@ func TestLogin_ReturnsMalformedError_WhenInputIsInvalid(t *testing.T) {
 		{
 			desc: "username and password too short",
 			input: login.Input{
-				Username: strings.Repeat("a", user.UsernameMinLen-1),
+				Username: strings.Repeat("a", user.UsernameMinCodePoints-1),
 				Password: strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
 			expectedErr: login.ErrUsernameMalformed,
@@ -81,7 +81,7 @@ func TestLogin_ReturnsMalformedError_WhenInputIsInvalid(t *testing.T) {
 		{
 			desc: "username and password too long",
 			input: login.Input{
-				Username: strings.Repeat("a", user.UsernameMaxLen+1),
+				Username: strings.Repeat("a", user.UsernameMaxCodePoints+1),
 				Password: strings.Repeat("a", password.PlainMaxBytes+1),
 			},
 			expectedErr: login.ErrUsernameMalformed,
