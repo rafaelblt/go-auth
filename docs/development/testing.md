@@ -70,10 +70,11 @@ would give it.
 
 **A rule earns a test here** when forgetting it is easy and the breakage
 invisible. A rule that the compiler, a domain test or a database constraint
-already enforces does not: the invariants of decisions 0045, 0048, 0049, 0050
-and 0051 are covered by use case tests, a unique index, an unexported
-constructor and the adapter tests in `internal/api`, and repeating them here
-would only add a second place to update.
+already enforces does not: the invariants of decisions 0045, 0048, 0049 and 0050
+are covered by use case tests, a unique index and an unexported constructor, and
+the `415` of decision 0051 by the adapter tests in `internal/api`. Repeating them
+here would only add a second place to update. The other half of 0051, that no
+CORS header is sent, has no test: nothing in the code writes one.
 
 ## Writing a test
 
