@@ -240,6 +240,7 @@ func TestLogin_IssuesAndReturnsAccessToken(t *testing.T) {
 	issued := testutil.Only(t, helper.FakeAccessTokenIssuer.Issueds())
 	assert.Equal(t, issued.Token.Value(), output.AccessToken.Value())
 	assert.Equal(t, issued.ExpiresAt, output.AccessToken.ExpiresAt())
+	assert.Equal(t, issued.ExpiresAt.Sub(issued.IssuedAt), output.AccessToken.ExpiresIn())
 }
 
 func TestLogin_ReturnsIDsOfUserAndSavedSession(t *testing.T) {
@@ -268,6 +269,7 @@ func TestLogin_ReturnsSecretOfSavedRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, token.Hash(), secret.Hash())
 	assert.Equal(t, token.ExpiresAt(), output.RefreshToken.ExpiresAt())
+	assert.Equal(t, helper.RefreshTokenTTL, output.RefreshToken.ExpiresIn())
 }
 
 func TestLogin_ShouldSaveSession(t *testing.T) {

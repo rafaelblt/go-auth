@@ -172,7 +172,7 @@ func TestNewAccessTokenService_ReturnsError_WhenConfigIsInvalid(t *testing.T) {
 	}
 }
 
-func TestAccessTokenService_Issue_ReturnsSignedTokenAndExpiresAt(t *testing.T) {
+func TestAccessTokenService_Issue_ReturnsSignedTokenAndItsTimes(t *testing.T) {
 	helper := NewServiceTestHelper(t)
 
 	issued, err := helper.Service().Issue(helper.ValidPayload())
@@ -180,6 +180,7 @@ func TestAccessTokenService_Issue_ReturnsSignedTokenAndExpiresAt(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, issued)
 	assert.Equal(t, helper.FakeSigner.DefaultSignedToken(), issued.Token.Value())
+	assert.Equal(t, helper.FakeClock.Now(), issued.IssuedAt)
 	assert.Equal(t,
 		helper.FakeClock.Now().Add(helper.Expiration).Truncate(time.Second),
 		issued.ExpiresAt)

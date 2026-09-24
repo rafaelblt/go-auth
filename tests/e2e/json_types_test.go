@@ -33,9 +33,11 @@ type User struct {
 type AccessToken struct {
 	Value     string    `json:"value"`
 	ExpiresAt time.Time `json:"expires_at"`
+	ExpiresIn int64     `json:"expires_in"`
 }
 
 type RefreshToken struct {
 	Value     string    `json:"value"`
 	ExpiresAt time.Time `json:"expires_at"`
+	ExpiresIn int64     `json:"expires_in"`
 }

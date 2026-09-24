@@ -21,6 +21,7 @@ type AccessTokenPayload struct {
 
 type AccessTokenIssued struct {
 	Token     session.AccessToken
+	IssuedAt  time.Time
 	ExpiresAt time.Time
 }
 

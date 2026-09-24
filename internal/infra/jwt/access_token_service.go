@@ -62,9 +62,10 @@ func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.Access
 		return port.AccessTokenIssued{}, errors.New("user id zero")
 	}
 
+	now := s.clock.Now()
 	claims := jwt.RegisteredClaims{
 		Subject:   payload.UserID.Value().String(),
-		ExpiresAt: jwt.NewNumericDate(s.clock.Now().Add(s.expiration)),
+		ExpiresAt: jwt.NewNumericDate(now.Add(s.expiration)),
 	}
 
 	token, err := s.signer.Sign(claims)
@@ -79,6 +80,7 @@ func (s *AccessTokenService) Issue(payload port.AccessTokenPayload) (port.Access
 
 	issued := port.AccessTokenIssued{
 		Token:     accessToken,
+		IssuedAt:  now,
 		ExpiresAt: claims.ExpiresAt.Time,
 	}
 	return issued, nil

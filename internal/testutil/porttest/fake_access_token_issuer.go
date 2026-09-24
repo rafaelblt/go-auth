@@ -31,9 +31,11 @@ func (iss *FakeAccessTokenIssuer) Issue(payload port.AccessTokenPayload) (port.A
 		return port.AccessTokenIssued{}, e
 	}
 
+	now := time.Now().UTC()
 	issued := port.AccessTokenIssued{
 		Token:     token,
-		ExpiresAt: time.Now().UTC().AddDate(1, 0, 0),
+		IssuedAt:  now,
+		ExpiresAt: now.AddDate(1, 0, 0),
 	}
 	iss.issueds = append(iss.issueds, issued)
 

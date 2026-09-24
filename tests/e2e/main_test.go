@@ -15,6 +15,11 @@ import (
 
 var testApp *TestApp
 
+const (
+	AccessTokenTTL  = 30 * time.Minute
+	RefreshTokenTTL = 24 * time.Hour
+)
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
@@ -28,8 +33,8 @@ func TestMain(m *testing.M) {
 		Address:         "localhost:8080",
 		DatabaseURL:     db.ConnectionString(),
 		BcryptCost:      shared.Ptr(6),
-		AccessTokenTTL:  shared.Ptr(time.Minute * 30),
-		RefreshTokenTTL: shared.Ptr(time.Hour * 24),
+		AccessTokenTTL:  shared.Ptr(AccessTokenTTL),
+		RefreshTokenTTL: shared.Ptr(RefreshTokenTTL),
 	})
 	if err != nil {
 		log.Fatalf("new config failed: %s", err)

@@ -162,14 +162,23 @@ a refresh token.
 {
   "access_token": {
     "value": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9...",
-    "expires_at": "2026-09-08T12:30:00Z"
+    "expires_at": "2026-09-08T12:30:00Z",
+    "expires_in": 1799
   },
   "refresh_token": {
     "value": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01",
-    "expires_at": "2026-09-15T12:00:00Z"
+    "expires_at": "2026-09-15T12:00:00Z",
+    "expires_in": 604800
   }
 }
 ```
+
+`expires_at` and `expires_in` give the same expiry two ways. `expires_in` is
+the whole seconds from the moment the service issued the token to its expiry,
+rounded down, so at that moment it never overstates the time the token has
+left. If you cannot trust your own clock, count `expires_in` from when the
+response arrives and refresh a little early: the time the service spent after
+issuing the token, and the time on the network, are not deducted.
 
 `access_token.value` is a JWT. Send it to your own services, and verify it
 there ([how](token-verification.md)).

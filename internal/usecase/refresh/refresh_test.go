@@ -29,6 +29,7 @@ func TestRefresh_IssuesAccessToken(t *testing.T) {
 	issued := testutil.Only(t, helper.FakeAccessTokenIssuer.Issueds())
 	assert.Equal(t, issued.Token.Value(), out.AccessToken.Value())
 	assert.Equal(t, issued.ExpiresAt, out.AccessToken.ExpiresAt())
+	assert.Equal(t, issued.ExpiresAt.Sub(issued.IssuedAt), out.AccessToken.ExpiresIn())
 }
 
 func TestRefresh_ReturnsIDsOfSessionAndItsUser(t *testing.T) {
@@ -55,6 +56,7 @@ func TestRefresh_ReturnsSecretOfAddedRefreshToken(t *testing.T) {
 	assert.Equal(t, added.Hash(), secret.Hash())
 	assert.NotEqual(t, in.RefreshToken, out.RefreshToken.Value())
 	assert.Equal(t, helper.FakeClock.Now().Add(helper.RefreshTokenTTL), out.RefreshToken.ExpiresAt())
+	assert.Equal(t, helper.RefreshTokenTTL, out.RefreshToken.ExpiresIn())
 }
 
 func TestRefresh_MarksUsedRefreshToken(t *testing.T) {

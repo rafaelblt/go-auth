@@ -2,6 +2,7 @@ package api
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
@@ -35,6 +36,8 @@ func TestMapAccessTokenDTO(t *testing.T) {
 	require.NotZero(t, retrieved)
 	assert.Equal(t, dto.Value(), retrieved.Value)
 	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
+	assert.Equal(t, int64(dto.ExpiresIn()/time.Second), retrieved.ExpiresIn)
+	assert.Equal(t, int64(1800), retrieved.ExpiresIn)
 }
 
 func TestMapAccessTokenDTO_PanicsWithZeroDTO(t *testing.T) {
@@ -50,6 +53,7 @@ func TestMapRefreshTokenDTO(t *testing.T) {
 	require.NotZero(t, retrieved)
 	assert.Equal(t, dto.Value(), retrieved.Value)
 	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
+	assert.Equal(t, int64(dto.ExpiresIn()/time.Second), retrieved.ExpiresIn)
 }
 
 func TestMapRefreshTokenDTO_PanicsWithZeroDTO(t *testing.T) {

@@ -31,6 +31,7 @@ func mapUserDTO(dto usecase.UserDTO) user {
 type accessToken struct {
 	Value     string    `json:"value"`
 	ExpiresAt time.Time `json:"expires_at"`
+	ExpiresIn int64     `json:"expires_in"`
 }
 
 func mapAccessTokenDTO(dto usecase.AccessTokenDTO) accessToken {
@@ -40,6 +41,7 @@ func mapAccessTokenDTO(dto usecase.AccessTokenDTO) accessToken {
 	token := accessToken{
 		Value:     dto.Value(),
 		ExpiresAt: dto.ExpiresAt(),
+		ExpiresIn: int64(dto.ExpiresIn() / time.Second),
 	}
 	return token
 }
@@ -47,6 +49,7 @@ func mapAccessTokenDTO(dto usecase.AccessTokenDTO) accessToken {
 type refreshToken struct {
 	Value     string    `json:"value"`
 	ExpiresAt time.Time `json:"expires_at"`
+	ExpiresIn int64     `json:"expires_in"`
 }
 
 func mapRefreshTokenDTO(dto usecase.RefreshTokenDTO) refreshToken {
@@ -56,5 +59,6 @@ func mapRefreshTokenDTO(dto usecase.RefreshTokenDTO) refreshToken {
 	}
 	token.Value = dto.Value()
 	token.ExpiresAt = dto.ExpiresAt()
+	token.ExpiresIn = int64(dto.ExpiresIn() / time.Second)
 	return token
 }

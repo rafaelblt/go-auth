@@ -3,6 +3,7 @@ package e2e
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,9 @@ func TestLogin_ReturnsSuccessResponse(t *testing.T) {
 	respBody := DecodeBody[LoginResponseBody](t, resp)
 	assert.NotZero(t, respBody.AccessToken)
 	assert.NotZero(t, respBody.RefreshToken)
+	assert.GreaterOrEqual(t, respBody.AccessToken.ExpiresIn, int64((AccessTokenTTL-time.Second)/time.Second))
+	assert.LessOrEqual(t, respBody.AccessToken.ExpiresIn, int64(AccessTokenTTL/time.Second))
+	assert.Equal(t, int64(RefreshTokenTTL/time.Second), respBody.RefreshToken.ExpiresIn)
 }
 
 func TestLogin_ReturnsMethodNotAllowed(t *testing.T) {

@@ -50,11 +50,13 @@ func MapUserToDTO(user *user.User) UserDTO {
 type AccessTokenDTO struct {
 	value     string
 	expiresAt time.Time
+	expiresIn time.Duration
 }
 
-func (dto AccessTokenDTO) Value() string        { return dto.value }
-func (dto AccessTokenDTO) ExpiresAt() time.Time { return dto.expiresAt }
-func (dto AccessTokenDTO) IsZero() bool         { return dto.value == "" }
+func (dto AccessTokenDTO) Value() string            { return dto.value }
+func (dto AccessTokenDTO) ExpiresAt() time.Time     { return dto.expiresAt }
+func (dto AccessTokenDTO) ExpiresIn() time.Duration { return dto.expiresIn }
+func (dto AccessTokenDTO) IsZero() bool             { return dto.value == "" }
 
 func MapAccessTokenIssuedToDTO(issued port.AccessTokenIssued) AccessTokenDTO {
 	if issued.Token.IsZero() {
@@ -63,6 +65,7 @@ func MapAccessTokenIssuedToDTO(issued port.AccessTokenIssued) AccessTokenDTO {
 	dto := AccessTokenDTO{
 		value:     issued.Token.Value(),
 		expiresAt: issued.ExpiresAt,
+		expiresIn: issued.ExpiresAt.Sub(issued.IssuedAt).Truncate(time.Second),
 	}
 	return dto
 }
@@ -70,11 +73,13 @@ func MapAccessTokenIssuedToDTO(issued port.AccessTokenIssued) AccessTokenDTO {
 type RefreshTokenDTO struct {
 	value     string
 	expiresAt time.Time
+	expiresIn time.Duration
 }
 
-func (dto RefreshTokenDTO) Value() string        { return dto.value }
-func (dto RefreshTokenDTO) ExpiresAt() time.Time { return dto.expiresAt }
-func (dto RefreshTokenDTO) IsZero() bool         { return dto.value == "" }
+func (dto RefreshTokenDTO) Value() string            { return dto.value }
+func (dto RefreshTokenDTO) ExpiresAt() time.Time     { return dto.expiresAt }
+func (dto RefreshTokenDTO) ExpiresIn() time.Duration { return dto.expiresIn }
+func (dto RefreshTokenDTO) IsZero() bool             { return dto.value == "" }
 
 // MapRefreshTokenToDTO takes the secret apart from the token because the token
 // keeps only its hash.
@@ -91,6 +96,7 @@ func MapRefreshTokenToDTO(token *session.RefreshToken, secret session.RefreshTok
 	dto := RefreshTokenDTO{
 		value:     secret.Value(),
 		expiresAt: token.ExpiresAt(),
+		expiresIn: token.ExpiresAt().Sub(token.CreatedAt()).Truncate(time.Second),
 	}
 	return dto
 }

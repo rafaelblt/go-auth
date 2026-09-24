@@ -56,6 +56,7 @@ func TestMapUserToDTO(t *testing.T) {
 func TestMapAccessTokenIssuedToDTO(t *testing.T) {
 	issued := port.AccessTokenIssued{
 		Token:     sessiontest.MustAccessToken(t, "access"),
+		IssuedAt:  time.Date(2026, 6, 17, 23, 10, 0, 400_000_000, time.UTC),
 		ExpiresAt: time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC),
 	}
 
@@ -63,6 +64,7 @@ func TestMapAccessTokenIssuedToDTO(t *testing.T) {
 
 	assert.Equal(t, issued.Token.Value(), dto.Value())
 	assert.Equal(t, issued.ExpiresAt, dto.ExpiresAt())
+	assert.Equal(t, 29*time.Minute+59*time.Second, dto.ExpiresIn())
 }
 
 func TestMapAccessTokenIssuedToDTO_PanicsWithZeroToken(t *testing.T) {
@@ -73,13 +75,17 @@ func TestMapAccessTokenIssuedToDTO_PanicsWithZeroToken(t *testing.T) {
 }
 
 func TestMapRefreshTokenToDTO(t *testing.T) {
-	token := sessiontest.NewRefreshToken(t, nil)
+	token := sessiontest.NewRefreshToken(t, func(p *session.RefreshTokenRestoreParams) {
+		p.CreatedAt = time.Date(2026, 6, 17, 23, 39, 58, 700_000_000, time.UTC)
+		p.ExpiresAt = time.Date(2026, 6, 17, 23, 40, 0, 0, time.UTC)
+	})
 	secret := sessiontest.NewRefreshTokenSecret(t)
 
 	dto := usecase.MapRefreshTokenToDTO(token, secret)
 
 	assert.Equal(t, secret.Value(), dto.Value())
 	assert.Equal(t, token.ExpiresAt(), dto.ExpiresAt())
+	assert.Equal(t, time.Second, dto.ExpiresIn())
 }
 
 func TestMapRefreshTokenToDTO_Panics(t *testing.T) {

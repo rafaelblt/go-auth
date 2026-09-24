@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -53,10 +54,12 @@ func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 		AccessToken: accessToken{
 			Value:     output.AccessToken.Value(),
 			ExpiresAt: output.AccessToken.ExpiresAt(),
+			ExpiresIn: int64(output.AccessToken.ExpiresIn() / time.Second),
 		},
 		RefreshToken: refreshToken{
 			Value:     output.RefreshToken.Value(),
 			ExpiresAt: output.RefreshToken.ExpiresAt(),
+			ExpiresIn: int64(output.RefreshToken.ExpiresIn() / time.Second),
 		},
 	}
 	assert.Equal(t, expectedBody, actualBody)

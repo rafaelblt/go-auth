@@ -133,11 +133,13 @@ curl -sX POST http://localhost:8080/v1/auth/login \
 {
   "access_token": {
     "value": "eyJhbGciOiJFZERTQSIsImtpZCI6Ii4uLiIsInR5cCI6IkpXVCJ9...",
-    "expires_at": "2026-09-08T12:30:00Z"
+    "expires_at": "2026-09-08T12:30:00Z",
+    "expires_in": 1799
   },
   "refresh_token": {
     "value": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01",
-    "expires_at": "2026-09-15T12:00:00Z"
+    "expires_at": "2026-09-15T12:00:00Z",
+    "expires_in": 604800
   }
 }
 ```
