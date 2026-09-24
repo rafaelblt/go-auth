@@ -48,7 +48,7 @@ on each of them, and a `bool` would leave unclear which value means valid.
 | `Positive[T]()`      | `NOT_POSITIVE`       | —                    | config  |
 
 The first three are the ones whose failures a client sees; they are the whole
-[validation code catalog](../../api/errors.md#validation-codes) of the API. The
+[field code catalog](../../api/errors.md#field-codes) of the API. The
 last two exist for `internal/config`: `Required` catches a missing
 `DATABASE_URL` or `ADDRESS`, and `Positive` catches a cost or a TTL that is zero
 or negative.

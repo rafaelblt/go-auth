@@ -8,13 +8,10 @@ type ErrorResponseBody struct {
 	Error ErrorData `json:"error"`
 }
 
-type ValidationErrorResponseBody struct {
-	Errors []FieldErrorData `json:"errors"`
-}
-
 type ErrorData struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string           `json:"code"`
+	Message string           `json:"message"`
+	Fields  []FieldErrorData `json:"fields"`
 }
 
 type FieldErrorData struct {

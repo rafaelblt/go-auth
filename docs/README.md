@@ -19,7 +19,7 @@ You are writing a client for the HTTP API.
 
 - **[API reference](api/reference.md)**: endpoints, request and response
   bodies, status codes.
-- **[Error model](api/errors.md)**: the two error shapes, how errors map to
+- **[Error model](api/errors.md)**: the error shape, how errors map to
   status codes, and every error code.
 - **[Verifying access tokens](api/token-verification.md)**: how to validate a
   JWT in your own service with the JWKS endpoint, with examples.

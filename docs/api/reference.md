@@ -29,7 +29,8 @@ response has a JSON body.
 
 **Timestamps.** RFC 3339, in UTC: `2026-09-08T12:00:00Z`.
 
-**Errors.** Two shapes, described in [Error model](errors.md).
+**Errors.** One shape, an `error` object with a `code`, described in
+[Error model](errors.md).
 
 ---
 
@@ -82,17 +83,21 @@ in the [Domain model](../architecture/domain/user.md#username).
 |---|---|---|
 | `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
 | `409` | `USERNAME_ALREADY_EXISTS` | The username is taken |
-| `422` | *(field errors)* | The username or the password is invalid |
+| `422` | `VALIDATION_FAILED` | The username or the password is invalid |
 
 A validation error names every field at fault, so one request reports every
 problem:
 
 ```json
 {
-  "errors": [
-    { "field": "username", "code": "TOO_SHORT", "details": { "min": 3, "unit": "code_point" } },
-    { "field": "password", "code": "TOO_SHORT", "details": { "min": 8, "unit": "code_point" } }
-  ]
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "The input failed validation.",
+    "fields": [
+      { "field": "username", "code": "TOO_SHORT", "details": { "min": 3, "unit": "code_point" } },
+      { "field": "password", "code": "TOO_SHORT", "details": { "min": 8, "unit": "code_point" } }
+    ]
+  }
 }
 ```
 

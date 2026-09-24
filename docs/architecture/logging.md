@@ -146,11 +146,11 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `invalid json body error` | `INFO` | `error` | `400 INVALID_JSON_BODY` |
-| `validation error` | `INFO` | `pairs` | `422` |
+| `validation error` | `INFO` | `pairs` | `422 VALIDATION_FAILED` |
 | `use case error` | `INFO` | `code`, `kind`, `reason` | `401` or `409`, from `kind` |
 
 `pairs` lists the failed fields as `"<field> <code>"`, one entry per
-[validation error entry](../api/errors.md#validation-error), with the values
+[`fields` entry](../api/errors.md#validation-errors), with the values
 left out. It is an array in `json` and a bracketed string in `text`.
 
 `reason` is the field to read, and the reason these lines exist. The API

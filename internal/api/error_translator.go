@@ -85,6 +85,5 @@ func translateValidationError(ctx context.Context, verr validation.ValidationErr
 	}
 
 	logger.Info("validation error", "pairs", pairsToLog)
-	body := validationErrorBody{Errors: fieldErrs}
-	return validationError(body)
+	return validationError(fieldErrs)
 }

@@ -183,10 +183,12 @@ func TestTranslateValidationError(t *testing.T) {
 			resp := translateValidationError(ctx, tC.err)
 			assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 
-			require.IsType(t, validationErrorBody{}, resp.Body)
-			body := resp.Body.(validationErrorBody)
+			require.IsType(t, errorBody{}, resp.Body)
+			body := resp.Body.(errorBody)
+			assert.Equal(t, "VALIDATION_FAILED", body.Error.Code)
+			assert.NotEmpty(t, body.Error.Message)
 
-			expected := fieldErrors{}
+			expected := []fieldErrorData{}
 			for _, fErr := range tC.err.Errors() {
 				data := fieldErrorData{
 					Field:   fErr.Field(),
@@ -196,7 +198,7 @@ func TestTranslateValidationError(t *testing.T) {
 				expected = append(expected, data)
 			}
 
-			assert.Equal(t, expected, body.Errors)
+			assert.Equal(t, expected, body.Error.Fields)
 		})
 	}
 }
@@ -213,9 +215,9 @@ func TestTranslateValidationError_WarnsOnFieldNotInCatalog(t *testing.T) {
 
 	resp := translateValidationError(ctx, verr)
 
-	require.IsType(t, validationErrorBody{}, resp.Body)
-	body := resp.Body.(validationErrorBody)
-	assert.Equal(t, "Email", testutil.Only(t, body.Errors).Field)
+	require.IsType(t, errorBody{}, resp.Body)
+	body := resp.Body.(errorBody)
+	assert.Equal(t, "Email", testutil.Only(t, body.Error.Fields).Field)
 
 	lines := loggedLines(t, buf)
 	require.NotEmpty(t, lines)
@@ -234,4 +236,52 @@ func TestTranslateValidationError_DoesNotWarnForAKnownField(t *testing.T) {
 
 	line := testutil.Only(t, loggedLines(t, buf))
 	assert.Equal(t, "validation error", line["msg"])
+}
+
+// Every error shares one envelope, and fields is in it only for a validation
+// error: a client reads error.code first, whatever the status.
+func TestTranslateError_UsesOneEnvelope(t *testing.T) {
+	testCases := []struct {
+		desc       string
+		err        error
+		wantFields bool
+	}{
+		{
+			desc:       "use case error",
+			err:        usecase.NewError("USERNAME_ALREADY_EXISTS", usecase.ErrorKindConflict),
+			wantFields: false,
+		},
+		{
+			desc: "validation error",
+			err: validation.NewValidationError(
+				validation.NewFieldError(register.FieldUsername, validation.IssueTooShort(3, validation.UnitCodePoint)),
+			),
+			wantFields: true,
+		},
+		{
+			desc:       "unexpected error",
+			err:        errors.New("unexpected"),
+			wantFields: false,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			ctx, _ := contextWithLoggedLines(t)
+			resp := translateError(ctx, tC.err)
+
+			raw, err := json.Marshal(resp.Body)
+			require.NoError(t, err)
+			body := map[string]map[string]any{}
+			require.NoError(t, json.Unmarshal(raw, &body))
+
+			require.Contains(t, body, "error")
+			assert.NotEmpty(t, body["error"]["code"])
+			assert.NotEmpty(t, body["error"]["message"])
+			if tC.wantFields {
+				assert.Contains(t, body["error"], "fields")
+			} else {
+				assert.NotContains(t, body["error"], "fields")
+			}
+		})
+	}
 }

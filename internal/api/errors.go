@@ -4,24 +4,15 @@ import (
 	"net/http"
 )
 
-// Single Error
-
 type errorBody struct {
 	Error errorData `json:"error"`
 }
 
 type errorData struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string           `json:"code"`
+	Message string           `json:"message"`
+	Fields  []fieldErrorData `json:"fields,omitempty"`
 }
-
-// Validation Error
-
-type validationErrorBody struct {
-	Errors fieldErrors `json:"errors"`
-}
-
-type fieldErrors = []fieldErrorData
 
 type fieldErrorData struct {
 	Field   string         `json:"field"`
@@ -29,12 +20,14 @@ type fieldErrorData struct {
 	Details map[string]any `json:"details"`
 }
 
-// Functions
-
-func validationError(body validationErrorBody) response {
+func validationError(fields []fieldErrorData) response {
 	return response{
 		StatusCode: http.StatusUnprocessableEntity,
-		Body:       body,
+		Body: errorBody{Error: errorData{
+			Code:    "VALIDATION_FAILED",
+			Message: "The input failed validation.",
+			Fields:  fields,
+		}},
 	}
 }
 

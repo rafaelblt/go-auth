@@ -1,11 +1,10 @@
 # Error model
 
-The API has two error shapes: a **single error**, for a request that fails as
-a whole, and a **validation error**, for input that fails field by field.
-
-## Single error
-
-Used for every failure except input validation.
+Every error response has the same shape: an `error` object with a `code` and
+a `message`. A validation error adds `fields`, which names each field that
+failed. A client reads `error.code` first, whatever the status. The one
+exception is the plain-text `404` and `405` of an unknown route; see
+[Status codes](#status-codes).
 
 ```json
 {
@@ -20,36 +19,42 @@ Used for every failure except input validation.
 |---|---|
 | `code` | A stable identifier for the failure. Branch on this. |
 | `message` | Text for humans, set by the error's class rather than by its code. Do not parse it, and reword it before showing it to users. |
+| `fields` | Present only when `code` is `VALIDATION_FAILED`: every field that failed. See [Validation errors](#validation-errors). |
 
 Because the message comes from the class, several codes share one text: every
 `401` reads `"Not authorized."`, whether the credentials were wrong or the
 refresh token was spent. Only `code` says what happened.
 
-## Validation error
+## Validation errors
 
-Used only for `422`. It reports every field that failed, in one response.
+A `422` has the code `VALIDATION_FAILED`, and its `fields` reports every field
+that failed, in one response.
 
 ```json
 {
-  "errors": [
-    {
-      "field": "username",
-      "code": "TOO_SHORT",
-      "details": { "min": 3, "unit": "code_point" }
-    },
-    {
-      "field": "password",
-      "code": "TOO_LONG",
-      "details": { "max": 72, "unit": "byte" }
-    }
-  ]
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "The input failed validation.",
+    "fields": [
+      {
+        "field": "username",
+        "code": "TOO_SHORT",
+        "details": { "min": 3, "unit": "code_point" }
+      },
+      {
+        "field": "password",
+        "code": "TOO_LONG",
+        "details": { "max": 72, "unit": "byte" }
+      }
+    ]
+  }
 }
 ```
 
 | Field | Meaning |
 |---|---|
 | `field` | The request field that failed, named as in the JSON body |
-| `code` | The rule that was broken |
+| `code` | The rule that was broken, from the [field codes](#field-codes) |
 | `details` | The rule's parameters, shaped by its code |
 
 A field can appear more than once: a username that is too long and contains a
@@ -93,7 +98,9 @@ count code points with `[...str].length`, and bytes with
 
 ## Code catalog
 
-### Single-error codes
+### Error codes
+
+The values of `error.code`.
 
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
@@ -101,9 +108,12 @@ count code points with `[...str].length`, and bytes with
 | `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |
 | `INVALID_TOKEN` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
 | `USERNAME_ALREADY_EXISTS` | 409 | `/v1/auth/register` | The username is taken |
+| `VALIDATION_FAILED` | 422 | `/v1/auth/register` | The input failed validation; `fields` says how |
 | `INTERNAL_SERVER_ERROR` | 500 | all | An unexpected failure |
 
-### Validation codes
+### Field codes
+
+The values of `error.fields[].code`.
 
 | Code | `details` | Meaning |
 |---|---|---|
@@ -127,11 +137,12 @@ For completeness, since the message is set by the error's class:
 | `400` | `Request body is not valid JSON.` |
 | `401` | `Not authorized.` |
 | `409` | `A conflict error occurred.` |
+| `422` | `The input failed validation.` |
 | `500` | `An internal error occurred.` |
 
 The `401` and `409` texts come from the error's `kind`, so they cover every code
 of that class: a wrong password and a spent refresh token read the same. The
-`400` and `500` texts belong to one code each.
+`400`, `422` and `500` texts belong to one code each.
 
 Do not depend on any of them. They are listed so that it is obvious one text
 serves several codes, which is the reason to branch on `code`.
@@ -173,7 +184,7 @@ status.
 401  →  on /login: show "wrong username or password"
         on /refresh: discard the token and send the user to log in
 409  →  ask for another username
-422  →  map errors[].field to your form fields and show a message for each
+422  →  map error.fields[].field to your form fields and show a message for each
 404  →  bug in your client; the body is plain text
 405  →  bug in your client; the body is plain text
 500  →  retry with backoff; if it persists, check the service's logs

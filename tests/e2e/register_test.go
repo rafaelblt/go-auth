@@ -22,6 +22,7 @@ type RegisterResponseBody struct {
 const (
 	RegisterPath              = "/v1/auth/register"
 	UsernameAlreadyExistsCode = "USERNAME_ALREADY_EXISTS"
+	ValidationFailedCode      = "VALIDATION_FAILED"
 )
 
 func TestRegister_ReturnsSuccessResponse(t *testing.T) {
@@ -80,8 +81,10 @@ func TestRegister_ReturnsValidationErrorResponse(t *testing.T) {
 	resp := env.Client.Post(t, RegisterPath, reqBody)
 
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
-	respBody := DecodeBody[ValidationErrorResponseBody](t, resp)
-	assert.Len(t, respBody.Errors, 2)
-	assert.Equal(t, "username", respBody.Errors[0].Field)
-	assert.Equal(t, "password", respBody.Errors[1].Field)
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, ValidationFailedCode, respBody.Error.Code)
+	assert.NotZero(t, respBody.Error.Message)
+	require.Len(t, respBody.Error.Fields, 2)
+	assert.Equal(t, "username", respBody.Error.Fields[0].Field)
+	assert.Equal(t, "password", respBody.Error.Fields[1].Field)
 }

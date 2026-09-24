@@ -50,7 +50,7 @@ deliberate abort, not a bug. What each line carries is in
 | Error type | Result |
 |---|---|
 | `usecase.UseCaseError` | Logged with its `reason`; status from its `kind`, code from its `code` |
-| `validation.ValidationError` | `422` with an entry for each failed field |
+| `validation.ValidationError` | `422 VALIDATION_FAILED`, with an entry in `fields` for each failed field |
 | anything else | Logged, and answered `500 INTERNAL_SERVER_ERROR` |
 
 A [`UseCaseError`](usecases/README.md#usecaseerror) is logged at `info`, since
