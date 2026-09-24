@@ -28,7 +28,8 @@ copy of the error handling to get subtly wrong.
 
 Before it decodes anything, the adapter answers `415` to a request whose
 `Content-Type` is not `application/json`, so every endpoint it serves requires
-that header ([API reference](../api/reference.md)).
+that header ([API reference](../api/reference.md),
+[why](../development/decisions/0051-post-endpoints-require-application-json.md)).
 
 ## JWKS is a plain handler
 

@@ -20,7 +20,8 @@ path.
 `Content-Type: application/json`, matched regardless of case, with any
 parameters (`; charset=utf-8`) allowed and ignored. Anything else, including no
 header at all, is answered `415 UNSUPPORTED_MEDIA_TYPE` before the body is
-read. `curl -d` sends `application/x-www-form-urlencoded`, so add
+read ([why](../development/decisions/0051-post-endpoints-require-application-json.md)).
+`curl -d` sends `application/x-www-form-urlencoded`, so add
 `-H 'Content-Type: application/json'` or use `--json`.
 
 **Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`

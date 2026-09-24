@@ -72,7 +72,8 @@ body without asking first, but asks (a CORS preflight) before sending
 but `application/json` is therefore what stops a page on another site from
 sending logins and registrations through its visitors' browsers, one client
 address each, past the proxy's rate limit. A proxy that answers those
-preflights for these endpoints, for origins you do not control, undoes that.
+preflights for these endpoints, for origins you do not control, undoes that
+([why](development/decisions/0051-post-endpoints-require-application-json.md)).
 
 ### Refresh token rows are never deleted
 

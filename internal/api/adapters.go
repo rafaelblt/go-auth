@@ -40,6 +40,7 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 		ctx := r.Context()
 		logger := loggerFrom(ctx)
 
+		// See docs/development/decisions/0051-post-endpoints-require-application-json.md.
 		if !hasJSONContentType(r) {
 			logger.Info("unsupported media type error", "content_type", r.Header.Get("Content-Type"))
 			writeJSON(ctx, w, unsupportedMediaTypeError())
