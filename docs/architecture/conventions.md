@@ -4,6 +4,19 @@ Patterns that recur throughout the code. Following them keeps new code
 consistent with what is already here. The conventions for tests are in
 [Testing](../development/testing.md).
 
+## Principles
+
+Simplicity and readability come first. The patterns below exist because each
+one removes a way to get something wrong; they are not a goal in themselves.
+When a pattern does not buy anything in a given place, the simpler code wins.
+
+**Comments are the exception.** Code should say what it does through its names
+and its shape; if it needs a comment to be understood, first try to make it
+simpler. A comment is warranted for what the simplest code still cannot
+express — a reason, a constraint, a non-obvious consequence — and it can be a
+link to the document that explains it (`See docs/...`) rather than the whole
+argument. Never restate the code.
+
 ## Protected struct
 
 Unexported fields, exported accessor methods.

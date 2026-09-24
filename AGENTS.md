@@ -36,6 +36,9 @@ values, params structs past two arguments, protected structs.
 
 ## Rules a single file does not reveal
 
+- **Simplicity and readability come first.** The patterns serve that, not the
+  other way round, and a comment is for what the simplest code cannot say. See
+  [Principles](docs/architecture/conventions.md#principles).
 - **Dependencies point inward.** `usecase` imports `port` and the domain
   packages, never `api`, `infra`, `bootstrap` or `config`.
 - **Only `infra.SystemClock` calls `time.Now`.** Everything else takes a
