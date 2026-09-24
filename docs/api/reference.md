@@ -32,6 +32,31 @@ response has a JSON body.
 **Errors.** One shape, an `error` object with a `code`, described in
 [Error model](errors.md).
 
+### Request bodies
+
+The body of a `POST` is one JSON object. An empty body, malformed or truncated
+JSON, a value that is not an object (`[]`, `"text"`), and a field of the wrong
+type (`{"username": 1}`) are all `400 INVALID_JSON_BODY`.
+
+**Unknown fields are ignored.** That is a rule, and it is what lets a field be
+added without breaking clients. It also means a misspelled field name is not
+reported as such: the field it was meant to be arrives empty, and is reported
+instead. `{"usernme": "alice"}` at registration is `TOO_SHORT` on `username`.
+
+A missing field and a field set to `null` are both read as `""`.
+
+The decoder also tolerates the following. Send one well-formed object in valid
+UTF-8, with each field once and in lower case, and do not depend on these:
+
+- A body of `null` reads as `{}`: registration answers `422`, login and refresh
+  `401`.
+- Anything after the first JSON value is ignored.
+- Field names match regardless of case: `USERNAME` fills `username`.
+- A field sent twice keeps the last value, also when the two differ in case.
+- Invalid UTF-8 in a string, and an escaped lone surrogate such as `\ud800`,
+  become `U+FFFD` without an error. In a password, each one replaced counts as
+  3 bytes toward the 72-byte limit.
+
 ---
 
 ## POST /v1/auth/register
@@ -58,8 +83,10 @@ Usernames are lower-cased before they are checked and stored, so `Alice` and
 leading or trailing space is a character outside the allowed set.
 
 Passwords are stored and compared exactly as sent: no trimming, no Unicode
-normalisation, and any character is allowed. The reasons for these rules are
-in the [Domain model](../architecture/domain/user.md#username).
+normalisation, and any character is allowed. The one change happens while the
+body is decoded: invalid UTF-8 becomes `U+FFFD` (see
+[Request bodies](#request-bodies)). The reasons for these rules are in the
+[Domain model](../architecture/domain/user.md#username).
 
 ### Response: `200 OK`
 
@@ -81,7 +108,7 @@ in the [Domain model](../architecture/domain/user.md#username).
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `409` | `USERNAME_ALREADY_EXISTS` | The username is taken |
 | `422` | `VALIDATION_FAILED` | The username or the password is invalid |
 
@@ -148,7 +175,7 @@ a password: keep it private, never log it, never put it in a URL.
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `401` | `INVALID_CREDENTIALS` | Any other failure |
 
 Every login failure gets the same response: a malformed username, an unknown
@@ -182,7 +209,7 @@ revokes the whole session.
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not valid JSON |
+| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `401` | `INVALID_TOKEN` | Any other failure |
 
 Every failure gets the same response: a token that never existed, one that

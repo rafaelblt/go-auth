@@ -88,7 +88,7 @@ count code points with `[...str].length`, and bytes with
 | Status | When |
 |---|---|
 | `200 OK` | Success. Every successful response is `200`, registration included. |
-| `400 Bad Request` | The body is not valid JSON |
+| `400 Bad Request` | The body is not a JSON object with fields of the expected types |
 | `401 Unauthorized` | Wrong credentials, or an unusable refresh token |
 | `404 Not Found` | Unknown path. **Plain text body**, not JSON |
 | `405 Method Not Allowed` | Known path, wrong method. **Plain text body**, not JSON |
@@ -104,7 +104,7 @@ The values of `error.code`.
 
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
-| `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded as JSON |
+| `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not an object, or a field of the wrong type |
 | `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |
 | `INVALID_TOKEN` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
 | `USERNAME_ALREADY_EXISTS` | 409 | `/v1/auth/register` | The username is taken |

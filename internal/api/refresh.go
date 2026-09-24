@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
@@ -23,7 +22,7 @@ type refreshUseCase interface {
 
 func refreshDecoder(r *http.Request) (refresh.Input, error) {
 	var body refreshRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := decodeJSONBody(r, &body); err != nil {
 		return refresh.Input{}, err
 	}
 	in := refresh.Input{

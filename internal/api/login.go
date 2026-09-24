@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -24,7 +23,7 @@ type loginUseCase interface {
 
 func loginDecoder(r *http.Request) (login.Input, error) {
 	var body loginRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := decodeJSONBody(r, &body); err != nil {
 		return login.Input{}, err
 	}
 	in := login.Input{

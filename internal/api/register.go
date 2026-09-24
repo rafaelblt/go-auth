@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -23,7 +22,7 @@ type registerUseCase interface {
 
 func registerDecoder(r *http.Request) (register.Input, error) {
 	var body registerRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := decodeJSONBody(r, &body); err != nil {
 		return register.Input{}, err
 	}
 	in := register.Input{
