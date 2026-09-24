@@ -48,13 +48,14 @@ added without breaking clients. It also means a misspelled field name is not
 reported as such: the field it was meant to be arrives empty, and is reported
 instead. `{"usernme": "alice"}` at registration is `TOO_SHORT` on `username`.
 
-A missing field and a field set to `null` are both read as `""`.
+A missing field is read as `""`.
 
 The decoder also tolerates the following. Send one well-formed object in valid
 UTF-8, with each field once and in lower case, and do not depend on these:
 
 - A body of `null` reads as `{}`: registration answers `422`, login and refresh
   `401`.
+- A field set to `null` is read as `""`, like a missing one.
 - Anything after the first JSON value is ignored.
 - Field names match regardless of case: `USERNAME` fills `username`.
 - A field sent twice keeps the last value, also when the two differ in case.
