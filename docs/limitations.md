@@ -66,6 +66,14 @@ and no CORS handling. Put it behind a reverse proxy that:
 A proxy limits by client address, not by account, so guesses against one
 account spread over many addresses are not limited.
 
+A browser sends a cross-site `POST` as `text/plain`, a form or a URL-encoded
+body without asking first, but asks (a CORS preflight) before sending
+`application/json`, and `go-auth` never allows it. Answering `415` to anything
+but `application/json` is therefore what stops a page on another site from
+sending logins and registrations through its visitors' browsers, one client
+address each, past the proxy's rate limit. A proxy that answers those
+preflights for these endpoints, for origins you do not control, undoes that.
+
 ### Refresh token rows are never deleted
 
 Every login and every refresh inserts a row into `refresh_tokens`, and nothing

@@ -50,3 +50,13 @@ func invalidJSONBodyError() response {
 		}},
 	}
 }
+
+func unsupportedMediaTypeError() response {
+	return response{
+		StatusCode: http.StatusUnsupportedMediaType,
+		Body: errorBody{Error: errorData{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json.",
+		}},
+	}
+}

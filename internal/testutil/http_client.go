@@ -34,7 +34,7 @@ func NewHTTPClient(baseURL string) (*HTTPClient, error) {
 	return &client, nil
 }
 
-func (c *HTTPClient) do(t *testing.T, method, path string, body any) *http.Response {
+func (c *HTTPClient) do(t *testing.T, method, path, contentType string, body any) *http.Response {
 	t.Helper()
 
 	if !strings.HasPrefix(path, "/") {
@@ -64,8 +64,8 @@ func (c *HTTPClient) do(t *testing.T, method, path string, body any) *http.Respo
 	require.NoError(t, err, "request creation failed")
 
 	req.Header.Set("Accept", "application/json")
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 
 	client := &http.Client{}
@@ -77,10 +77,21 @@ func (c *HTTPClient) do(t *testing.T, method, path string, body any) *http.Respo
 
 func (c *HTTPClient) Get(t *testing.T, path string) *http.Response {
 	t.Helper()
-	return c.do(t, http.MethodGet, path, nil)
+	return c.do(t, http.MethodGet, path, "", nil)
 }
 
 func (c *HTTPClient) Post(t *testing.T, path string, body any) *http.Response {
 	t.Helper()
-	return c.do(t, http.MethodPost, path, body)
+	contentType := ""
+	if body != nil {
+		contentType = "application/json"
+	}
+	return c.do(t, http.MethodPost, path, contentType, body)
+}
+
+// PostWithContentType sends body as Post does, with contentType as its
+// Content-Type, or with no Content-Type when contentType is empty.
+func (c *HTTPClient) PostWithContentType(t *testing.T, path, contentType string, body any) *http.Response {
+	t.Helper()
+	return c.do(t, http.MethodPost, path, contentType, body)
 }

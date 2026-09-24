@@ -16,8 +16,12 @@ version, because [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) fixes its
 path.
 
 **Content type.** Every response the service writes is
-`Content-Type: application/json`. Requests are parsed as JSON whatever
-`Content-Type` they send, but sending `application/json` is correct.
+`Content-Type: application/json`. The three `POST` endpoints require
+`Content-Type: application/json`, matched regardless of case, with any
+parameters (`; charset=utf-8`) allowed and ignored. Anything else, including no
+header at all, is answered `415 UNSUPPORTED_MEDIA_TYPE` before the body is
+read. `curl -d` sends `application/x-www-form-urlencoded`, so add
+`-H 'Content-Type: application/json'` or use `--json`.
 
 **Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`
 returns `405 Method Not Allowed`, not `404`.
@@ -110,6 +114,7 @@ body is decoded: invalid UTF-8 becomes `U+FFFD` (see
 |---|---|---|
 | `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `409` | `USERNAME_ALREADY_EXISTS` | The username is taken |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
 | `422` | `VALIDATION_FAILED` | The username or the password is invalid |
 
 A validation error names every field at fault, so one request reports every
@@ -177,6 +182,7 @@ a password: keep it private, never log it, never put it in a URL.
 |---|---|---|
 | `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `401` | `INVALID_CREDENTIALS` | Any other failure |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
 
 Every login failure gets the same response: a malformed username, an unknown
 username, a user without a password, and a wrong password. Login never returns
@@ -211,6 +217,7 @@ revokes the whole session.
 |---|---|---|
 | `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
 | `401` | `INVALID_TOKEN` | Any other failure |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
 
 Every failure gets the same response: a token that never existed, one that
 expired, one already used, and one whose session was revoked. A caller cannot

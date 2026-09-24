@@ -93,6 +93,7 @@ count code points with `[...str].length`, and bytes with
 | `404 Not Found` | Unknown path. **Plain text body**, not JSON |
 | `405 Method Not Allowed` | Known path, wrong method. **Plain text body**, not JSON |
 | `409 Conflict` | The username is taken |
+| `415 Unsupported Media Type` | A `POST` whose `Content-Type` is not `application/json` |
 | `422 Unprocessable Entity` | The input failed validation |
 | `500 Internal Server Error` | An unexpected failure |
 
@@ -105,6 +106,7 @@ The values of `error.code`.
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
 | `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not an object, or a field of the wrong type |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
 | `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |
 | `INVALID_TOKEN` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
 | `USERNAME_ALREADY_EXISTS` | 409 | `/v1/auth/register` | The username is taken |
@@ -137,12 +139,13 @@ For completeness, since the message is set by the error's class:
 | `400` | `Request body is not valid JSON.` |
 | `401` | `Not authorized.` |
 | `409` | `A conflict error occurred.` |
+| `415` | `Content-Type must be application/json.` |
 | `422` | `The input failed validation.` |
 | `500` | `An internal error occurred.` |
 
 The `401` and `409` texts come from the error's `kind`, so they cover every code
 of that class: a wrong password and a spent refresh token read the same. The
-`400`, `422` and `500` texts belong to one code each.
+`400`, `415`, `422` and `500` texts belong to one code each.
 
 Do not depend on any of them. They are listed so that it is obvious one text
 serves several codes, which is the reason to branch on `code`.
@@ -184,6 +187,7 @@ status.
 401  →  on /login: show "wrong username or password"
         on /refresh: discard the token and send the user to log in
 409  →  ask for another username
+415  →  bug in your client: send Content-Type: application/json
 422  →  map error.fields[].field to your form fields and show a message for each
 404  →  bug in your client; the body is plain text
 405  →  bug in your client; the body is plain text

@@ -26,6 +26,10 @@ adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
 A new endpoint is three small functions, not another handler with its own
 copy of the error handling to get subtly wrong.
 
+Before it decodes anything, the adapter answers `415` to a request whose
+`Content-Type` is not `application/json`, so every endpoint it serves requires
+that header ([API reference](../api/reference.md)).
+
 ## JWKS is a plain handler
 
 It has no business logic: it reads the keys from a provider and reshapes

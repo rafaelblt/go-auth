@@ -173,6 +173,7 @@ func (h *TestAdapterUseCaseHelper) NewRequest(value string) *http.Request {
 
 	req, err := http.NewRequest(http.MethodPost, "url", reader)
 	require.NoError(h.t, err)
+	req.Header.Set("Content-Type", "application/json")
 
 	return req
 }
@@ -272,12 +273,59 @@ func TestAdaptUseCase_WritesInvalidJSONBodyError_WhenDecoderReturnsError(t *test
 
 	req, err := http.NewRequest("POST", "url", strings.NewReader("invalid json"))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
 
 	helper.Handle(recorder, req)
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
 	body := helper.DecodeErrorBody(recorder)
 	assert.Equal(t, invalidJSONBodyError().Body, body)
+}
+
+func TestAdaptUseCase_WritesUnsupportedMediaTypeError_WhenContentTypeIsNotJSON(t *testing.T) {
+	testCases := []struct {
+		desc        string
+		contentType string
+	}{
+		{desc: "no header", contentType: ""},
+		{desc: "text plain", contentType: "text/plain;charset=UTF-8"},
+		{desc: "url encoded form", contentType: "application/x-www-form-urlencoded"},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			helper := NewTestAdapterUseCaseHelper(t)
+			recorder := httptest.NewRecorder()
+			req, err := http.NewRequest("POST", "url", strings.NewReader(`{"req_value":"v"}`))
+			require.NoError(t, err)
+			if tC.contentType != "" {
+				req.Header.Set("Content-Type", tC.contentType)
+			}
+
+			helper.Handle(recorder, req)
+
+			require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
+			body := helper.DecodeErrorBody(recorder)
+			assert.Equal(t, unsupportedMediaTypeError().Body, body)
+			assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
+			assert.Empty(t, helper.RequestsProvidedToDecoder())
+			assert.Empty(t, helper.InputsProvidedToUseCase())
+		})
+	}
+}
+
+func TestAdaptUseCase_LogsContentType_WhenContentTypeIsNotJSON(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	ctx, buf := contextWithLoggedLines(t)
+	req, err := http.NewRequest("POST", "url", strings.NewReader(`{"req_value":"v"}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "text/plain;charset=UTF-8")
+
+	helper.Handle(httptest.NewRecorder(), req.WithContext(ctx))
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "unsupported media type error", line["msg"])
+	assert.Equal(t, "INFO", line["level"])
+	assert.Equal(t, "text/plain;charset=UTF-8", line["content_type"])
 }
 
 func TestAdaptUseCase_UseSuccessLog_WithContext(t *testing.T) {

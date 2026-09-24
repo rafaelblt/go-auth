@@ -40,6 +40,12 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 		ctx := r.Context()
 		logger := loggerFrom(ctx)
 
+		if !hasJSONContentType(r) {
+			logger.Info("unsupported media type error", "content_type", r.Header.Get("Content-Type"))
+			writeJSON(ctx, w, unsupportedMediaTypeError())
+			return
+		}
+
 		input, err := p.Decoder(r)
 		if err != nil {
 			logger.Info("invalid json body error", "error", err)

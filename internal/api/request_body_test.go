@@ -9,6 +9,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestHasJSONContentType(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		header   string
+		expected bool
+	}{
+		{desc: "json", header: "application/json", expected: true},
+		{desc: "json with charset", header: "application/json; charset=utf-8", expected: true},
+		{desc: "json with upper case charset", header: "application/json;charset=UTF-8", expected: true},
+		{desc: "json with another charset", header: "application/json;charset=latin1", expected: true},
+		{desc: "json in another case", header: "Application/JSON", expected: true},
+		{desc: "json with empty parameters", header: "application/json;", expected: true},
+		{desc: "no header", header: "", expected: false},
+		{desc: "text plain", header: "text/plain", expected: false},
+		{desc: "text plain with charset", header: "text/plain;charset=UTF-8", expected: false},
+		{desc: "url encoded form", header: "application/x-www-form-urlencoded", expected: false},
+		{desc: "multipart form", header: "multipart/form-data; boundary=x", expected: false},
+		{desc: "json suffix", header: "application/problem+json", expected: false},
+		{desc: "json with malformed parameter", header: "application/json; foo", expected: false},
+		{desc: "list of types", header: "application/json, text/plain", expected: false},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/", nil)
+			if tC.header != "" {
+				req.Header.Set("Content-Type", tC.header)
+			}
+
+			assert.Equal(t, tC.expected, hasJSONContentType(req))
+		})
+	}
+}
+
 type testRequestBody struct {
 	Username string `json:"username"`
 	Password string `json:"password"`

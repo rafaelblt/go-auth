@@ -96,6 +96,7 @@ POST /v1/auth/login
   ├─ recovery middleware     catch panics from here on
   ├─ ServeMux                match POST /v1/auth/login
   │
+  ├─ adaptUseCase            Content-Type not application/json → 415
   ├─ loginDecoder            JSON body → login.Input
   ├─ login.Execute           validate → find user → find password → verify
   │                          → create session → issue access token
