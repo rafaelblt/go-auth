@@ -35,7 +35,7 @@ func registerDecoder(r *http.Request) (register.Input, error) {
 func registerEncoder(out register.Output) response {
 	usr := mapUserDTO(out.User)
 	body := registerResponseBody{User: usr}
-	resp := response{StatusCode: http.StatusOK, Body: body}
+	resp := response{StatusCode: http.StatusCreated, Body: body}
 	return resp
 }
 

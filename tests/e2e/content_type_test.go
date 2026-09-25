@@ -46,7 +46,7 @@ func TestRegister_CreatesNoUser_WhenContentTypeIsNotJSON(t *testing.T) {
 	require.Equal(t, http.StatusUnsupportedMediaType, resp.StatusCode)
 
 	resp = env.Client.Post(t, RegisterPath, reqBody)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
 func TestRegister_AcceptsJSONContentTypeWithParameters(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRegister_AcceptsJSONContentTypeWithParameters(t *testing.T) {
 
 	resp := env.Client.PostWithContentType(t, RegisterPath, "Application/JSON; charset=utf-8", reqBody)
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
 func TestUnknownPath_ReturnsNotFound_WhenContentTypeIsNotJSON(t *testing.T) {

@@ -94,7 +94,7 @@ body is decoded: invalid UTF-8 becomes `U+FFFD` (see
 [Request bodies](#request-bodies)). The reasons for these rules are in the
 [Domain model](../architecture/domain/user.md#username).
 
-### Response: `200 OK`
+### Response: `201 Created`
 
 ```json
 {

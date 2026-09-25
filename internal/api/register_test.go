@@ -43,7 +43,7 @@ func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
 
 	resp := registerEncoder(output)
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	require.IsType(t, registerResponseBody{}, resp.Body)
 	actualBody := resp.Body.(registerResponseBody)
 	expectedBody := registerResponseBody{

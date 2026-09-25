@@ -35,7 +35,7 @@ func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 
 	resp := env.Client.Post(t, RegisterPath, reqBody)
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 	respBody := DecodeBody[RegisterResponseBody](t, resp)
 	assert.NotZero(t, respBody.User.ID)
 	assert.Equal(t, reqBody.Username, respBody.User.Username)

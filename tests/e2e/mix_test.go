@@ -23,7 +23,7 @@ func TestRegister_Login_Refresh(t *testing.T) {
 		Password: password,
 	}
 	registerResp := env.Client.Post(t, RegisterPath, registerReq)
-	require.Equal(t, http.StatusOK, registerResp.StatusCode)
+	require.Equal(t, http.StatusCreated, registerResp.StatusCode)
 
 	// Login
 

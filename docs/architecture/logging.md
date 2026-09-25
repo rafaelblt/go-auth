@@ -143,7 +143,7 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 
 | Message | Level | Extra fields | Response |
 |---|---|---|---|
-| `success register` | `INFO` | `user_id` | `200` |
+| `success register` | `INFO` | `user_id` | `201` |
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415 UNSUPPORTED_MEDIA_TYPE` |

@@ -87,7 +87,8 @@ count code points with `[...str].length`, and bytes with
 
 | Status | When |
 |---|---|
-| `200 OK` | Success. Every successful response is `200`, registration included. |
+| `200 OK` | Success, except for registration |
+| `201 Created` | A user was registered |
 | `400 Bad Request` | The body is not a JSON object with fields of the expected types |
 | `401 Unauthorized` | Wrong credentials, or an unusable refresh token |
 | `404 Not Found` | Unknown path. **Plain text body**, not JSON |
