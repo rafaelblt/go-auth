@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 )
 
@@ -47,7 +48,14 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 			return
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, requestBodyMaxBytes)
 		input, err := p.Decoder(r)
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			logger.Info("request body too large error")
+			writeJSON(ctx, w, requestBodyTooLargeError())
+			return
+		}
 		if err != nil {
 			logger.Info("invalid json body error", "error", err)
 			writeJSON(ctx, w, invalidJSONBodyError())

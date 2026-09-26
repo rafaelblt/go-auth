@@ -60,3 +60,13 @@ func unsupportedMediaTypeError() response {
 		}},
 	}
 }
+
+func requestBodyTooLargeError() response {
+	return response{
+		StatusCode: http.StatusRequestEntityTooLarge,
+		Body: errorBody{Error: errorData{
+			Code:    "REQUEST_BODY_TOO_LARGE",
+			Message: "Request body is too large.",
+		}},
+	}
+}

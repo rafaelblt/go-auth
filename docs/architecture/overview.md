@@ -97,6 +97,7 @@ POST /v1/auth/login
   ├─ ServeMux                match POST /v1/auth/login
   │
   ├─ adaptUseCase            Content-Type not application/json → 415
+  │                          decoder reads at most 64 KiB; past it → 413
   ├─ loginDecoder            JSON body → login.Input
   ├─ login.Execute           validate → find user → find password → verify
   │                          → create session → issue access token

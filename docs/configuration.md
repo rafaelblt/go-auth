@@ -194,6 +194,7 @@ starts half-configured.
 | HTTP read timeout | 15s | `internal/bootstrap/app.go` |
 | HTTP write timeout | 15s | `internal/bootstrap/app.go` |
 | HTTP idle timeout | 60s | `internal/bootstrap/app.go` |
+| Request body decoding limit | 64 KiB | `internal/api/request_body.go` |
 | Graceful shutdown timeout | 10s | `internal/bootstrap/app.go` |
 | Signing key rotation interval | 7 days | `internal/bootstrap/app.go` |
 | Background task timeout, per run | 3s | `internal/bootstrap/app.go` |

@@ -103,8 +103,8 @@ The level is a claim about who should care, and it is applied consistently:
 | `WARN` | Handled, but a catalog is incomplete | The developer, eventually |
 | `ERROR` | A defect or an operational failure | Whoever is on call |
 
-A wrong password, a spent refresh token, a wrong content type and a malformed
-body are all `INFO`.
+A wrong password, a spent refresh token, a wrong content type, an oversized
+body and a malformed body are all `INFO`.
 They are the traffic an authentication service exists to reject, and paging on
 them would page on every bot that finds the login endpoint.
 
@@ -147,6 +147,7 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415 UNSUPPORTED_MEDIA_TYPE` |
+| `request body too large error` | `INFO` | — | `413 REQUEST_BODY_TOO_LARGE` |
 | `invalid json body error` | `INFO` | `error` | `400 INVALID_JSON_BODY` |
 | `validation error` | `INFO` | `pairs` | `422 VALIDATION_FAILED` |
 | `use case error` | `INFO` | `code`, `kind`, `reason` | `401` or `409`, from `kind` |

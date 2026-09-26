@@ -188,7 +188,7 @@ it, with examples: [Verifying access tokens](api/token-verification.md).
 Before deploying, read [Limitations](limitations.md). The two things most
 likely to matter:
 
-- `go-auth` has no TLS, rate limiting or request size limit of its own. Run it
+- `go-auth` has no TLS or rate limiting of its own. Run it
   [behind a reverse proxy](limitations.md#run-it-behind-a-reverse-proxy).
 - The signing key is held in memory, so every restart invalidates all
   outstanding access tokens, and the service runs as

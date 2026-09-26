@@ -328,6 +328,86 @@ func TestAdaptUseCase_LogsContentType_WhenContentTypeIsNotJSON(t *testing.T) {
 	assert.Equal(t, "text/plain;charset=UTF-8", line["content_type"])
 }
 
+func TestAdaptUseCase_ExecutesUseCase_WhenBodyIsAtLimit(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	recorder := httptest.NewRecorder()
+	value := strings.Repeat("a", requestBodyMaxBytes-16)
+	body := `{"req_value":"` + value + `"}`
+	require.Len(t, body, requestBodyMaxBytes)
+	req, err := http.NewRequest("POST", "url", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, helper.ExpectedStatusCode(), recorder.Code)
+	input := testutil.Only(t, helper.InputsProvidedToUseCase())
+	assert.Equal(t, value, input.InValue)
+}
+
+func TestAdaptUseCase_WritesRequestBodyTooLargeError_WhenBodyExceedsLimit(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	recorder := httptest.NewRecorder()
+	body := `{"req_value":"` + strings.Repeat("a", requestBodyMaxBytes) + `"}`
+	req, err := http.NewRequest("POST", "url", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
+	respBody := helper.DecodeErrorBody(recorder)
+	assert.Equal(t, requestBodyTooLargeError().Body, respBody)
+	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
+	assert.Empty(t, helper.InputsProvidedToUseCase())
+}
+
+func TestAdaptUseCase_WritesUnsupportedMediaTypeError_WhenBodyExceedsLimitAndContentTypeIsNotJSON(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	recorder := httptest.NewRecorder()
+	body := `{"req_value":"` + strings.Repeat("a", requestBodyMaxBytes) + `"}`
+	req, err := http.NewRequest("POST", "url", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "text/plain;charset=UTF-8")
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
+	respBody := helper.DecodeErrorBody(recorder)
+	assert.Equal(t, unsupportedMediaTypeError().Body, respBody)
+	assert.Empty(t, helper.RequestsProvidedToDecoder())
+}
+
+func TestAdaptUseCase_LogsRequestBodyTooLarge_WhenBodyExceedsLimit(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	ctx, buf := contextWithLoggedLines(t)
+	body := `{"req_value":"` + strings.Repeat("a", requestBodyMaxBytes) + `"}`
+	req, err := http.NewRequest("POST", "url", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	helper.Handle(httptest.NewRecorder(), req.WithContext(ctx))
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "request body too large error", line["msg"])
+	assert.Equal(t, "INFO", line["level"])
+}
+
+func TestAdaptUseCase_ExecutesUseCase_WhenTrailingContentExceedsLimit(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	recorder := httptest.NewRecorder()
+	body := `{"req_value":"x"}` + strings.Repeat("a", requestBodyMaxBytes)
+	req, err := http.NewRequest("POST", "url", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, helper.ExpectedStatusCode(), recorder.Code)
+	input := testutil.Only(t, helper.InputsProvidedToUseCase())
+	assert.Equal(t, "x", input.InValue)
+}
+
 func TestAdaptUseCase_UseSuccessLog_WithContext(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
 	req := helper.NewRequest("zero value in golang")

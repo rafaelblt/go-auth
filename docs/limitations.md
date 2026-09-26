@@ -20,7 +20,7 @@ provide:
 - multi-tenancy: one deployment serves one application;
 - an audit trail: authentication events are log lines, not stored records;
 - health or readiness endpoints, or metrics;
-- TLS, CORS, rate limiting or a request size limit (see
+- TLS, CORS or rate limiting (see
   [Run it behind a reverse proxy](#run-it-behind-a-reverse-proxy)).
 
 ## Deployment
@@ -53,14 +53,12 @@ should refresh when a service answers `401`.
 
 ### Run it behind a reverse proxy
 
-`go-auth` serves plain HTTP, with no rate limiting, no request body size limit
-and no CORS handling. Put it behind a reverse proxy that:
+`go-auth` serves plain HTTP, with no rate limiting and no CORS handling. Put
+it behind a reverse proxy that:
 
 - terminates TLS;
 - rate limits the three `POST` endpoints. Nothing else limits password
   guessing, apart from the cost of a bcrypt comparison;
-- caps the request body size. Bodies are decoded in full before they are
-  validated;
 - exposes only the four endpoints.
 
 A proxy limits by client address, not by account, so guesses against one

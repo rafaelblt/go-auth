@@ -30,6 +30,11 @@ Before it decodes anything, the adapter answers `415` to a request whose
 `Content-Type` is not `application/json`, so every endpoint it serves requires
 that header ([API reference](../api/reference.md),
 [why](../development/decisions/0051-post-endpoints-require-application-json.md)).
+It then limits the body the decoder reads to 64 KiB (`requestBodyMaxBytes`,
+with `http.MaxBytesReader`) and answers `413` when the decoder reaches the
+limit, so every endpoint it serves has it
+([API reference](../api/reference.md#request-bodies)). The wrap reads nothing
+by itself, so the `415` still comes first.
 
 ## JWKS is a plain handler
 
