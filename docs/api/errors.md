@@ -107,7 +107,7 @@ The values of `error.code`.
 
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
-| `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not an object, or a field of the wrong type |
+| `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not valid UTF-8, not an object, or a field of the wrong type |
 | `REQUEST_BODY_TOO_LARGE` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
 | `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |

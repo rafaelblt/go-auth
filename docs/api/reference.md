@@ -40,8 +40,15 @@ response has a JSON body.
 ### Request bodies
 
 The body of a `POST` is one JSON object. An empty body, malformed or truncated
-JSON, a value that is not an object (`[]`, `"text"`), and a field of the wrong
-type (`{"username": 1}`) are all `400 INVALID_JSON_BODY`.
+JSON, a value that is not an object (`[]`, `"text"`), a field of the wrong
+type (`{"username": 1}`), and invalid UTF-8 anywhere in the object, in a field
+that is ignored too, are all `400 INVALID_JSON_BODY`.
+
+Invalid UTF-8 is rejected rather than replaced because a replaced password is
+stored that way. Every invalid byte would become the same `U+FFFD`, so a body
+sent in Latin-1 would make `senhaçã` and `senhaõé` one password. And once
+stored, such a password could not be tightened away: rejecting the bytes later
+would lock out the users who registered with them.
 
 A body is decoded only up to its first 64 KiB (65,536 bytes): a body whose
 first JSON value does not end within them is answered `413`
@@ -65,9 +72,10 @@ UTF-8, with each field once and in lower case, and do not depend on these:
   the 64 KiB limit.
 - Field names match regardless of case: `USERNAME` fills `username`.
 - A field sent twice keeps the last value, also when the two differ in case.
-- Invalid UTF-8 in a string, and an escaped lone surrogate such as `\ud800`,
-  become `U+FFFD` without an error. In a password, each one replaced counts as
-  3 bytes toward the 72-byte limit.
+- An escaped lone surrogate such as `\ud800` becomes `U+FFFD` without an
+  error. In a password, each one replaced counts as 3 bytes toward the 72-byte
+  limit. The bytes are valid UTF-8, so the check above does not see it, and a
+  password stored this way carries the same risk.
 
 ---
 
@@ -96,7 +104,7 @@ leading or trailing space is a character outside the allowed set.
 
 Passwords are stored and compared exactly as sent: no trimming, no Unicode
 normalisation, and any character is allowed. The one change happens while the
-body is decoded: invalid UTF-8 becomes `U+FFFD` (see
+body is decoded: an escaped lone surrogate becomes `U+FFFD` (see
 [Request bodies](#request-bodies)). The reasons for these rules are in the
 [Domain model](../architecture/domain/user.md#username).
 

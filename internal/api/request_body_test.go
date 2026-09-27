@@ -67,7 +67,6 @@ func TestDecodeJSONBody_Tolerances(t *testing.T) {
 		{desc: "repeated field", body: `{"username":"a","username":"b"}`, expected: testRequestBody{Username: "b"}},
 		{desc: "repeated field in another case", body: `{"username":"a","USERNAME":"b"}`, expected: testRequestBody{Username: "b"}},
 		{desc: "null field", body: `{"username":null}`, expected: testRequestBody{}},
-		{desc: "invalid utf-8", body: "{\"password\":\"ab\xffcd\"}", expected: testRequestBody{Password: "ab�cd"}},
 		{desc: "escaped lone surrogate", body: `{"password":"ab\ud800cd"}`, expected: testRequestBody{Password: "ab�cd"}},
 	}
 	for _, tC := range testCases {
@@ -83,6 +82,16 @@ func TestDecodeJSONBody_Tolerances(t *testing.T) {
 	}
 }
 
+func TestDecodeJSONBody_KeepsValidUTF8(t *testing.T) {
+	req := httptest.NewRequest("POST", "/", strings.NewReader(`{"password":"josé�"}`))
+	var body testRequestBody
+
+	err := decodeJSONBody(req, &body)
+
+	require.NoError(t, err)
+	assert.Equal(t, testRequestBody{Password: "josé�"}, body)
+}
+
 func TestDecodeJSONBody_ReturnsError(t *testing.T) {
 	testCases := []struct {
 		desc string
@@ -95,6 +104,9 @@ func TestDecodeJSONBody_ReturnsError(t *testing.T) {
 		{desc: "string", body: `"text"`},
 		{desc: "field of the wrong type", body: `{"username":1}`},
 		{desc: "not json", body: `not json`},
+		{desc: "invalid utf-8", body: "{\"password\":\"ab\xffcd\"}"},
+		{desc: "latin-1", body: "{\"password\":\"senha\xe7\xe3\"}"},
+		{desc: "invalid utf-8 in an unknown field", body: "{\"other\":\"\xff\"}"},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
