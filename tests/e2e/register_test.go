@@ -50,6 +50,9 @@ func TestRegister_ReturnsMethodNotAllowed(t *testing.T) {
 	resp := env.Client.Get(t, RegisterPath)
 
 	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	assert.Equal(t, "POST", resp.Header.Get("Allow"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, MethodNotAllowedCode, respBody.Error.Code)
 }
 
 func TestRegister_ReturnsUsernameAlreadyExistsErrorResponse(t *testing.T) {

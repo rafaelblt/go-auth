@@ -2,9 +2,7 @@
 
 Every error response has the same shape: an `error` object with a `code` and
 a `message`. A validation error adds `fields`, which names each field that
-failed. A client reads `error.code` first, whatever the status. The one
-exception is the plain-text `404` and `405` of an unknown route; see
-[Status codes](#status-codes).
+failed. A client reads `error.code` first, whatever the status.
 
 ```json
 {
@@ -91,8 +89,8 @@ count code points with `[...str].length`, and bytes with
 | `201 Created` | A user was registered |
 | `400 Bad Request` | The body is not a JSON object with fields of the expected types |
 | `401 Unauthorized` | Wrong credentials, or an unusable refresh token |
-| `404 Not Found` | Unknown path. **Plain text body**, not JSON |
-| `405 Method Not Allowed` | Known path, wrong method. **Plain text body**, not JSON |
+| `404 Not Found` | Unknown path |
+| `405 Method Not Allowed` | Known path, wrong method; the `Allow` header lists the accepted methods |
 | `409 Conflict` | The username is taken |
 | `413 Request Entity Too Large` | A `POST` body whose JSON value runs past 64 KiB |
 | `415 Unsupported Media Type` | A `POST` whose `Content-Type` is not `application/json` |
@@ -108,6 +106,8 @@ The values of `error.code`.
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
 | `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not valid UTF-8, not an object, or a field of the wrong type |
+| `ROUTE_NOT_FOUND` | 404 | any unknown path | No endpoint has this path |
+| `METHOD_NOT_ALLOWED` | 405 | every endpoint | The endpoint does not accept this method; `Allow` lists the ones it does |
 | `REQUEST_BODY_TOO_LARGE` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
 | `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |
@@ -141,6 +141,8 @@ For completeness, since the message is set by the error's class:
 |---|---|
 | `400` | `Request body is not valid JSON.` |
 | `401` | `Not authorized.` |
+| `404` | `Route not found.` |
+| `405` | `Method not allowed for this route.` |
 | `409` | `A conflict error occurred.` |
 | `413` | `Request body is too large.` |
 | `415` | `Content-Type must be application/json.` |
@@ -149,7 +151,7 @@ For completeness, since the message is set by the error's class:
 
 The `401` and `409` texts come from the error's `kind`, so they cover every code
 of that class: a wrong password and a spent refresh token read the same. The
-`400`, `413`, `415`, `422` and `500` texts belong to one code each.
+`400`, `404`, `405`, `413`, `415`, `422` and `500` texts belong to one code each.
 
 Do not depend on any of them. They are listed so that it is obvious one text
 serves several codes, which is the reason to branch on `code`.
@@ -194,8 +196,8 @@ status.
 413  →  bug in your client: the body is too large
 415  →  bug in your client: send Content-Type: application/json
 422  →  map error.fields[].field to your form fields and show a message for each
-404  →  bug in your client; the body is plain text
-405  →  bug in your client; the body is plain text
+404  →  bug in your client: the path is wrong
+405  →  bug in your client: use the method in the Allow header
 500  →  retry with backoff; if it persists, check the service's logs
 ```
 

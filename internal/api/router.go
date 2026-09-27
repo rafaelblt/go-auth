@@ -73,7 +73,7 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
-	chain := chainMiddlewares(mux, cfg.Dependencies.Logger)
+	chain := chainMiddlewares(jsonRouteErrors(mux), cfg.Dependencies.Logger)
 
 	return chain, nil
 }

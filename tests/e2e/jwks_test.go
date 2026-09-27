@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,4 +31,15 @@ func TestJWKS_ReturnsResponse(t *testing.T) {
 	body := DecodeBody[JWKSResponseBody](t, resp)
 	require.NotNil(t, body.Keys)
 	assert.Len(t, body.Keys, 1)
+}
+
+func TestJWKS_ReturnsMethodNotAllowed(t *testing.T) {
+	env := testApp.NewEnv(t)
+
+	resp := env.Client.Post(t, JWKSPath, nil)
+
+	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	assert.Equal(t, "GET, HEAD", resp.Header.Get("Allow"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, MethodNotAllowedCode, respBody.Error.Code)
 }

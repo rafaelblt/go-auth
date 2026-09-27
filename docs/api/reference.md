@@ -25,12 +25,14 @@ read ([why](../development/decisions/0051-post-endpoints-require-application-jso
 `-H 'Content-Type: application/json'` or use `--json`.
 
 **Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`
-returns `405 Method Not Allowed`, not `404`.
+returns `405 METHOD_NOT_ALLOWED`, not `404`, with an `Allow` header naming the
+accepted method.
 
-**Unknown routes return plain text.** A `404` for an unknown path, and a `405`
-for a known path with the wrong method, come from Go's `http.ServeMux`, with a
-`text/plain` body instead of the JSON error shape. Do not assume every error
-response has a JSON body.
+**Unknown routes.** A path no endpoint has is answered `404 ROUTE_NOT_FOUND`,
+in the usual error shape. A path not in canonical form (`//v1/auth/login`, or
+one with `..` segments) gets a `307` redirect to its cleaned form from Go's
+`http.ServeMux`, not a JSON error: a `GET` gets a short HTML body, any other
+method an empty one.
 
 **Timestamps.** RFC 3339, in UTC: `2026-09-08T12:00:00Z`.
 

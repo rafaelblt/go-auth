@@ -66,5 +66,8 @@ func TestUnknownPath_ReturnsNotFound_WhenContentTypeIsNotJSON(t *testing.T) {
 
 	resp := env.Client.PostWithContentType(t, "/v1/auth/unknown", "text/plain", "x")
 
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, RouteNotFoundCode, respBody.Error.Code)
 }

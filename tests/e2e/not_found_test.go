@@ -5,6 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	RouteNotFoundCode    = "ROUTE_NOT_FOUND"
+	MethodNotAllowedCode = "METHOD_NOT_ALLOWED"
 )
 
 func TestNotFound(t *testing.T) {
@@ -12,5 +18,8 @@ func TestNotFound(t *testing.T) {
 
 	resp := env.Client.Get(t, "unknown")
 
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, RouteNotFoundCode, respBody.Error.Code)
 }

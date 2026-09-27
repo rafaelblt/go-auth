@@ -70,3 +70,23 @@ func requestBodyTooLargeError() response {
 		}},
 	}
 }
+
+func routeNotFoundError() response {
+	return response{
+		StatusCode: http.StatusNotFound,
+		Body: errorBody{Error: errorData{
+			Code:    "ROUTE_NOT_FOUND",
+			Message: "Route not found.",
+		}},
+	}
+}
+
+func methodNotAllowedError() response {
+	return response{
+		StatusCode: http.StatusMethodNotAllowed,
+		Body: errorBody{Error: errorData{
+			Code:    "METHOD_NOT_ALLOWED",
+			Message: "Method not allowed for this route.",
+		}},
+	}
+}

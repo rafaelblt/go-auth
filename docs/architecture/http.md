@@ -42,6 +42,18 @@ It has no business logic: it reads the keys from a provider and reshapes
 them. A use case for it would add a layer that only passes data along. The
 keys it publishes come from the [keyring](tokens.md#signing-keys).
 
+## Unknown routes
+
+`NewRouter` wraps the `ServeMux` in `jsonRouteErrors`. When the mux has no
+pattern for a request, the mux still answers it, and its plain-text `404` and
+`405` are replaced with `ROUTE_NOT_FOUND` and `METHOD_NOT_ALLOWED` through
+`writeJSON`, keeping the `Allow` header the mux computed
+([Error model](../api/errors.md)). A catch-all `/` pattern would not do: it
+would swallow the `405`s and their `Allow`. A response from a matched route,
+and the mux's path-cleaning redirects, pass through untouched. The wrapper sits
+inside `logging` and `recovery` and logs nothing of its own: `request finished`
+carries the status.
+
 ## Middleware
 
 Middleware wraps the router in this order: `logging`, then `recovery`.

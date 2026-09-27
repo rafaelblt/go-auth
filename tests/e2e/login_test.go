@@ -49,6 +49,9 @@ func TestLogin_ReturnsMethodNotAllowed(t *testing.T) {
 	resp := env.Client.Get(t, LoginPath)
 
 	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	assert.Equal(t, "POST", resp.Header.Get("Allow"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, MethodNotAllowedCode, respBody.Error.Code)
 }
 
 func TestLogin_ReturnsInvalidCredentialsResponse_WhenUsernameNotExists(t *testing.T) {

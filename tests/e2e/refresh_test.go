@@ -47,6 +47,9 @@ func TestRefresh_ReturnsMethodNotAllowed(t *testing.T) {
 	resp := env.Client.Get(t, RefreshPath)
 
 	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	assert.Equal(t, "POST", resp.Header.Get("Allow"))
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, MethodNotAllowedCode, respBody.Error.Code)
 }
 
 func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsInvalid(t *testing.T) {

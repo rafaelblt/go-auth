@@ -95,6 +95,7 @@ POST /v1/auth/login
   ├─ logging middleware      give the request an ID, tag the logger, log "request received"
   ├─ recovery middleware     catch panics from here on
   ├─ ServeMux                match POST /v1/auth/login
+  │                          no route → 404, wrong method → 405 (JSON, jsonRouteErrors)
   │
   ├─ adaptUseCase            Content-Type not application/json → 415
   │                          decoder reads at most 64 KiB; past it → 413
