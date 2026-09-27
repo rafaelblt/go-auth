@@ -71,7 +71,7 @@ func TestMapRefreshTokenDTO_PanicsWithZeroDTO(t *testing.T) {
 }
 
 func TestRegisterDecoder_ReturnsInput(t *testing.T) {
-	body := registerRequestBody{
+	body := credentialsRequestBody{
 		Username: "username",
 		Password: "password",
 	}
@@ -116,7 +116,7 @@ func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
 }
 
 func TestLoginDecoder_ReturnsInput(t *testing.T) {
-	body := loginRequestBody{
+	body := credentialsRequestBody{
 		Username: "username",
 		Password: "password",
 	}
@@ -149,15 +149,15 @@ func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	resp := loginEncoder(output)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	require.IsType(t, loginResponseBody{}, resp.Body)
-	actualBody := resp.Body.(loginResponseBody)
-	expectedBody := loginResponseBody{
-		AccessToken: accessToken{
+	require.IsType(t, tokensResponseBody{}, resp.Body)
+	actualBody := resp.Body.(tokensResponseBody)
+	expectedBody := tokensResponseBody{
+		AccessToken: token{
 			Value:     output.AccessToken.Value(),
 			ExpiresAt: output.AccessToken.ExpiresAt(),
 			ExpiresIn: int64(output.AccessToken.ExpiresIn() / time.Second),
 		},
-		RefreshToken: refreshToken{
+		RefreshToken: token{
 			Value:     output.RefreshToken.Value(),
 			ExpiresAt: output.RefreshToken.ExpiresAt(),
 			ExpiresIn: int64(output.RefreshToken.ExpiresIn() / time.Second),
@@ -198,15 +198,15 @@ func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 	resp := refreshEncoder(output)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	require.IsType(t, refreshResponseBody{}, resp.Body)
-	actualBody := resp.Body.(refreshResponseBody)
-	expectedBody := refreshResponseBody{
-		AccessToken: accessToken{
+	require.IsType(t, tokensResponseBody{}, resp.Body)
+	actualBody := resp.Body.(tokensResponseBody)
+	expectedBody := tokensResponseBody{
+		AccessToken: token{
 			Value:     output.AccessToken.Value(),
 			ExpiresAt: output.AccessToken.ExpiresAt(),
 			ExpiresIn: int64(output.AccessToken.ExpiresIn() / time.Second),
 		},
-		RefreshToken: refreshToken{
+		RefreshToken: token{
 			Value:     output.RefreshToken.Value(),
 			ExpiresAt: output.RefreshToken.ExpiresAt(),
 			ExpiresIn: int64(output.RefreshToken.ExpiresIn() / time.Second),

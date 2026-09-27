@@ -24,9 +24,9 @@ type Config struct {
 type Dependencies struct {
 	Logger            *slog.Logger
 	Clock             port.Clock
-	Register          registerUseCase
-	Login             loginUseCase
-	Refresh           refreshUseCase
+	Register          useCase[register.Input, register.Output]
+	Login             useCase[login.Input, login.Output]
+	Refresh           useCase[refresh.Input, refresh.Output]
 	PublicKeyProvider port.PublicKeyProvider
 }
 

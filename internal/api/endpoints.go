@@ -35,56 +35,58 @@ func mapUserDTO(dto usecase.UserDTO) user {
 	return user
 }
 
-type accessToken struct {
+type token struct {
 	Value     string    `json:"value"`
 	ExpiresAt time.Time `json:"expires_at"`
 	ExpiresIn int64     `json:"expires_in"`
 }
 
-func mapAccessTokenDTO(dto usecase.AccessTokenDTO) accessToken {
+func mapAccessTokenDTO(dto usecase.AccessTokenDTO) token {
 	if dto.IsZero() {
 		panic("the mapAccessTokenDTO() func received a zero AccessTokenDTO")
 	}
-	token := accessToken{
+	return token{
 		Value:     dto.Value(),
 		ExpiresAt: dto.ExpiresAt(),
 		ExpiresIn: int64(dto.ExpiresIn() / time.Second),
 	}
-	return token
 }
 
-type refreshToken struct {
-	Value     string    `json:"value"`
-	ExpiresAt time.Time `json:"expires_at"`
-	ExpiresIn int64     `json:"expires_in"`
-}
-
-func mapRefreshTokenDTO(dto usecase.RefreshTokenDTO) refreshToken {
-	token := refreshToken{}
+func mapRefreshTokenDTO(dto usecase.RefreshTokenDTO) token {
 	if dto.IsZero() {
 		panic("the mapRefreshTokenDTO() func received a zero RefreshTokenDTO")
 	}
-	token.Value = dto.Value()
-	token.ExpiresAt = dto.ExpiresAt()
-	token.ExpiresIn = int64(dto.ExpiresIn() / time.Second)
-	return token
+	return token{
+		Value:     dto.Value(),
+		ExpiresAt: dto.ExpiresAt(),
+		ExpiresIn: int64(dto.ExpiresIn() / time.Second),
+	}
 }
 
-type registerRequestBody struct {
+type credentialsRequestBody struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type tokensResponseBody struct {
+	AccessToken  token `json:"access_token"`
+	RefreshToken token `json:"refresh_token"`
+}
+
+func tokensResponse(accessDTO usecase.AccessTokenDTO, refreshDTO usecase.RefreshTokenDTO) response {
+	body := tokensResponseBody{
+		AccessToken:  mapAccessTokenDTO(accessDTO),
+		RefreshToken: mapRefreshTokenDTO(refreshDTO),
+	}
+	return response{StatusCode: http.StatusOK, Body: body}
 }
 
 type registerResponseBody struct {
 	User user `json:"user"`
 }
 
-type registerUseCase interface {
-	Execute(context.Context, register.Input) (register.Output, error)
-}
-
 func registerDecoder(r *http.Request) (register.Input, error) {
-	var body registerRequestBody
+	var body credentialsRequestBody
 	if err := decodeJSONBody(r, &body); err != nil {
 		return register.Input{}, err
 	}
@@ -106,22 +108,8 @@ func registerSuccessLog(ctx context.Context, out register.Output) {
 	loggerFrom(ctx).Info("success register", "user_id", out.User.ID())
 }
 
-type loginRequestBody struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type loginResponseBody struct {
-	AccessToken  accessToken  `json:"access_token"`
-	RefreshToken refreshToken `json:"refresh_token"`
-}
-
-type loginUseCase interface {
-	Execute(context.Context, login.Input) (login.Output, error)
-}
-
 func loginDecoder(r *http.Request) (login.Input, error) {
-	var body loginRequestBody
+	var body credentialsRequestBody
 	if err := decodeJSONBody(r, &body); err != nil {
 		return login.Input{}, err
 	}
@@ -133,19 +121,7 @@ func loginDecoder(r *http.Request) (login.Input, error) {
 }
 
 func loginEncoder(out login.Output) response {
-	accessToken := mapAccessTokenDTO(out.AccessToken)
-	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
-
-	body := loginResponseBody{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
-	resp := response{
-		StatusCode: http.StatusOK,
-		Body:       body,
-	}
-
-	return resp
+	return tokensResponse(out.AccessToken, out.RefreshToken)
 }
 
 func loginSuccessLog(ctx context.Context, out login.Output) {
@@ -156,15 +132,6 @@ func loginSuccessLog(ctx context.Context, out login.Output) {
 
 type refreshRequestBody struct {
 	RefreshToken string `json:"refresh_token"`
-}
-
-type refreshResponseBody struct {
-	AccessToken  accessToken  `json:"access_token"`
-	RefreshToken refreshToken `json:"refresh_token"`
-}
-
-type refreshUseCase interface {
-	Execute(context.Context, refresh.Input) (refresh.Output, error)
 }
 
 func refreshDecoder(r *http.Request) (refresh.Input, error) {
@@ -179,19 +146,7 @@ func refreshDecoder(r *http.Request) (refresh.Input, error) {
 }
 
 func refreshEncoder(out refresh.Output) response {
-	accessToken := mapAccessTokenDTO(out.AccessToken)
-	refreshToken := mapRefreshTokenDTO(out.RefreshToken)
-
-	body := refreshResponseBody{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
-	resp := response{
-		StatusCode: http.StatusOK,
-		Body:       body,
-	}
-
-	return resp
+	return tokensResponse(out.AccessToken, out.RefreshToken)
 }
 
 func refreshSuccessLog(ctx context.Context, out refresh.Output) {
