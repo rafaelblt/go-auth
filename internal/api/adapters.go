@@ -2,8 +2,12 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"mime"
 	"net/http"
+	"unicode/utf8"
 )
 
 type response struct {
@@ -63,4 +67,41 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 		p.SuccessLog(ctx, output)
 		writeJSON(ctx, w, resp)
 	}
+}
+
+// See docs/api/reference.md#request-bodies.
+const requestBodyMaxBytes = 64 << 10
+
+var errInvalidUTF8 = errors.New("request body is not valid UTF-8")
+
+func hasJSONContentType(r *http.Request) bool {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	return err == nil && mediaType == "application/json"
+}
+
+// decodeJSONBody reads only the first JSON value, as before, and checks its
+// bytes before encoding/json can turn invalid UTF-8 into U+FFFD. See
+// docs/api/reference.md#request-bodies.
+func decodeJSONBody(r *http.Request, body any) error {
+	var raw json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return err
+	}
+	if !utf8.Valid(raw) {
+		return errInvalidUTF8
+	}
+	return json.Unmarshal(raw, body)
+}
+
+func writeJSON(ctx context.Context, w http.ResponseWriter, resp response) {
+	bodyBuf, err := json.Marshal(resp.Body)
+	if err != nil {
+		loggerFrom(ctx).Error("json marshal failed", "error", err, "body_type", fmt.Sprintf("%T", resp.Body))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(resp.StatusCode)
+	w.Write(bodyBuf)
 }
