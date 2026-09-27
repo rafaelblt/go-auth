@@ -75,7 +75,8 @@ UTF-8, with each field once and in lower case, and do not depend on these:
 - An escaped lone surrogate such as `\ud800` becomes `U+FFFD` without an
   error. In a password, each one replaced counts as 3 bytes toward the 72-byte
   limit. The bytes are valid UTF-8, so the check above does not see it, and a
-  password stored this way carries the same risk.
+  password stored this way carries the same risk
+  ([Limitations](../limitations.md#a-lone-surrogate-in-a-password-becomes-ufffd)).
 
 ---
 

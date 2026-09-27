@@ -140,3 +140,23 @@ This matters little in practice: registration already answers
 `409 USERNAME_ALREADY_EXISTS` for a taken username, so whether an account
 exists is not secret. If it matters for your deployment, choose `BCRYPT_COST`
 before the first user registers, and keep it.
+
+## A lone surrogate in a password becomes `U+FFFD`
+
+A request body in invalid UTF-8 is rejected, but an escaped lone surrogate
+such as `\ud800` is valid UTF-8 on the wire, and the JSON decoder replaces it
+with `U+FFFD` without an error
+([Request bodies](api/reference.md#request-bodies)). In a password, that
+replacement is what gets hashed and stored, so:
+
+- **different passwords can be the same one.** Every lone surrogate becomes
+  the same character: `ab\ud800` and `ab\udfff` log in to the same account.
+- **the password is longer than sent.** Each replacement counts as 3 bytes
+  toward the 72-byte limit.
+- **the account depends on the replacement.** A password stored this way
+  logs in only while lone surrogates keep becoming `U+FFFD`. A decoder that
+  rejected them would lock that user out.
+
+A client sends one only when its string is not well-formed Unicode, such as a
+JavaScript string cut through the middle of an emoji: `JSON.stringify` then
+escapes the half it kept. Clients avoid it by sending well-formed strings.
