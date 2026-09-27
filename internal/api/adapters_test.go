@@ -188,16 +188,6 @@ func (h *TestAdapterUseCaseHelper) DecodeSuccessBody(r *httptest.ResponseRecorde
 	return body
 }
 
-func (h *TestAdapterUseCaseHelper) DecodeErrorBody(r *httptest.ResponseRecorder) errorBody {
-	h.t.Helper()
-	require.NotNil(h.t, r, "recorder nil")
-
-	var body errorBody
-	require.NoError(h.t, json.Unmarshal(r.Body.Bytes(), &body))
-
-	return body
-}
-
 func (h *TestAdapterUseCaseHelper) ContextsProvidedToUseCase() []context.Context {
 	return h.fakeUseCase.contexts
 }
@@ -263,7 +253,7 @@ func TestAdaptUseCase_TranslatesError_WhenUseCaseFails(t *testing.T) {
 
 	expectedResp := translateError(context.Background(), err)
 	assert.Equal(t, expectedResp.StatusCode, recorder.Code)
-	actualBody := helper.DecodeErrorBody(recorder)
+	actualBody := decodeErrorBody(t, recorder)
 	assert.Equal(t, expectedResp.Body, actualBody)
 }
 
@@ -278,7 +268,7 @@ func TestAdaptUseCase_WritesInvalidJSONBodyError_WhenDecoderReturnsError(t *test
 	helper.Handle(recorder, req)
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
-	body := helper.DecodeErrorBody(recorder)
+	body := decodeErrorBody(t, recorder)
 	assert.Equal(t, invalidJSONBodyError().Body, body)
 }
 
@@ -304,7 +294,7 @@ func TestAdaptUseCase_WritesUnsupportedMediaTypeError_WhenContentTypeIsNotJSON(t
 			helper.Handle(recorder, req)
 
 			require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
-			body := helper.DecodeErrorBody(recorder)
+			body := decodeErrorBody(t, recorder)
 			assert.Equal(t, unsupportedMediaTypeError().Body, body)
 			assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 			assert.Empty(t, helper.RequestsProvidedToDecoder())
@@ -356,7 +346,7 @@ func TestAdaptUseCase_WritesRequestBodyTooLargeError_WhenBodyExceedsLimit(t *tes
 	helper.Handle(recorder, req)
 
 	require.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
-	respBody := helper.DecodeErrorBody(recorder)
+	respBody := decodeErrorBody(t, recorder)
 	assert.Equal(t, requestBodyTooLargeError().Body, respBody)
 	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 	assert.Empty(t, helper.InputsProvidedToUseCase())
@@ -373,7 +363,7 @@ func TestAdaptUseCase_WritesUnsupportedMediaTypeError_WhenBodyExceedsLimitAndCon
 	helper.Handle(recorder, req)
 
 	require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
-	respBody := helper.DecodeErrorBody(recorder)
+	respBody := decodeErrorBody(t, recorder)
 	assert.Equal(t, unsupportedMediaTypeError().Body, respBody)
 	assert.Empty(t, helper.RequestsProvidedToDecoder())
 }

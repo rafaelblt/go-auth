@@ -72,7 +72,7 @@ func TestNewRouter_AnswersUnknownRoute_AndLogsItsLifecycle(t *testing.T) {
 
 	require.Equal(t, http.StatusNotFound, recorder.Code)
 	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
-	assert.Equal(t, routeNotFoundError().Body, decodeRouteErrorBody(t, recorder))
+	assert.Equal(t, routeNotFoundError().Body, decodeErrorBody(t, recorder))
 	lines := loggedLines(t, buf)
 	require.NotEmpty(t, lines)
 	assert.Equal(t, "request received", lines[0]["msg"])

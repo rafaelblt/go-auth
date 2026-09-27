@@ -32,13 +32,6 @@ func newRouteErrorsTestHandler() http.Handler {
 	return jsonRouteErrors(mux)
 }
 
-func decodeRouteErrorBody(t *testing.T, recorder *httptest.ResponseRecorder) errorBody {
-	t.Helper()
-	var body errorBody
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
-	return body
-}
-
 func TestJSONRouteErrors_WritesRouteNotFoundError_WhenNoRouteMatchesPath(t *testing.T) {
 	testCases := []struct {
 		desc        string
@@ -61,7 +54,7 @@ func TestJSONRouteErrors_WritesRouteNotFoundError_WhenNoRouteMatchesPath(t *test
 			newRouteErrorsTestHandler().ServeHTTP(recorder, req)
 
 			require.Equal(t, http.StatusNotFound, recorder.Code)
-			assert.Equal(t, routeNotFoundError().Body, decodeRouteErrorBody(t, recorder))
+			assert.Equal(t, routeNotFoundError().Body, decodeErrorBody(t, recorder))
 			assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 			assert.Empty(t, recorder.Header().Get("Allow"))
 		})
@@ -87,7 +80,7 @@ func TestJSONRouteErrors_WritesMethodNotAllowedError_WhenRouteMatchesPathButNotM
 			newRouteErrorsTestHandler().ServeHTTP(recorder, req)
 
 			require.Equal(t, http.StatusMethodNotAllowed, recorder.Code)
-			assert.Equal(t, methodNotAllowedError().Body, decodeRouteErrorBody(t, recorder))
+			assert.Equal(t, methodNotAllowedError().Body, decodeErrorBody(t, recorder))
 			assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 			assert.Equal(t, tC.allow, recorder.Header().Get("Allow"))
 		})
@@ -255,7 +248,7 @@ func TestRecovery_WritesInternalServerError_WhenHandlerPanics(t *testing.T) {
 	handler.ServeHTTP(recorder, req)
 
 	require.Equal(t, http.StatusInternalServerError, recorder.Code)
-	assert.Equal(t, internalServerError().Body, decodeRouteErrorBody(t, recorder))
+	assert.Equal(t, internalServerError().Body, decodeErrorBody(t, recorder))
 	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 	line := testutil.Only(t, loggedLines(t, buf))
 	assert.Equal(t, "panic recovered", line["msg"])

@@ -1,7 +1,14 @@
 package api
 
 import (
+	"context"
+	"errors"
+	"log/slog"
 	"net/http"
+
+	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/validation"
 )
 
 type errorBody struct {
@@ -20,73 +27,142 @@ type fieldErrorData struct {
 	Details map[string]any `json:"details"`
 }
 
+func errorResponse(status int, data errorData) response {
+	return response{StatusCode: status, Body: errorBody{Error: data}}
+}
+
 func validationError(fields []fieldErrorData) response {
-	return response{
-		StatusCode: http.StatusUnprocessableEntity,
-		Body: errorBody{Error: errorData{
-			Code:    "VALIDATION_FAILED",
-			Message: "The input failed validation.",
-			Fields:  fields,
-		}},
-	}
+	return errorResponse(http.StatusUnprocessableEntity, errorData{
+		Code:    "VALIDATION_FAILED",
+		Message: "The input failed validation.",
+		Fields:  fields,
+	})
 }
 
 func internalServerError() response {
-	return response{
-		StatusCode: http.StatusInternalServerError,
-		Body: errorBody{Error: errorData{
-			Code:    "INTERNAL_SERVER_ERROR",
-			Message: "An internal error occurred.",
-		}},
-	}
+	return errorResponse(http.StatusInternalServerError, errorData{
+		Code:    "INTERNAL_SERVER_ERROR",
+		Message: "An internal error occurred.",
+	})
 }
 
 func invalidJSONBodyError() response {
-	return response{
-		StatusCode: http.StatusBadRequest,
-		Body: errorBody{Error: errorData{
-			Code:    "INVALID_JSON_BODY",
-			Message: "Request body is not valid JSON.",
-		}},
-	}
+	return errorResponse(http.StatusBadRequest, errorData{
+		Code:    "INVALID_JSON_BODY",
+		Message: "Request body is not valid JSON.",
+	})
 }
 
 func unsupportedMediaTypeError() response {
-	return response{
-		StatusCode: http.StatusUnsupportedMediaType,
-		Body: errorBody{Error: errorData{
-			Code:    "UNSUPPORTED_MEDIA_TYPE",
-			Message: "Content-Type must be application/json.",
-		}},
-	}
+	return errorResponse(http.StatusUnsupportedMediaType, errorData{
+		Code:    "UNSUPPORTED_MEDIA_TYPE",
+		Message: "Content-Type must be application/json.",
+	})
 }
 
 func requestBodyTooLargeError() response {
-	return response{
-		StatusCode: http.StatusRequestEntityTooLarge,
-		Body: errorBody{Error: errorData{
-			Code:    "REQUEST_BODY_TOO_LARGE",
-			Message: "Request body is too large.",
-		}},
-	}
+	return errorResponse(http.StatusRequestEntityTooLarge, errorData{
+		Code:    "REQUEST_BODY_TOO_LARGE",
+		Message: "Request body is too large.",
+	})
 }
 
 func routeNotFoundError() response {
-	return response{
-		StatusCode: http.StatusNotFound,
-		Body: errorBody{Error: errorData{
-			Code:    "ROUTE_NOT_FOUND",
-			Message: "Route not found.",
-		}},
-	}
+	return errorResponse(http.StatusNotFound, errorData{
+		Code:    "ROUTE_NOT_FOUND",
+		Message: "Route not found.",
+	})
 }
 
 func methodNotAllowedError() response {
-	return response{
-		StatusCode: http.StatusMethodNotAllowed,
-		Body: errorBody{Error: errorData{
-			Code:    "METHOD_NOT_ALLOWED",
-			Message: "Method not allowed for this route.",
-		}},
+	return errorResponse(http.StatusMethodNotAllowed, errorData{
+		Code:    "METHOD_NOT_ALLOWED",
+		Message: "Method not allowed for this route.",
+	})
+}
+
+var errorFieldCatalog = map[string]string{
+	register.FieldUsername: "username",
+	register.FieldPassword: "password",
+}
+
+var kindStatusCatalog = map[usecase.ErrorKind]int{
+	usecase.ErrorKindConflict:     http.StatusConflict,
+	usecase.ErrorKindUnauthorized: http.StatusUnauthorized,
+}
+
+var kindMessageCatalog = map[usecase.ErrorKind]string{
+	usecase.ErrorKindConflict:     "A conflict error occurred.",
+	usecase.ErrorKindUnauthorized: "Not authorized.",
+}
+
+func translateError(ctx context.Context, err error) response {
+	var uerr usecase.UseCaseError
+	if errors.As(err, &uerr) {
+		return translateUseCaseError(ctx, uerr)
 	}
+
+	var verr validation.ValidationError
+	if errors.As(err, &verr) {
+		return translateValidationError(ctx, verr)
+	}
+
+	loggerFrom(ctx).Error("unexpected error for translation", "error", err)
+	return internalServerError()
+}
+
+func translateUseCaseError(ctx context.Context, uerr usecase.UseCaseError) response {
+	logger := loggerFrom(ctx)
+	logUseCaseError(logger, uerr)
+
+	status, ok := kindStatusCatalog[uerr.Kind()]
+	if !ok {
+		logger.Error("error kind not found in status catalog", "kind", uerr.Kind())
+		return internalServerError()
+	}
+
+	msg, ok := kindMessageCatalog[uerr.Kind()]
+	if !ok {
+		logger.Warn("error kind not found in message catalog, using fallback", "kind", uerr.Kind())
+		msg = "An error occurred." // fallback
+	}
+
+	return errorResponse(status, errorData{Code: uerr.Code(), Message: msg})
+}
+
+// logUseCaseError records what the client is not told: the reason behind an
+// error whose code is deliberately generic. Errors without one carry it in
+// their code already, so the field is left out rather than logged empty.
+func logUseCaseError(logger *slog.Logger, uerr usecase.UseCaseError) {
+	attrs := []any{"code", uerr.Code(), "kind", uerr.Kind()}
+	if reason := uerr.Reason(); reason != "" {
+		attrs = append(attrs, "reason", reason)
+	}
+	logger.Info("use case error", attrs...)
+}
+
+func translateValidationError(ctx context.Context, verr validation.ValidationError) response {
+	logger := loggerFrom(ctx)
+	fieldErrs := make([]fieldErrorData, len(verr.Errors()))
+	pairsToLog := make([]string, len(verr.Errors()))
+
+	for i, ferr := range verr.Errors() {
+		issue := ferr.Issue()
+		field, ok := errorFieldCatalog[ferr.Field()]
+		if !ok {
+			logger.Warn("error field not found in field catalog, using raw name",
+				"field", ferr.Field())
+			field = ferr.Field()
+		}
+		fieldErr := fieldErrorData{
+			Field:   field,
+			Code:    issue.Code(),
+			Details: issue.Details(),
+		}
+		fieldErrs[i] = fieldErr
+		pairsToLog[i] = field + " " + issue.Code()
+	}
+
+	logger.Info("validation error", "pairs", pairsToLog)
+	return validationError(fieldErrs)
 }

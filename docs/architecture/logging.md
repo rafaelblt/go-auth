@@ -196,7 +196,7 @@ answer `500`.
 | `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled. The client gets `500` with an empty body | Always a bug, in the type named by `body_type` |
 
 The first three are all the same kind of defect: something was added without
-updating one of the three catalogs in `internal/api/error_catalogs.go`. The two
+updating one of the three catalogs in `internal/api/errors.go`. The two
 keyed by `ErrorKind` want a new `ErrorKind`; `errorFieldCatalog`, which maps a use
 case's field name to the name that goes in a `422` body, wants a newly validated
 field. None of the three fails in silence.
