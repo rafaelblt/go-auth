@@ -116,7 +116,7 @@ func TestJSONRouteErrors_PassesRedirectThrough_WhenPathIsNotClean(t *testing.T) 
 func TestJSONRouteErrors_ReportsStatusToLogging_WhenNoRouteMatchesPath(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
-	handler := adaptMiddleware(logging(logger))(newRouteErrorsTestHandler())
+	handler := logging(logger)(newRouteErrorsTestHandler())
 	req := httptest.NewRequest(http.MethodGet, "/unknown", nil)
 
 	handler.ServeHTTP(httptest.NewRecorder(), req)
@@ -154,7 +154,7 @@ func TestLogging_LogsRequestReceived_WithRequestFields(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	handler := adaptMiddleware(logging(logger))(next)
+	handler := logging(logger)(next)
 	req := httptest.NewRequest(http.MethodPost, "/some/path", nil)
 
 	handler.ServeHTTP(httptest.NewRecorder(), req)
@@ -179,7 +179,7 @@ func TestLogging_PutsTaggedLoggerInContext(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		loggerFrom(r.Context()).Info("inside handler")
 	})
-	handler := adaptMiddleware(logging(logger))(next)
+	handler := logging(logger)(next)
 
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -211,7 +211,7 @@ func TestLogging_LogsRequestFinished_WithStatus(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			logger := slog.New(slog.NewJSONHandler(buf, nil))
-			handler := adaptMiddleware(logging(logger))(tC.next)
+			handler := logging(logger)(tC.next)
 
 			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -228,7 +228,7 @@ func TestLogging_LogsRequestFinished_WithStatus(t *testing.T) {
 func TestRecovery_WritesInternalServerError_WhenHandlerPanics(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") })
-	handler := adaptMiddleware(recovery)(next)
+	handler := recovery(next)
 	recorder := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx)
 
@@ -245,7 +245,7 @@ func TestRecovery_WritesInternalServerError_WhenHandlerPanics(t *testing.T) {
 
 func TestRecovery_RepanicsErrAbortHandler(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic(http.ErrAbortHandler) })
-	handler := adaptMiddleware(recovery)(next)
+	handler := recovery(next)
 
 	assert.PanicsWithValue(t, http.ErrAbortHandler, func() {
 		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
@@ -256,7 +256,7 @@ func TestLogging_LogsRequestFinished_AfterRecoveredPanic(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") })
-	handler := adaptMiddleware(logging(logger))(adaptMiddleware(recovery)(next))
+	handler := logging(logger)(recovery(next))
 
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 

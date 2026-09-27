@@ -6,16 +6,6 @@ import (
 	"net/http"
 )
 
-type middleware = func(http.Handler, http.ResponseWriter, *http.Request)
-
-func adaptMiddleware(m middleware) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			m(next, w, r)
-		})
-	}
-}
-
 type response struct {
 	StatusCode int
 	Body       any

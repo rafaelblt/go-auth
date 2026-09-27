@@ -7,11 +7,9 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"net/http"
-	"slices"
 
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -31,7 +29,7 @@ type Dependencies struct {
 	PublicKeyProvider port.PublicKeyProvider
 }
 
-func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
+func NewRouter(cfg Config) (http.Handler, error) {
 	if cfg.Dependencies.Logger == nil {
 		return nil, errors.New("logger nil")
 	}
@@ -73,21 +71,9 @@ func NewRouter(ctx context.Context, cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
-	chain := chainMiddlewares(jsonRouteErrors(mux), cfg.Dependencies.Logger)
+	handler := jsonRouteErrors(mux)
+	handler = recovery(handler)
+	handler = logging(cfg.Dependencies.Logger)(handler)
 
-	return chain, nil
-}
-
-func chainMiddlewares(handler http.Handler, logger *slog.Logger) http.Handler {
-	type middleware func(http.Handler) http.Handler
-	middlewares := []middleware{
-		adaptMiddleware(logging(logger)),
-		adaptMiddleware(recovery),
-	}
-
-	for _, middleware := range slices.Backward(middlewares) {
-		handler = middleware(handler)
-	}
-
-	return handler
+	return handler, nil
 }
