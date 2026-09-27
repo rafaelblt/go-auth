@@ -1,7 +1,7 @@
 # Logging
 
 `internal/bootstrap/run.go`, `internal/bootstrap/logger.go`,
-`internal/api/logging.go`, `internal/bootstrap/periodic.go`
+`internal/api/middleware.go`, `internal/bootstrap/periodic.go`
 
 Logs are the only record `go-auth` keeps of what it did: there is no audit
 table and no metrics endpoint. This document lists every line the service can
@@ -360,7 +360,7 @@ logger := slog.New(slog.NewJSONHandler(buf, nil))
 ctx := context.WithValue(t.Context(), loggerKey, logger)
 ```
 
-`internal/api/error_translator_test.go` has the helpers that do this.
+`internal/api/middleware_test.go` has the helpers that do this.
 
 ## What logs are not
 

@@ -1,11 +1,8 @@
 package api
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"testing"
 
@@ -81,28 +78,6 @@ func TestTranslateUseCaseError(t *testing.T) {
 			assert.Equal(t, tC.expectedMsg, body.Error.Message)
 		})
 	}
-}
-
-// contextWithLoggedLines returns a context whose logger writes one JSON
-// object per line into the returned buffer, so a test can read what was
-// logged.
-func contextWithLoggedLines(t *testing.T) (context.Context, *bytes.Buffer) {
-	t.Helper()
-	buf := &bytes.Buffer{}
-	logger := slog.New(slog.NewJSONHandler(buf, nil))
-	return context.WithValue(t.Context(), loggerKey, logger), buf
-}
-
-func loggedLines(t *testing.T, buf *bytes.Buffer) []map[string]any {
-	t.Helper()
-	lines := []map[string]any{}
-	decoder := json.NewDecoder(buf)
-	for decoder.More() {
-		line := map[string]any{}
-		require.NoError(t, decoder.Decode(&line))
-		lines = append(lines, line)
-	}
-	return lines
 }
 
 func TestTranslateUseCaseError_LogsReason(t *testing.T) {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -123,4 +124,26 @@ func TestJSONRouteErrors_ReportsStatusToLogging_WhenNoRouteMatchesPath(t *testin
 	last := lines[len(lines)-1]
 	assert.Equal(t, "request finished", last["msg"])
 	assert.Equal(t, float64(http.StatusNotFound), last["status"])
+}
+
+// contextWithLoggedLines returns a context whose logger writes one JSON
+// object per line into the returned buffer, so a test can read what was
+// logged.
+func contextWithLoggedLines(t *testing.T) (context.Context, *bytes.Buffer) {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	logger := slog.New(slog.NewJSONHandler(buf, nil))
+	return context.WithValue(t.Context(), loggerKey, logger), buf
+}
+
+func loggedLines(t *testing.T, buf *bytes.Buffer) []map[string]any {
+	t.Helper()
+	lines := []map[string]any{}
+	decoder := json.NewDecoder(buf)
+	for decoder.More() {
+		line := map[string]any{}
+		require.NoError(t, decoder.Decode(&line))
+		lines = append(lines, line)
+	}
+	return lines
 }
