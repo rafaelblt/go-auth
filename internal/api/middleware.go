@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/rafaelblt/go-auth/internal/port"
 )
 
 // loggerKeyType is unexported so that no other package can build a key that
@@ -22,11 +22,11 @@ func loggerFrom(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
-func logging(base *slog.Logger) func(http.Handler) http.Handler {
+func logging(base *slog.Logger, clock port.Clock) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := uuid.NewString()
-			start := time.Now().UTC()
+			start := clock.Now()
 
 			logger := base.With(
 				slog.String("request_id", requestID),
@@ -41,7 +41,7 @@ func logging(base *slog.Logger) func(http.Handler) http.Handler {
 			wr := writerRecorder{w, http.StatusOK}
 			next.ServeHTTP(&wr, r.WithContext(ctx))
 
-			end := time.Now().UTC()
+			end := clock.Now()
 			logger.Info("request finished",
 				slog.Int("status", wr.status),
 				slog.Duration("duration", end.Sub(start)))

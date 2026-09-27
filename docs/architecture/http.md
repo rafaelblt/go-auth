@@ -57,9 +57,10 @@ carries the status.
 ## Middleware
 
 Middleware wraps the router in this order: `logging`, then `recovery`.
-`logging` takes the logger `NewRouter` was given, tags it with a request ID
-and puts it into the request context, so every log line for the request
-carries the same ID.
+`logging` takes the logger and the clock `NewRouter` was given, tags the
+logger with a request ID and puts it into the request context, so every log
+line for the request carries the same ID. It times each request with that
+clock.
 `recovery` catches a panic, logs it and answers `500` instead of dropping the
 connection. It lets `http.ErrAbortHandler` through, since that panic is a
 deliberate abort, not a bug. What each line carries is in

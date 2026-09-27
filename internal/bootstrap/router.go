@@ -10,6 +10,7 @@ import (
 func newRouter(deps dependencies) (http.Handler, error) {
 	cfg := api.Config{Dependencies: api.Dependencies{
 		Logger:            deps.Logger,
+		Clock:             deps.Infra.Clock,
 		Register:          deps.UseCases.Register,
 		Login:             deps.UseCases.Login,
 		Refresh:           deps.UseCases.Refresh,

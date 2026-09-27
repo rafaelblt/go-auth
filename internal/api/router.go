@@ -23,6 +23,7 @@ type Config struct {
 
 type Dependencies struct {
 	Logger            *slog.Logger
+	Clock             port.Clock
 	Register          registerUseCase
 	Login             loginUseCase
 	Refresh           refreshUseCase
@@ -32,6 +33,9 @@ type Dependencies struct {
 func NewRouter(cfg Config) (http.Handler, error) {
 	if cfg.Dependencies.Logger == nil {
 		return nil, errors.New("logger nil")
+	}
+	if cfg.Dependencies.Clock == nil {
+		return nil, errors.New("clock nil")
 	}
 	if cfg.Dependencies.Register == nil {
 		return nil, errors.New("register nil")
@@ -73,7 +77,7 @@ func NewRouter(cfg Config) (http.Handler, error) {
 
 	handler := jsonRouteErrors(mux)
 	handler = recovery(handler)
-	handler = logging(cfg.Dependencies.Logger)(handler)
+	handler = logging(cfg.Dependencies.Logger, cfg.Dependencies.Clock)(handler)
 
 	return handler, nil
 }

@@ -9,9 +9,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -116,7 +118,7 @@ func TestJSONRouteErrors_PassesRedirectThrough_WhenPathIsNotClean(t *testing.T) 
 func TestJSONRouteErrors_ReportsStatusToLogging_WhenNoRouteMatchesPath(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
-	handler := logging(logger)(newRouteErrorsTestHandler())
+	handler := logging(logger, porttest.NewFakeClock())(newRouteErrorsTestHandler())
 	req := httptest.NewRequest(http.MethodGet, "/unknown", nil)
 
 	handler.ServeHTTP(httptest.NewRecorder(), req)
@@ -154,7 +156,7 @@ func TestLogging_LogsRequestReceived_WithRequestFields(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	handler := logging(logger)(next)
+	handler := logging(logger, porttest.NewFakeClock())(next)
 	req := httptest.NewRequest(http.MethodPost, "/some/path", nil)
 
 	handler.ServeHTTP(httptest.NewRecorder(), req)
@@ -179,7 +181,7 @@ func TestLogging_PutsTaggedLoggerInContext(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		loggerFrom(r.Context()).Info("inside handler")
 	})
-	handler := logging(logger)(next)
+	handler := logging(logger, porttest.NewFakeClock())(next)
 
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -211,7 +213,7 @@ func TestLogging_LogsRequestFinished_WithStatus(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			logger := slog.New(slog.NewJSONHandler(buf, nil))
-			handler := logging(logger)(tC.next)
+			handler := logging(logger, porttest.NewFakeClock())(tC.next)
 
 			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -223,6 +225,24 @@ func TestLogging_LogsRequestFinished_WithStatus(t *testing.T) {
 			assert.Contains(t, last, "duration")
 		})
 	}
+}
+
+func TestLogging_LogsDurationFromClock(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := slog.New(slog.NewJSONHandler(buf, nil))
+	clock := porttest.NewFakeClock()
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clock.SetNow(clock.Now().Add(1500 * time.Millisecond))
+	})
+	handler := logging(logger, clock)(next)
+
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+
+	lines := loggedLines(t, buf)
+	require.NotEmpty(t, lines)
+	last := lines[len(lines)-1]
+	assert.Equal(t, "request finished", last["msg"])
+	assert.Equal(t, float64((1500 * time.Millisecond).Nanoseconds()), last["duration"])
 }
 
 func TestRecovery_WritesInternalServerError_WhenHandlerPanics(t *testing.T) {
@@ -256,7 +276,7 @@ func TestLogging_LogsRequestFinished_AfterRecoveredPanic(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(buf, nil))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") })
-	handler := logging(logger)(recovery(next))
+	handler := logging(logger, porttest.NewFakeClock())(recovery(next))
 
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 
