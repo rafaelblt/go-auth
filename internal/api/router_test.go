@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
@@ -21,6 +22,12 @@ type stubUseCase[In, Out any] struct{}
 func (stubUseCase[In, Out]) Execute(context.Context, In) (Out, error) {
 	var out Out
 	return out, nil
+}
+
+type panickingUseCase[In, Out any] struct{}
+
+func (panickingUseCase[In, Out]) Execute(context.Context, In) (Out, error) {
+	panic("boom")
 }
 
 func newRouterTestDependencies(t *testing.T) (Dependencies, *bytes.Buffer) {
@@ -80,4 +87,26 @@ func TestNewRouter_AnswersUnknownRoute_AndLogsItsLifecycle(t *testing.T) {
 	assert.Equal(t, "request finished", last["msg"])
 	assert.Equal(t, float64(http.StatusNotFound), last["status"])
 	assert.Equal(t, float64(0), last["duration"])
+}
+
+func TestNewRouter_AnswersInternalServerError_AndLogsItsLifecycle_WhenHandlerPanics(t *testing.T) {
+	deps, buf := newRouterTestDependencies(t)
+	deps.Login = panickingUseCase[login.Input, login.Output]{}
+	handler, err := NewRouter(Config{Dependencies: deps})
+	require.NoError(t, err)
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", strings.NewReader(`{"username":"alice","password":"secret"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	handler.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.Equal(t, internalServerError().Body, decodeErrorBody(t, recorder))
+	lines := loggedLines(t, buf)
+	require.Len(t, lines, 3)
+	assert.Equal(t, "request received", lines[0]["msg"])
+	assert.Equal(t, "panic recovered", lines[1]["msg"])
+	assert.Equal(t, lines[0]["request_id"], lines[1]["request_id"])
+	assert.Equal(t, "request finished", lines[2]["msg"])
+	assert.Equal(t, float64(http.StatusInternalServerError), lines[2]["status"])
 }
