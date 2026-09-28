@@ -45,9 +45,6 @@ func TestMapUserToDTO(t *testing.T) {
 				dto := usecase.MapUserToDTO(tC.user)
 				assert.Equal(t, tC.user.ID().Value().String(), dto.ID())
 				assert.Equal(t, tC.user.Username().String(), dto.Username())
-				assert.Equal(t, tC.user.Status().String(), dto.Status())
-				assert.Equal(t, tC.user.CreatedAt(), dto.CreatedAt())
-				assert.Equal(t, tC.user.UpdatedAt(), dto.UpdatedAt())
 			}
 		})
 	}

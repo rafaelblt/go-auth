@@ -124,11 +124,12 @@ func TestRegister_ShouldUseClock(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := helper.ValidInput()
 
-	output, err := helper.UseCase().Execute(context.Background(), input)
+	_, err := helper.UseCase().Execute(context.Background(), input)
 
 	require.NoError(t, err)
-	require.NotZero(t, output)
-	assert.Equal(t, helper.FakeClock.Now(), output.User.CreatedAt())
+	savedUsers := helper.FakeUnitOfWork.FakeUserWriter.SavedUsers()
+	require.Len(t, savedUsers, 1)
+	assert.Equal(t, helper.FakeClock.Now(), savedUsers[0].CreatedAt())
 }
 
 func TestRegister_SavesNewUser(t *testing.T) {

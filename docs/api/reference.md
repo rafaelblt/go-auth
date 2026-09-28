@@ -117,15 +117,10 @@ body is decoded: an escaped lone surrogate becomes `U+FFFD` (see
 {
   "user": {
     "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
-    "username": "alice",
-    "status": "active",
-    "created_at": "2026-09-08T12:00:00Z",
-    "updated_at": "2026-09-08T12:00:00Z"
+    "username": "alice"
   }
 }
 ```
-
-`status` is always `active`.
 
 ### Errors
 

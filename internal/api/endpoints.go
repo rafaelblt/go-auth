@@ -14,11 +14,8 @@ import (
 )
 
 type user struct {
-	ID        string    `json:"id"`
-	Username  string    `json:"username"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
 }
 
 func mapUserDTO(dto usecase.UserDTO) user {
@@ -26,11 +23,8 @@ func mapUserDTO(dto usecase.UserDTO) user {
 		panic("the mapUserDTO() func received a zero UserDTO")
 	}
 	user := user{
-		ID:        dto.ID(),
-		Username:  dto.Username(),
-		Status:    dto.Status(),
-		CreatedAt: dto.CreatedAt(),
-		UpdatedAt: dto.UpdatedAt(),
+		ID:       dto.ID(),
+		Username: dto.Username(),
 	}
 	return user
 }

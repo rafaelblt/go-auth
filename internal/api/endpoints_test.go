@@ -27,9 +27,6 @@ func TestMapUserDTO(t *testing.T) {
 	assert.NotZero(t, user)
 	assert.Equal(t, dto.ID(), user.ID)
 	assert.Equal(t, dto.Username(), user.Username)
-	assert.Equal(t, dto.Status(), user.Status)
-	assert.Equal(t, dto.CreatedAt(), user.CreatedAt)
-	assert.Equal(t, dto.UpdatedAt(), user.UpdatedAt)
 }
 
 func TestMapUserDTO_PanicsWithZeroDTO(t *testing.T) {
@@ -105,14 +102,28 @@ func TestRegisterEncoder_ReturnsResponse(t *testing.T) {
 	actualBody := resp.Body.(registerResponseBody)
 	expectedBody := registerResponseBody{
 		User: user{
-			ID:        output.User.ID(),
-			Username:  output.User.Username(),
-			Status:    output.User.Status(),
-			CreatedAt: output.User.CreatedAt(),
-			UpdatedAt: output.User.UpdatedAt(),
+			ID:       output.User.ID(),
+			Username: output.User.Username(),
 		},
 	}
 	assert.Equal(t, expectedBody, actualBody)
+}
+
+func TestRegisterEncoder_BodyIsOnlyUserIDAndUsername(t *testing.T) {
+	output := register.Output{User: apitest.NewUserDTO(t, nil)}
+
+	resp := registerEncoder(output)
+
+	actualJSON, err := json.Marshal(resp.Body)
+	require.NoError(t, err)
+	expectedJSON, err := json.Marshal(map[string]map[string]string{
+		"user": {
+			"id":       output.User.ID(),
+			"username": output.User.Username(),
+		},
+	})
+	require.NoError(t, err)
+	assert.JSONEq(t, string(expectedJSON), string(actualJSON))
 }
 
 func TestLoginDecoder_ReturnsInput(t *testing.T) {

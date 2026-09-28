@@ -3,7 +3,6 @@ package e2e
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/stretchr/testify/assert"
@@ -39,9 +38,6 @@ func TestRegister_ReturnsSuccessResponse(t *testing.T) {
 	respBody := DecodeBody[RegisterResponseBody](t, resp)
 	assert.NotZero(t, respBody.User.ID)
 	assert.Equal(t, reqBody.Username, respBody.User.Username)
-	assert.Equal(t, "active", respBody.User.Status)
-	assert.WithinRange(t, respBody.User.CreatedAt, time.Now().Add(-time.Second), time.Now().Add(time.Second))
-	assert.Equal(t, respBody.User.CreatedAt, respBody.User.UpdatedAt)
 }
 
 func TestRegister_ReturnsMethodNotAllowed(t *testing.T) {

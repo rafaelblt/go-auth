@@ -16,19 +16,13 @@ import (
 )
 
 type UserDTO struct {
-	id        string
-	username  string
-	status    string
-	createdAt time.Time
-	updatedAt time.Time
+	id       string
+	username string
 }
 
-func (dto UserDTO) ID() string           { return dto.id }
-func (dto UserDTO) Username() string     { return dto.username }
-func (dto UserDTO) Status() string       { return dto.status }
-func (dto UserDTO) CreatedAt() time.Time { return dto.createdAt }
-func (dto UserDTO) UpdatedAt() time.Time { return dto.updatedAt }
-func (dto UserDTO) IsZero() bool         { return dto.id == "" }
+func (dto UserDTO) ID() string       { return dto.id }
+func (dto UserDTO) Username() string { return dto.username }
+func (dto UserDTO) IsZero() bool     { return dto.id == "" }
 
 func MapUserToDTO(user *user.User) UserDTO {
 	if user == nil {
@@ -38,11 +32,8 @@ func MapUserToDTO(user *user.User) UserDTO {
 		panic("cannot map a zero user to dto")
 	}
 	dto := UserDTO{
-		id:        user.ID().Value().String(),
-		username:  user.Username().String(),
-		status:    user.Status().String(),
-		createdAt: user.CreatedAt(),
-		updatedAt: user.UpdatedAt(),
+		id:       user.ID().Value().String(),
+		username: user.Username().String(),
 	}
 	return dto
 }
