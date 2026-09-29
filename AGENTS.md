@@ -54,8 +54,6 @@ values, params structs past two arguments, protected structs.
   `Login.rejectWithDummyVerify` discards a bcrypt result on purpose, and
   `RefreshTokenRepo.MarkUsed` is guarded in SQL rather than in Go. Both carry a
   `See docs/development/decisions/...` comment; read it before touching them.
-- **`docs/` describes only what exists.** Ideas, planned features and open
-  questions go in `ignore/post-v1/`, which is gitignored.
 
 ## Commands
 
