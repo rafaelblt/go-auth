@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
@@ -41,7 +42,7 @@ func TestMapAccessTokenDTO(t *testing.T) {
 
 	require.NotZero(t, retrieved)
 	assert.Equal(t, dto.Value(), retrieved.Value)
-	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
+	assert.Equal(t, "2031-03-14T15:09:26Z", retrieved.ExpiresAt)
 	assert.Equal(t, int64(dto.ExpiresIn()/time.Second), retrieved.ExpiresIn)
 	assert.Equal(t, int64(1800), retrieved.ExpiresIn)
 }
@@ -52,14 +53,47 @@ func TestMapAccessTokenDTO_PanicsWithZeroDTO(t *testing.T) {
 }
 
 func TestMapRefreshTokenDTO(t *testing.T) {
-	dto := apitest.NewRefreshTokenDTO(t)
+	dto := apitest.NewRefreshTokenDTO(t, nil)
 
 	retrieved := mapRefreshTokenDTO(dto)
 
 	require.NotZero(t, retrieved)
 	assert.Equal(t, dto.Value(), retrieved.Value)
-	assert.Equal(t, dto.ExpiresAt(), retrieved.ExpiresAt)
+	assert.Equal(t, "2026-06-17T23:40:00Z", retrieved.ExpiresAt)
 	assert.Equal(t, int64(dto.ExpiresIn()/time.Second), retrieved.ExpiresIn)
+}
+
+func TestMapRefreshTokenDTO_FormatsExpiresAt(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		expiresAt time.Time
+		expected  string
+	}{
+		{
+			desc:      "whole seconds in UTC",
+			expiresAt: time.Date(2026, 9, 15, 12, 0, 0, 0, time.UTC),
+			expected:  "2026-09-15T12:00:00Z",
+		},
+		{
+			desc:      "fraction dropped, not rounded",
+			expiresAt: time.Date(2026, 9, 15, 12, 0, 0, 999999999, time.UTC),
+			expected:  "2026-09-15T12:00:00Z",
+		},
+		{
+			desc:      "other offset converted to UTC",
+			expiresAt: time.Date(2026, 9, 15, 9, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60)),
+			expected:  "2026-09-15T12:00:00Z",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			dto := apitest.NewRefreshTokenDTO(t, func(p *session.RefreshTokenRestoreParams) { p.ExpiresAt = tC.expiresAt })
+
+			retrieved := mapRefreshTokenDTO(dto)
+
+			assert.Equal(t, tC.expected, retrieved.ExpiresAt)
+		})
+	}
 }
 
 func TestMapRefreshTokenDTO_PanicsWithZeroDTO(t *testing.T) {
@@ -154,7 +188,7 @@ func TestLoginDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	output := login.Output{
 		AccessToken:  apitest.NewAccessTokenDTO(t),
-		RefreshToken: apitest.NewRefreshTokenDTO(t),
+		RefreshToken: apitest.NewRefreshTokenDTO(t, nil),
 	}
 
 	resp := loginEncoder(output)
@@ -165,12 +199,12 @@ func TestLoginEncoder_ReturnsResponse(t *testing.T) {
 	expectedBody := tokensResponseBody{
 		AccessToken: token{
 			Value:     output.AccessToken.Value(),
-			ExpiresAt: output.AccessToken.ExpiresAt(),
+			ExpiresAt: "2031-03-14T15:09:26Z",
 			ExpiresIn: int64(output.AccessToken.ExpiresIn() / time.Second),
 		},
 		RefreshToken: token{
 			Value:     output.RefreshToken.Value(),
-			ExpiresAt: output.RefreshToken.ExpiresAt(),
+			ExpiresAt: "2026-06-17T23:40:00Z",
 			ExpiresIn: int64(output.RefreshToken.ExpiresIn() / time.Second),
 		},
 	}
@@ -203,7 +237,7 @@ func TestRefreshDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
 func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 	output := refresh.Output{
 		AccessToken:  apitest.NewAccessTokenDTO(t),
-		RefreshToken: apitest.NewRefreshTokenDTO(t),
+		RefreshToken: apitest.NewRefreshTokenDTO(t, nil),
 	}
 
 	resp := refreshEncoder(output)
@@ -214,12 +248,12 @@ func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 	expectedBody := tokensResponseBody{
 		AccessToken: token{
 			Value:     output.AccessToken.Value(),
-			ExpiresAt: output.AccessToken.ExpiresAt(),
+			ExpiresAt: "2031-03-14T15:09:26Z",
 			ExpiresIn: int64(output.AccessToken.ExpiresIn() / time.Second),
 		},
 		RefreshToken: token{
 			Value:     output.RefreshToken.Value(),
-			ExpiresAt: output.RefreshToken.ExpiresAt(),
+			ExpiresAt: "2026-06-17T23:40:00Z",
 			ExpiresIn: int64(output.RefreshToken.ExpiresIn() / time.Second),
 		},
 	}

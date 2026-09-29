@@ -163,7 +163,7 @@ factories in `apitest` build one through the real mapper:
 ```go
 out := login.Output{
     AccessToken:  apitest.NewAccessTokenDTO(t),
-    RefreshToken: apitest.NewRefreshTokenDTO(t),
+    RefreshToken: apitest.NewRefreshTokenDTO(t, nil),
 }
 usr := apitest.NewUserDTO(t, func(p *user.RestoreParams) { p.Username = usertest.MustUsername(t, "alice") })
 ```

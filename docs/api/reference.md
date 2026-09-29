@@ -34,7 +34,9 @@ one with `..` segments) gets a `307` redirect to its cleaned form from Go's
 `http.ServeMux`, not a JSON error: a `GET` gets a short HTML body, any other
 method an empty one.
 
-**Timestamps.** RFC 3339, in UTC: `2026-09-08T12:00:00Z`.
+**Timestamps.** RFC 3339, in UTC, to the whole second: `2026-09-08T12:00:00Z`.
+A fraction of a second is dropped, never rounded up, so an `expires_at` is
+never later than the real expiry.
 
 **Errors.** One shape, an `error` object with a `code`, described in
 [Error model](errors.md).

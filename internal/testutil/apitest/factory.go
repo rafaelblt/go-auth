@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
@@ -34,10 +35,12 @@ func NewAccessTokenDTO(t *testing.T) usecase.AccessTokenDTO {
 	return usecase.MapAccessTokenIssuedToDTO(issued)
 }
 
-func NewRefreshTokenDTO(t *testing.T) usecase.RefreshTokenDTO {
+// NewRefreshTokenDTO maps a default refresh token, adjusted by override, the
+// same way a use case does.
+func NewRefreshTokenDTO(t *testing.T, override func(p *session.RefreshTokenRestoreParams)) usecase.RefreshTokenDTO {
 	t.Helper()
 
-	token := sessiontest.NewRefreshToken(t, nil)
+	token := sessiontest.NewRefreshToken(t, override)
 	secret := sessiontest.NewRefreshTokenSecret(t)
 	return usecase.MapRefreshTokenToDTO(token, secret)
 }
