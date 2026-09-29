@@ -22,6 +22,7 @@ const (
 	RegisterPath              = "/v1/auth/register"
 	UsernameAlreadyExistsCode = "USERNAME_ALREADY_EXISTS"
 	ValidationFailedCode      = "VALIDATION_FAILED"
+	TooShortCode              = "too_short"
 )
 
 func TestRegister_ReturnsSuccessResponse(t *testing.T) {
@@ -86,4 +87,6 @@ func TestRegister_ReturnsValidationErrorResponse(t *testing.T) {
 	require.Len(t, respBody.Error.Fields, 2)
 	assert.Equal(t, "username", respBody.Error.Fields[0].Field)
 	assert.Equal(t, "password", respBody.Error.Fields[1].Field)
+	assert.Equal(t, TooShortCode, respBody.Error.Fields[0].Code)
+	assert.Equal(t, TooShortCode, respBody.Error.Fields[1].Code)
 }

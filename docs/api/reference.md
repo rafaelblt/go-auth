@@ -62,7 +62,7 @@ not a setting.
 **Unknown fields are ignored.** That is a rule, and it is what lets a field be
 added without breaking clients. It also means a misspelled field name is not
 reported as such: the field it was meant to be arrives empty, and is reported
-instead. `{"usernme": "alice"}` at registration is `TOO_SHORT` on `username`.
+instead. `{"usernme": "alice"}` at registration is `too_short` on `username`.
 
 A missing field is read as `""`.
 
@@ -143,8 +143,8 @@ problem:
     "code": "VALIDATION_FAILED",
     "message": "The input failed validation.",
     "fields": [
-      { "field": "username", "code": "TOO_SHORT", "details": { "min": 3, "unit": "code_point" } },
-      { "field": "password", "code": "TOO_SHORT", "details": { "min": 8, "unit": "code_point" } }
+      { "field": "username", "code": "too_short", "details": { "min": 3, "unit": "code_point" } },
+      { "field": "password", "code": "too_short", "details": { "min": 8, "unit": "code_point" } }
     ]
   }
 }

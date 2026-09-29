@@ -78,7 +78,7 @@ func TestValidate_PassesValueToEachValidator(t *testing.T) {
 }
 
 func TestValidate_WithNonStringType(t *testing.T) {
-	code := "NOT_POSITIVE"
+	code := "not_positive"
 	positive := func(value int) *Issue {
 		if value <= 0 {
 			return &Issue{code: code, details: map[string]any{}}

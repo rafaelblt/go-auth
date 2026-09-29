@@ -36,12 +36,12 @@ that failed, in one response.
     "fields": [
       {
         "field": "username",
-        "code": "TOO_SHORT",
+        "code": "too_short",
         "details": { "min": 3, "unit": "code_point" }
       },
       {
         "field": "password",
-        "code": "TOO_LONG",
+        "code": "too_long",
         "details": { "max": 72, "unit": "byte" }
       }
     ]
@@ -62,7 +62,7 @@ forbidden character produces two entries.
 
 There is no separate code for a missing or empty field. A missing `username`
 is decoded as `""`, which breaks the minimum length, and is reported as
-`TOO_SHORT` with `min: 3`.
+`too_short` with `min: 3`.
 
 ### Length units
 
@@ -122,14 +122,14 @@ The values of `error.fields[].code`.
 
 | Code | `details` | Meaning |
 |---|---|---|
-| `TOO_SHORT` | `{ "min": int, "unit": string }` | Shorter than the minimum length |
-| `TOO_LONG` | `{ "max": int, "unit": string }` | Longer than the maximum length |
-| `INVALID_CHARACTERS` | `{}` | Contains a character outside the allowed set |
+| `too_short` | `{ "min": int, "unit": string }` | Shorter than the minimum length |
+| `too_long` | `{ "max": int, "unit": string }` | Longer than the maximum length |
+| `invalid_characters` | `{}` | Contains a character outside the allowed set |
 
-`INVALID_CHARACTERS` does not say *which* character failed.
+`invalid_characters` does not say *which* character failed.
 
 These three are the complete set a response can carry. `internal/validation`
-defines others — `REQUIRED`, `NOT_POSITIVE`, `NOT_ALLOWED` — but they belong to
+defines others — `required`, `not_positive`, `not_allowed` — but they belong to
 the configuration check and appear only in the startup error, never in a
 response; see [Validation](../architecture/domain/validation.md#validators).
 

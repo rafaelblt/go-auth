@@ -22,7 +22,7 @@ report too.
 One broken rule: a `code` and a `details` map.
 
 ```go
-Issue{ code: "TOO_SHORT", details: {"min": 3, "unit": "code_point"} }
+Issue{ code: "too_short", details: {"min": 3, "unit": "code_point"} }
 ```
 
 `Issue` does **not** implement `error`. It is data about a failure, and
@@ -41,11 +41,11 @@ on each of them, and a `bool` would leave unclear which value means valid.
 
 | Validator            | Issue                | `details`            | Used by |
 | -------------------- | -------------------- | -------------------- | ------- |
-| `MinLength(n, unit)` | `TOO_SHORT`          | `min`, `unit`        | domain  |
-| `MaxLength(n, unit)` | `TOO_LONG`           | `max`, `unit`        | domain  |
-| `AllowedChars(set)`  | `INVALID_CHARACTERS` | —                    | domain  |
-| `Required[T]()`      | `REQUIRED`           | —                    | config  |
-| `Positive[T]()`      | `NOT_POSITIVE`       | —                    | config  |
+| `MinLength(n, unit)` | `too_short`          | `min`, `unit`        | domain  |
+| `MaxLength(n, unit)` | `too_long`           | `max`, `unit`        | domain  |
+| `AllowedChars(set)`  | `invalid_characters` | —                    | domain  |
+| `Required[T]()`      | `required`           | —                    | config  |
+| `Positive[T]()`      | `not_positive`       | —                    | config  |
 
 The first three are the ones whose failures a client sees; they are the whole
 [field code catalog](../../api/errors.md#field-codes) of the API. The
@@ -55,7 +55,7 @@ or negative.
 
 `internal/config` also declares a validator of its own rather than using a
 generic one: `allowedLogFormat` checks `LOG_FORMAT` against the accepted values
-and returns `IssueNotAllowed`, whose code is `NOT_ALLOWED` and whose `details`
+and returns `IssueNotAllowed`, whose code is `not_allowed` and whose `details`
 carry `allowed`. A validator is just a `func(T) *Issue`, so a package can write
 one without this one knowing about it — which is why the table above lists what
 this package exports, not every validator in the codebase.

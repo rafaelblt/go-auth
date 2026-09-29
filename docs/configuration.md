@@ -176,7 +176,7 @@ it became:
 
 ```
 invalid environment configuration: 'ACCESS_TOKEN_TTL': invalid duration value "7d": time: unknown unit "d" in duration "7d"
-'DATABASE_URL': REQUIRED
+'DATABASE_URL': required
 ```
 
 A variable that failed to parse is reported once, by the first stage. Its

@@ -2,12 +2,12 @@ package validation
 
 // Issue Codes
 const (
-	CodeTooLong           = "TOO_LONG"
-	CodeTooShort          = "TOO_SHORT"
-	CodeInvalidCharacters = "INVALID_CHARACTERS"
-	CodeRequired          = "REQUIRED"
-	CodeNotPositive       = "NOT_POSITIVE"
-	CodeNotAllowed        = "NOT_ALLOWED"
+	CodeTooLong           = "too_long"
+	CodeTooShort          = "too_short"
+	CodeInvalidCharacters = "invalid_characters"
+	CodeRequired          = "required"
+	CodeNotPositive       = "not_positive"
+	CodeNotAllowed        = "not_allowed"
 )
 
 // Issue Detail Keys
