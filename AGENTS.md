@@ -30,7 +30,7 @@ values, params structs past two arguments, protected structs.
 | Composition root, background tasks | [`architecture/startup.md`](docs/architecture/startup.md) |
 | The two token types and the signing keys | [`architecture/tokens.md`](docs/architecture/tokens.md) |
 | Every log line the service writes | [`architecture/logging.md`](docs/architecture/logging.md) |
-| Endpoints, error model, token verification | [`api/`](docs/api/reference.md) |
+| Endpoints, error model, token verification, OpenAPI spec | [`api/`](docs/api/reference.md) |
 | Configuration | [`configuration.md`](docs/configuration.md) |
 | What it deliberately does not do | [`limitations.md`](docs/limitations.md) |
 

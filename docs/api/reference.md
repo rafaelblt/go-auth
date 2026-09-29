@@ -1,6 +1,8 @@
 # API reference
 
-Four endpoints. All request and response bodies are JSON.
+Four endpoints. All request and response bodies are JSON. The same contract,
+in machine-readable form, is [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a
+change to the contract updates both.
 
 | Method | Path | Purpose |
 |---|---|---|

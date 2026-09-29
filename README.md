@@ -71,6 +71,7 @@ Full walkthrough: [Getting started](docs/getting-started.md).
 | [Limitations](docs/limitations.md) | What it does not do, and the trade-offs to know before deploying |
 | [API reference](docs/api/reference.md) | Endpoints, request and response bodies |
 | [Error model](docs/api/errors.md) | Status codes and error codes |
+| [OpenAPI spec](docs/api/openapi.yaml) | The API contract in OpenAPI 3.1 |
 | [Verifying access tokens](docs/api/token-verification.md) | Validating a JWT in your own service, with the JWKS |
 | [Architecture](docs/architecture/overview.md) | Layers, packages, dependency rules |
 | [Code conventions](docs/architecture/conventions.md) | The patterns used throughout the code, and why |

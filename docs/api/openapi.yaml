@@ -1,0 +1,542 @@
+openapi: 3.1.0
+
+info:
+  title: go-auth
+  version: v1
+  license:
+    name: MIT
+    identifier: MIT
+  description: |
+    A self-hosted authentication service. Four endpoints; every request and
+    response body is JSON. No endpoint takes a credential in a header.
+
+    The three `POST` endpoints require `Content-Type: application/json`
+    (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
+    decoded only up to its first 64 KiB, else `413`.
+
+    A path no endpoint has is answered `404` with code `route_not_found`, in the
+    usual error shape. A path not in canonical form (`//v1/auth/login`, or one
+    with `..` segments) gets a `307` redirect from Go's `http.ServeMux`, not a
+    JSON error.
+
+    Branch on `error.code`, never on `message`. Treat a code you do not
+    recognise as a generic failure: new codes can be added within a major
+    version.
+
+    The rules this file cannot express (the tolerances of the request-body
+    decoder, refresh token reuse detection, the deliberately vague errors,
+    caching the JWKS) are in `docs/api/reference.md`, `docs/api/errors.md` and
+    `docs/api/token-verification.md`. The code is the source of truth: where
+    this file or those documents disagree with it, the code is right and both
+    are fixed.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development. In production, the URL of the TLS proxy in front of the service.
+
+security: []
+
+paths:
+  /v1/auth/register:
+    post:
+      operationId: register
+      summary: Create a user
+      description: |
+        Creates a user with a username and a password. It does not log the user
+        in and returns no tokens: call `/v1/auth/login` next.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              register:
+                value:
+                  username: alice
+                  password: correct-horse
+      responses:
+        '201':
+          description: The user was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+              examples:
+                created:
+                  value:
+                    user:
+                      id: 0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37
+                      username: alice
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          description: The username is taken.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                username_already_exists:
+                  value:
+                    error:
+                      code: username_already_exists
+                      message: A conflict error occurred.
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: |
+            The username or the password is invalid. `fields` names every field
+            at fault, so one response reports every problem.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validation_failed:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The input failed validation.
+                      fields:
+                        - field: username
+                          code: too_short
+                          details:
+                            min: 3
+                            unit: code_point
+                        - field: password
+                          code: too_short
+                          details:
+                            min: 8
+                            unit: code_point
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/auth/login:
+    post:
+      operationId: login
+      summary: Exchange credentials for a token pair
+      description: |
+        Checks the credentials and opens a new session, returning an access
+        token and a refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              login:
+                value:
+                  username: alice
+                  password: correct-horse
+      responses:
+        '200':
+          description: The credentials are valid; a new session was opened.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokensResponse'
+              examples:
+                tokens:
+                  value:
+                    access_token:
+                      value: eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9...
+                      expires_at: '2026-09-08T12:30:00Z'
+                      expires_in: 1799
+                    refresh_token:
+                      value: kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01
+                      expires_at: '2026-09-15T12:00:00Z'
+                      expires_in: 604800
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '401':
+          description: |
+            Login failed. Every login failure gets this one response: a
+            malformed username, an unknown username, a user without a password,
+            and a wrong password. Login never returns `422`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_credentials:
+                  value:
+                    error:
+                      code: invalid_credentials
+                      message: Not authorized.
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/auth/refresh:
+    post:
+      operationId: refresh
+      summary: Exchange a refresh token for a new pair
+      description: |
+        Exchanges a valid refresh token for a new access token and a new
+        refresh token. The token sent is spent: replace your stored copy with
+        the new one, since sending the old one again revokes the whole session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            examples:
+              refresh:
+                value:
+                  refresh_token: kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01
+      responses:
+        '200':
+          description: The token was valid and is now spent; here is the new pair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokensResponse'
+              examples:
+                tokens:
+                  value:
+                    access_token:
+                      value: eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9...
+                      expires_at: '2026-09-08T12:30:00Z'
+                      expires_in: 1799
+                    refresh_token:
+                      value: kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01
+                      expires_at: '2026-09-15T12:00:00Z'
+                      expires_in: 604800
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '401':
+          description: |
+            The refresh token cannot be used. Every failure gets this one
+            response: a token that never existed, one that expired, one already
+            used, and one whose session was revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_token:
+                  value:
+                    error:
+                      code: invalid_token
+                      message: Not authorized.
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /.well-known/jwks.json:
+    get:
+      operationId: getJwks
+      summary: Public keys for verifying access tokens
+      description: |
+        The public keys that verify access tokens, as a JWK Set (RFC 7517). It
+        holds no secrets, needs no authentication, and the response has no
+        cache headers. Pick the key whose `kid` matches the token's header.
+      responses:
+        '200':
+          description: The JWK Set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwkSet'
+              examples:
+                jwks:
+                  value:
+                    keys:
+                      - kty: OKP
+                        crv: Ed25519
+                        x: 11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+                        use: sig
+                        alg: EdDSA
+                        kid: NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+          description: |
+            Lower-cased before it is checked and stored, so `Alice` and `alice`
+            are the same user. After that, only `a-z`, `0-9`, `.`, `_` and `-`
+            are allowed. Lengths are in code points. Spaces are not trimmed. A
+            missing field is read as `""` and reported as `too_short`.
+        password:
+          type: string
+          minLength: 8
+          description: |
+            At least 8 code points, and at most 72 bytes in UTF-8. Stored and
+            compared exactly as sent. A missing field is read as `""` and
+            reported as `too_short`.
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      description: |
+        No length or charset rules are applied here: any failure is
+        `401 invalid_credentials`.
+      properties:
+        username:
+          type: string
+          description: A missing field is read as `""`.
+        password:
+          type: string
+          description: A missing field is read as `""`.
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          description: |
+            The `refresh_token.value` from the last login or refresh. A missing
+            field is read as `""`.
+
+    User:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          description: As stored, in lower case.
+
+    RegisterResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    Token:
+      type: object
+      required: [value, expires_at, expires_in]
+      properties:
+        value:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+          description: |
+            RFC 3339, in UTC, to the whole second. A fraction of a second is
+            dropped, so it is never later than the real expiry.
+        expires_in:
+          type: integer
+          format: int64
+          description: |
+            Whole seconds from the moment the token was issued to its expiry,
+            rounded down. Set by `ACCESS_TOKEN_TTL` or `REFRESH_TOKEN_TTL`.
+
+    TokensResponse:
+      type: object
+      required: [access_token, refresh_token]
+      properties:
+        access_token:
+          $ref: '#/components/schemas/Token'
+          description: |
+            Its value is a JWT signed with EdDSA. Verify it with the keys from
+            `/.well-known/jwks.json`; see `docs/api/token-verification.md`.
+        refresh_token:
+          $ref: '#/components/schemas/Token'
+          description: |
+            Its value is 32 random bytes in base64url without padding: not a
+            JWT, and opaque outside this service. Keep it secret, and never put
+            it in a URL.
+
+    Jwk:
+      type: object
+      required: [kty, crv, x, use, alg, kid]
+      properties:
+        kty:
+          type: string
+          description: 'Key type: always `OKP` (octet key pair).'
+        crv:
+          type: string
+          description: 'Curve: always `Ed25519`.'
+        x:
+          type: string
+          description: The public key, base64url without padding.
+        use:
+          type: string
+          description: 'Always `sig`: the key verifies signatures.'
+        alg:
+          type: string
+          description: Always `EdDSA`.
+        kid:
+          type: string
+          description: 'Key ID: the RFC 7638 thumbprint of the key.'
+
+    JwkSet:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
+          description: |
+            The key signing now (exactly one today). Select a key by the `kid`
+            in the token's header.
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorData'
+
+    ErrorData:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            A stable identifier for the failure. Branch on this. The catalog is
+            in `docs/api/errors.md`; treat a code you do not recognise as a
+            generic failure.
+        message:
+          type: string
+          description: |
+            Text for humans, set by the error's class rather than by its code.
+            Do not parse it.
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+          description: |
+            Present only when `code` is `validation_failed`: every field that
+            failed. A field can appear more than once.
+
+    FieldError:
+      type: object
+      required: [field, code, details]
+      properties:
+        field:
+          type: string
+          description: The request field that failed, named as in the JSON body.
+        code:
+          type: string
+          description: |
+            The rule that was broken: `too_short`, `too_long` or
+            `invalid_characters` today.
+        details:
+          type: object
+          description: |
+            The rule's parameters, shaped by its code: `{min, unit}` for
+            `too_short`, `{max, unit}` for `too_long`, `{}` for
+            `invalid_characters`.
+          properties:
+            min:
+              type: integer
+            max:
+              type: integer
+            unit:
+              type: string
+              description: How the length was counted, `code_point` or `byte`.
+
+  responses:
+    InvalidJSONBody:
+      description: |
+        The body is not a JSON object with fields of the expected types. That
+        includes an empty body and invalid UTF-8.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            invalid_json_body:
+              value:
+                error:
+                  code: invalid_json_body
+                  message: Request body is not valid JSON.
+
+    MethodNotAllowed:
+      description: |
+        The path exists but does not accept the method used: the answer to a
+        different method on this path, not to the one documented here.
+      headers:
+        Allow:
+          required: true
+          description: |
+            The accepted methods: `POST` on the auth endpoints, `GET, HEAD` on
+            the JWKS.
+          schema:
+            type: string
+          example: POST
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            method_not_allowed:
+              value:
+                error:
+                  code: method_not_allowed
+                  message: Method not allowed for this route.
+
+    RequestBodyTooLarge:
+      description: The body's first JSON value does not end within 64 KiB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            request_body_too_large:
+              value:
+                error:
+                  code: request_body_too_large
+                  message: Request body is too large.
+
+    UnsupportedMediaType:
+      description: The request's `Content-Type` is not `application/json`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unsupported_media_type:
+              value:
+                error:
+                  code: unsupported_media_type
+                  message: Content-Type must be application/json.
+
+    InternalServerError:
+      description: An unexpected failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal_server_error:
+              value:
+                error:
+                  code: internal_server_error
+                  message: An internal error occurred.

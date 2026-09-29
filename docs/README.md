@@ -21,6 +21,8 @@ You are writing a client for the HTTP API.
   bodies, status codes.
 - **[Error model](api/errors.md)**: the error shape, how errors map to
   status codes, and every error code.
+- **[OpenAPI spec](api/openapi.yaml)**: the same contract, machine-readable
+  (OpenAPI 3.1), for generating clients and trying requests.
 - **[Verifying access tokens](api/token-verification.md)**: how to validate a
   JWT in your own service with the JWKS endpoint, with examples.
 
