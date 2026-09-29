@@ -47,15 +47,17 @@ database.
 |---|---|
 | `TestMarkdownLinksResolve` | Every relative link between documents resolves, file **and** anchor |
 | `TestDocLinksInCodeCommentsResolve` | Every `docs/….md` path in a comment exists, anchor included |
+| `TestOpenAPISpecMatchesTheRoutes` | The routes in `docs/api/openapi.yaml` are the ones `internal/api/router.go` registers |
 | `TestEveryPackageHasAPackageComment` | Every package says what it is and names its document |
 | `TestEveryAcceptedDecisionIsLinkedFromCode` | An `Accepted` record is mentioned by some `.go` file |
 | `TestSupersededDecisionsAreNotLinkedFromCode` | A superseded record is not, its references having been repointed |
 | `TestNoUseCaseLivesInTheUsecasePackageItself` | The invariant of [decision 0034](decisions/0034-protected-dtos.md) |
 
-All six guard the same kind of failure: something that stays correct only while
+All seven guard the same kind of failure: something that stays correct only while
 someone remembers it, and whose breakage nothing else reports. A renamed heading
 leaves a dead anchor that reads fine until followed. A new package with no comment
-leaves the reader no route to `docs/`. A use case moved out of its subpackage
+leaves the reader no route to `docs/`. A route added to the router but not to the
+spec leaves generated clients without it. A use case moved out of its subpackage
 leaves the DTOs' unexported fields looking protective while the mappers stop being
 the only way to build one.
 
