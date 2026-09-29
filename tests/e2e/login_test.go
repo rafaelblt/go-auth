@@ -21,7 +21,7 @@ type LoginResponseBody struct {
 
 const (
 	LoginPath              = "/v1/auth/login"
-	InvalidCredentialsCode = "INVALID_CREDENTIALS"
+	InvalidCredentialsCode = "invalid_credentials"
 )
 
 func TestLogin_ReturnsSuccessResponse(t *testing.T) {

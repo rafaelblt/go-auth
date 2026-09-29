@@ -14,8 +14,8 @@ func TestIssue_Code(t *testing.T) {
 	}{
 		{
 			desc:     "with code",
-			issue:    Issue{code: "SOME_CODE", details: map[string]any{"key": "value"}},
-			expected: "SOME_CODE",
+			issue:    Issue{code: "some_code", details: map[string]any{"key": "value"}},
+			expected: "some_code",
 		},
 		{
 			desc:     "zero value",
@@ -38,12 +38,12 @@ func TestIssue_Details(t *testing.T) {
 	}{
 		{
 			desc:     "with details",
-			issue:    Issue{code: "SOME_CODE", details: map[string]any{KeyMaxLength: 10, KeyMinLength: 2}},
+			issue:    Issue{code: "some_code", details: map[string]any{KeyMaxLength: 10, KeyMinLength: 2}},
 			expected: map[string]any{KeyMaxLength: 10, KeyMinLength: 2},
 		},
 		{
 			desc:     "with empty details",
-			issue:    Issue{code: "SOME_CODE", details: map[string]any{}},
+			issue:    Issue{code: "some_code", details: map[string]any{}},
 			expected: map[string]any{},
 		},
 		{
@@ -60,7 +60,7 @@ func TestIssue_Details(t *testing.T) {
 }
 
 func TestIssue_Details_ReturnsClone(t *testing.T) {
-	issue := Issue{code: "SOME_CODE", details: map[string]any{KeyMaxLength: 10}}
+	issue := Issue{code: "some_code", details: map[string]any{KeyMaxLength: 10}}
 
 	details := issue.Details()
 	details[KeyMaxLength] = 999
@@ -71,7 +71,7 @@ func TestIssue_Details_ReturnsClone(t *testing.T) {
 }
 
 func TestIssue_Details_KeepsNilForIssueWithoutDetails(t *testing.T) {
-	issue := Issue{code: "SOME_CODE"}
+	issue := Issue{code: "some_code"}
 
 	assert.Nil(t, issue.Details())
 }

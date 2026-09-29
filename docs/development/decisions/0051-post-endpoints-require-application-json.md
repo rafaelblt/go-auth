@@ -43,7 +43,7 @@ which would need a token it does not have.
 accepts the header when `mime.ParseMediaType` parses it without an error as
 `application/json`: in any case, and with any parameters, which it ignores,
 since RFC 8259 gives `application/json` no `charset`. Anything else, a missing
-header included, is answered `415 UNSUPPORTED_MEDIA_TYPE` without the body
+header included, is answered `415 unsupported_media_type` without the body
 being read.
 
 The check is in the adapter because the adapter serves exactly the three

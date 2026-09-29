@@ -246,7 +246,7 @@ func TestAdaptUseCase_TranslatesError_WhenUseCaseFails(t *testing.T) {
 	helper := NewTestAdapterUseCaseHelper(t)
 	recorder := httptest.NewRecorder()
 
-	err := usecase.NewError("ERROR_CODE", usecase.ErrorKindConflict)
+	err := usecase.NewError("error_code", usecase.ErrorKindConflict)
 	helper.SetErrorInUseCase(err)
 
 	helper.Handle(recorder, helper.NewRequest("req value"))

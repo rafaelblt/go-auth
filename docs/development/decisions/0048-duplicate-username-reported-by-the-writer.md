@@ -23,7 +23,7 @@ both.
 
 Before this record nothing translated that constraint violation. The insert
 failed, register treated the error as unexpected, and the loser of the race
-got `500 INTERNAL_SERVER_ERROR` instead of `409 USERNAME_ALREADY_EXISTS`. No
+got `500 internal_server_error` instead of `409 username_already_exists`. No
 duplicate user was created, so the outcome was safe and the answer was wrong.
 
 Register used to recognise a "username already exists" error from the writer,

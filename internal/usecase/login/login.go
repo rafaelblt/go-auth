@@ -42,31 +42,31 @@ type Login struct {
 }
 
 var ErrUsernameMalformed = usecase.NewErrorWithReason(
-	"INVALID_CREDENTIALS",
+	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"malformed username",
 )
 
 var ErrPasswordMalformed = usecase.NewErrorWithReason(
-	"INVALID_CREDENTIALS",
+	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"malformed password",
 )
 
 var ErrUserNotFound = usecase.NewErrorWithReason(
-	"INVALID_CREDENTIALS",
+	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"user not found",
 )
 
 var ErrPasswordNotFound = usecase.NewErrorWithReason(
-	"INVALID_CREDENTIALS",
+	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"password not found",
 )
 
 var ErrPasswordMismatch = usecase.NewErrorWithReason(
-	"INVALID_CREDENTIALS",
+	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"password mismatch",
 )

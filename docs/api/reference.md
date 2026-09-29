@@ -19,16 +19,16 @@ path.
 `Content-Type: application/json`. The three `POST` endpoints require
 `Content-Type: application/json`, matched regardless of case, with any
 parameters (`; charset=utf-8`) allowed and ignored. Anything else, including no
-header at all, is answered `415 UNSUPPORTED_MEDIA_TYPE` before the body is
+header at all, is answered `415 unsupported_media_type` before the body is
 read ([why](../development/decisions/0051-post-endpoints-require-application-json.md)).
 `curl -d` sends `application/x-www-form-urlencoded`, so add
 `-H 'Content-Type: application/json'` or use `--json`.
 
 **Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`
-returns `405 METHOD_NOT_ALLOWED`, not `404`, with an `Allow` header naming the
+returns `405 method_not_allowed`, not `404`, with an `Allow` header naming the
 accepted method.
 
-**Unknown routes.** A path no endpoint has is answered `404 ROUTE_NOT_FOUND`,
+**Unknown routes.** A path no endpoint has is answered `404 route_not_found`,
 in the usual error shape. A path not in canonical form (`//v1/auth/login`, or
 one with `..` segments) gets a `307` redirect to its cleaned form from Go's
 `http.ServeMux`, not a JSON error: a `GET` gets a short HTML body, any other
@@ -46,7 +46,7 @@ never later than the real expiry.
 The body of a `POST` is one JSON object. An empty body, malformed or truncated
 JSON, a value that is not an object (`[]`, `"text"`), a field of the wrong
 type (`{"username": 1}`), and invalid UTF-8 anywhere in the object, in a field
-that is ignored too, are all `400 INVALID_JSON_BODY`.
+that is ignored too, are all `400 invalid_json_body`.
 
 Invalid UTF-8 is rejected rather than replaced because a replaced password is
 stored that way. Every invalid byte would become the same `U+FFFD`, so a body
@@ -56,7 +56,7 @@ would lock out the users who registered with them.
 
 A body is decoded only up to its first 64 KiB (65,536 bytes): a body whose
 first JSON value does not end within them is answered `413`
-`REQUEST_BODY_TOO_LARGE`. No legitimate body comes near it. The value is fixed,
+`request_body_too_large`. No legitimate body comes near it. The value is fixed,
 not a setting.
 
 **Unknown fields are ignored.** That is a rule, and it is what lets a field be
@@ -128,11 +128,11 @@ body is decoded: an escaped lone surrogate becomes `U+FFFD` (see
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
-| `409` | `USERNAME_ALREADY_EXISTS` | The username is taken |
-| `413` | `REQUEST_BODY_TOO_LARGE` | The body's JSON value runs past 64 KiB |
-| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
-| `422` | `VALIDATION_FAILED` | The username or the password is invalid |
+| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
+| `409` | `username_already_exists` | The username is taken |
+| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
+| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
+| `422` | `validation_failed` | The username or the password is invalid |
 
 A validation error names every field at fault, so one request reports every
 problem:
@@ -140,7 +140,7 @@ problem:
 ```json
 {
   "error": {
-    "code": "VALIDATION_FAILED",
+    "code": "validation_failed",
     "message": "The input failed validation.",
     "fields": [
       { "field": "username", "code": "too_short", "details": { "min": 3, "unit": "code_point" } },
@@ -152,7 +152,7 @@ problem:
 
 Usernames are unique even under concurrency: of any number of registrations
 of one username sent at the same moment, exactly one creates the account, and
-the others get `409 USERNAME_ALREADY_EXISTS`, as they would one after the
+the others get `409 username_already_exists`, as they would one after the
 other.
 
 ---
@@ -206,10 +206,10 @@ a password: keep it private, never log it, never put it in a URL.
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
-| `401` | `INVALID_CREDENTIALS` | Any other failure |
-| `413` | `REQUEST_BODY_TOO_LARGE` | The body's JSON value runs past 64 KiB |
-| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
+| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
+| `401` | `invalid_credentials` | Any other failure |
+| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
+| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
 
 Every login failure gets the same response: a malformed username, an unknown
 username, a user without a password, and a wrong password. Login never returns
@@ -242,10 +242,10 @@ revokes the whole session.
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `INVALID_JSON_BODY` | The body is not a JSON object with fields of the expected types |
-| `401` | `INVALID_TOKEN` | Any other failure |
-| `413` | `REQUEST_BODY_TOO_LARGE` | The body's JSON value runs past 64 KiB |
-| `415` | `UNSUPPORTED_MEDIA_TYPE` | The `Content-Type` is not `application/json` |
+| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
+| `401` | `invalid_token` | Any other failure |
+| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
+| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
 
 Every failure gets the same response: a token that never existed, one that
 expired, one already used, and one whose session was revoked. A caller cannot

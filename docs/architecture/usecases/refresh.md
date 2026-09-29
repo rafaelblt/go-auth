@@ -24,7 +24,7 @@ Input{RefreshToken}
           └─ anything else    → 500
 ```
 
-The four `401` paths share one response, `INVALID_TOKEN`. Each carries a
+The four `401` paths share one response, `invalid_token`. Each carries a
 different `reason` (`invalid token`, `token expired`, `token already used`,
 `session revoked`), which never reaches the client. Someone holding a stolen
 token learns nothing about its state, and in particular not whether reuse

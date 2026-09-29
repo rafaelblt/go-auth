@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const RequestBodyTooLargeCode = "REQUEST_BODY_TOO_LARGE"
+const RequestBodyTooLargeCode = "request_body_too_large"
 
 const requestBodyMaxBytes = 64 << 10
 

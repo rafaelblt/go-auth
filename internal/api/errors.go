@@ -33,7 +33,7 @@ func errorResponse(status int, data errorData) response {
 
 func validationError(fields []fieldErrorData) response {
 	return errorResponse(http.StatusUnprocessableEntity, errorData{
-		Code:    "VALIDATION_FAILED",
+		Code:    "validation_failed",
 		Message: "The input failed validation.",
 		Fields:  fields,
 	})
@@ -41,42 +41,42 @@ func validationError(fields []fieldErrorData) response {
 
 func internalServerError() response {
 	return errorResponse(http.StatusInternalServerError, errorData{
-		Code:    "INTERNAL_SERVER_ERROR",
+		Code:    "internal_server_error",
 		Message: "An internal error occurred.",
 	})
 }
 
 func invalidJSONBodyError() response {
 	return errorResponse(http.StatusBadRequest, errorData{
-		Code:    "INVALID_JSON_BODY",
+		Code:    "invalid_json_body",
 		Message: "Request body is not valid JSON.",
 	})
 }
 
 func unsupportedMediaTypeError() response {
 	return errorResponse(http.StatusUnsupportedMediaType, errorData{
-		Code:    "UNSUPPORTED_MEDIA_TYPE",
+		Code:    "unsupported_media_type",
 		Message: "Content-Type must be application/json.",
 	})
 }
 
 func requestBodyTooLargeError() response {
 	return errorResponse(http.StatusRequestEntityTooLarge, errorData{
-		Code:    "REQUEST_BODY_TOO_LARGE",
+		Code:    "request_body_too_large",
 		Message: "Request body is too large.",
 	})
 }
 
 func routeNotFoundError() response {
 	return errorResponse(http.StatusNotFound, errorData{
-		Code:    "ROUTE_NOT_FOUND",
+		Code:    "route_not_found",
 		Message: "Route not found.",
 	})
 }
 
 func methodNotAllowedError() response {
 	return errorResponse(http.StatusMethodNotAllowed, errorData{
-		Code:    "METHOD_NOT_ALLOWED",
+		Code:    "method_not_allowed",
 		Message: "Method not allowed for this route.",
 	})
 }

@@ -67,7 +67,7 @@ it to a status code, so `internal/usecase` never refers to HTTP. The kinds
 line up closely with HTTP status classes, admittedly, but the mapping lives on
 the HTTP side. The `reason` is an internal detail: the HTTP layer logs it and
 never sends it to the client. This is what lets login and refresh give every
-caller the same `INVALID_CREDENTIALS` or `INVALID_TOKEN` while telling their
+caller the same `invalid_credentials` or `invalid_token` while telling their
 failures apart in the logs.
 
 How the HTTP layer turns one into a response:

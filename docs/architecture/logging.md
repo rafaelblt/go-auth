@@ -146,10 +146,10 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success register` | `INFO` | `user_id` | `201` |
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
-| `unsupported media type error` | `INFO` | `content_type` | `415 UNSUPPORTED_MEDIA_TYPE` |
-| `request body too large error` | `INFO` | — | `413 REQUEST_BODY_TOO_LARGE` |
-| `invalid json body error` | `INFO` | `error` | `400 INVALID_JSON_BODY` |
-| `validation error` | `INFO` | `pairs` | `422 VALIDATION_FAILED` |
+| `unsupported media type error` | `INFO` | `content_type` | `415 unsupported_media_type` |
+| `request body too large error` | `INFO` | — | `413 request_body_too_large` |
+| `invalid json body error` | `INFO` | `error` | `400 invalid_json_body` |
+| `validation error` | `INFO` | `pairs` | `422 validation_failed` |
 | `use case error` | `INFO` | `code`, `kind`, `reason` | `401` or `409`, from `kind` |
 
 `pairs` lists the failed fields as `"<field> <code>"`, one entry per
@@ -165,17 +165,17 @@ a client cannot tell them apart; the log is where they are told apart:
 
 | Response code | `reason` | What actually failed |
 |---|---|---|
-| `INVALID_CREDENTIALS` | `malformed username` | Username could not be parsed |
-| `INVALID_CREDENTIALS` | `malformed password` | Password could not be parsed |
-| `INVALID_CREDENTIALS` | `user not found` | No account with that username |
-| `INVALID_CREDENTIALS` | `password not found` | The account has no password row |
-| `INVALID_CREDENTIALS` | `password mismatch` | Wrong password |
-| `INVALID_TOKEN` | `invalid token` | Refresh token unknown or malformed |
-| `INVALID_TOKEN` | `token expired` | Refresh token past its expiry |
-| `INVALID_TOKEN` | `token already used` | [Reuse detected](usecases/refresh.md#reuse-detection); the session was just revoked |
-| `INVALID_TOKEN` | `session revoked` | The session was already revoked |
+| `invalid_credentials` | `malformed username` | Username could not be parsed |
+| `invalid_credentials` | `malformed password` | Password could not be parsed |
+| `invalid_credentials` | `user not found` | No account with that username |
+| `invalid_credentials` | `password not found` | The account has no password row |
+| `invalid_credentials` | `password mismatch` | Wrong password |
+| `invalid_token` | `invalid token` | Refresh token unknown or malformed |
+| `invalid_token` | `token expired` | Refresh token past its expiry |
+| `invalid_token` | `token already used` | [Reuse detected](usecases/refresh.md#reuse-detection); the session was just revoked |
+| `invalid_token` | `session revoked` | The session was already revoked |
 
-Errors whose code already says everything, such as `USERNAME_ALREADY_EXISTS`,
+Errors whose code already says everything, such as `username_already_exists`,
 carry no reason, and the field is left out rather than logged empty.
 
 `password not found` deserves attention: it means a user row exists without a

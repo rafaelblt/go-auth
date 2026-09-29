@@ -112,7 +112,7 @@ func TestLogin_RejectionsShareOneCodeAndDifferInReason(t *testing.T) {
 
 	reasons := map[string]bool{}
 	for _, rejection := range rejections {
-		assert.Equal(t, "INVALID_CREDENTIALS", rejection.Code())
+		assert.Equal(t, "invalid_credentials", rejection.Code())
 		assert.Equal(t, usecase.ErrorKindUnauthorized, rejection.Kind())
 		assert.NotEmpty(t, rejection.Reason())
 		reasons[rejection.Reason()] = true

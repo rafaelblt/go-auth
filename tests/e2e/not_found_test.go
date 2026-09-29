@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	RouteNotFoundCode    = "ROUTE_NOT_FOUND"
-	MethodNotAllowedCode = "METHOD_NOT_ALLOWED"
+	RouteNotFoundCode    = "route_not_found"
+	MethodNotAllowedCode = "method_not_allowed"
 )
 
 func TestNotFound(t *testing.T) {

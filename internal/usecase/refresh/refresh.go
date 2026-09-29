@@ -37,25 +37,25 @@ type Output struct {
 }
 
 var ErrTokenInvalid = usecase.NewErrorWithReason(
-	"INVALID_TOKEN",
+	"invalid_token",
 	usecase.ErrorKindUnauthorized,
 	"invalid token",
 )
 
 var ErrTokenExpired = usecase.NewErrorWithReason(
-	"INVALID_TOKEN",
+	"invalid_token",
 	usecase.ErrorKindUnauthorized,
 	"token expired",
 )
 
 var ErrTokenAlreadyUsed = usecase.NewErrorWithReason(
-	"INVALID_TOKEN",
+	"invalid_token",
 	usecase.ErrorKindUnauthorized,
 	"token already used",
 )
 
 var ErrSessionRevoked = usecase.NewErrorWithReason(
-	"INVALID_TOKEN",
+	"invalid_token",
 	usecase.ErrorKindUnauthorized,
 	"session revoked",
 )

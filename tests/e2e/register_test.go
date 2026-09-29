@@ -20,8 +20,8 @@ type RegisterResponseBody struct {
 
 const (
 	RegisterPath              = "/v1/auth/register"
-	UsernameAlreadyExistsCode = "USERNAME_ALREADY_EXISTS"
-	ValidationFailedCode      = "VALIDATION_FAILED"
+	UsernameAlreadyExistsCode = "username_already_exists"
+	ValidationFailedCode      = "validation_failed"
 	TooShortCode              = "too_short"
 )
 

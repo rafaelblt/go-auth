@@ -46,7 +46,7 @@ keys it publishes come from the [keyring](tokens.md#signing-keys).
 
 `NewRouter` wraps the `ServeMux` in `jsonRouteErrors`. When the mux has no
 pattern for a request, the mux still answers it, and its plain-text `404` and
-`405` are replaced with `ROUTE_NOT_FOUND` and `METHOD_NOT_ALLOWED` through
+`405` are replaced with `route_not_found` and `method_not_allowed` through
 `writeJSON`, keeping the `Allow` header the mux computed
 ([Error model](../api/errors.md)). A catch-all `/` pattern would not do: it
 would swallow the `405`s and their `Allow`. A response from a matched route,
@@ -73,8 +73,8 @@ deliberate abort, not a bug. What each line carries is in
 | Error type | Result |
 |---|---|
 | `usecase.UseCaseError` | Logged with its `reason`; status from its `kind`, code from its `code` |
-| `validation.ValidationError` | `422 VALIDATION_FAILED`, with an entry in `fields` for each failed field |
-| anything else | Logged, and answered `500 INTERNAL_SERVER_ERROR` |
+| `validation.ValidationError` | `422 validation_failed`, with an entry in `fields` for each failed field |
+| anything else | Logged, and answered `500 internal_server_error` |
 
 A [`UseCaseError`](usecases/README.md#usecaseerror) is logged at `info`, since
 a rejected login is expected traffic rather than a defect. The line carries

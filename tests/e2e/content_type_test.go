@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const UnsupportedMediaTypeCode = "UNSUPPORTED_MEDIA_TYPE"
+const UnsupportedMediaTypeCode = "unsupported_media_type"
 
 func TestPostEndpoints_ReturnUnsupportedMediaType_WhenContentTypeIsNotJSON(t *testing.T) {
 	endpoints := []struct {

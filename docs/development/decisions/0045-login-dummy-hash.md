@@ -32,7 +32,7 @@ When `FindByUsername` finds no user, or `FindByUserID` finds no password,
 login calls `PasswordChecker.Verify` with the submitted password and a dummy
 hash, ignores the result, and returns the rejection for that miss
 (`ErrUserNotFound` or `ErrPasswordNotFound`, both answered as
-`INVALID_CREDENTIALS`). An error from that call is returned as an unexpected
+`invalid_credentials`). An error from that call is returned as an unexpected
 error, since it can only mean the dummy hash is broken.
 
 The dummy hash is a `password.Hashed` injected through
@@ -71,5 +71,5 @@ are: their timing depends only on the input, and the format rules are public.
   hash. After a `BCRYPT_COST` change the gap reopens for accounts hashed
   before it ([Limitations](../../limitations.md#login-timing-after-a-bcrypt_cost-change)).
 - This removes the timing signal from login only. Register still answers
-  `409 USERNAME_ALREADY_EXISTS` for a taken username, so account existence is
+  `409 username_already_exists` for a taken username, so account existence is
   not secret; what limits enumeration through either endpoint is rate limiting.

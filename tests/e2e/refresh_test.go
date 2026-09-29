@@ -20,7 +20,7 @@ type RefreshResponseBody struct {
 
 const (
 	RefreshPath      = "/v1/auth/refresh"
-	InvalidTokenCode = "INVALID_TOKEN"
+	InvalidTokenCode = "invalid_token"
 )
 
 func TestRefresh_ReturnsSuccessResponse(t *testing.T) {

@@ -25,7 +25,7 @@ Input{Username, Password}
 ```
 
 **Every failure is the same response.** Steps 1 to 5 all end in
-`401 INVALID_CREDENTIALS`, so nothing tells a malformed username from an
+`401 invalid_credentials`, so nothing tells a malformed username from an
 unknown user or a wrong password. Login therefore never answers `422`, even
 for input that registration would reject with one. The five errors are
 distinct values carrying a different `reason` (`malformed username`,

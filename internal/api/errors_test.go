@@ -30,7 +30,7 @@ func TestTranslateError(t *testing.T) {
 	}{
 		{
 			desc:           "use case error",
-			err:            usecase.NewError("CODING_ERRORS", usecase.ErrorKindConflict),
+			err:            usecase.NewError("coding_errors", usecase.ErrorKindConflict),
 			expectedStatus: http.StatusConflict,
 		},
 		{
@@ -63,13 +63,13 @@ func TestTranslateUseCaseError(t *testing.T) {
 	}{
 		{
 			desc:           "unauthorized error",
-			err:            usecase.NewError("PASSWORD_NOT_FOUND", usecase.ErrorKindUnauthorized),
+			err:            usecase.NewError("password_not_found", usecase.ErrorKindUnauthorized),
 			expectedStatus: http.StatusUnauthorized,
 			expectedMsg:    kindMessageCatalog[usecase.ErrorKindUnauthorized],
 		},
 		{
 			desc:           "conflict error",
-			err:            usecase.NewError("USERNAME_STRANGE", usecase.ErrorKindConflict),
+			err:            usecase.NewError("username_strange", usecase.ErrorKindConflict),
 			expectedStatus: http.StatusConflict,
 			expectedMsg:    kindMessageCatalog[usecase.ErrorKindConflict],
 		},
@@ -91,27 +91,27 @@ func TestTranslateUseCaseError(t *testing.T) {
 func TestTranslateUseCaseError_LogsReason(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
 	err := usecase.NewErrorWithReason(
-		"INVALID_CREDENTIALS", usecase.ErrorKindUnauthorized, "password mismatch",
+		"invalid_credentials", usecase.ErrorKindUnauthorized, "password mismatch",
 	)
 
 	translateUseCaseError(ctx, err)
 
 	line := testutil.Only(t, loggedLines(t, buf))
 	assert.Equal(t, "use case error", line["msg"])
-	assert.Equal(t, "INVALID_CREDENTIALS", line["code"])
+	assert.Equal(t, "invalid_credentials", line["code"])
 	assert.Equal(t, string(usecase.ErrorKindUnauthorized), line["kind"])
 	assert.Equal(t, "password mismatch", line["reason"])
 }
 
 func TestTranslateUseCaseError_OmitsEmptyReason(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
-	err := usecase.NewError("USERNAME_ALREADY_EXISTS", usecase.ErrorKindConflict)
+	err := usecase.NewError("username_already_exists", usecase.ErrorKindConflict)
 
 	translateUseCaseError(ctx, err)
 
 	line := testutil.Only(t, loggedLines(t, buf))
 	assert.Equal(t, "use case error", line["msg"])
-	assert.Equal(t, "USERNAME_ALREADY_EXISTS", line["code"])
+	assert.Equal(t, "username_already_exists", line["code"])
 	assert.NotContains(t, line, "reason")
 }
 
@@ -119,7 +119,7 @@ func TestTranslateUseCaseError_OmitsEmptyReason(t *testing.T) {
 // that bug must not also cost the record of what the client was refused for.
 func TestTranslateUseCaseError_LogsReason_WhenKindIsNotInCatalog(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
-	err := usecase.NewErrorWithReason("SOME_CODE", "unmapped kind", "some reason")
+	err := usecase.NewErrorWithReason("some_code", "unmapped kind", "some reason")
 
 	resp := translateUseCaseError(ctx, err)
 
@@ -168,7 +168,7 @@ func TestTranslateValidationError(t *testing.T) {
 
 			require.IsType(t, errorBody{}, resp.Body)
 			body := resp.Body.(errorBody)
-			assert.Equal(t, "VALIDATION_FAILED", body.Error.Code)
+			assert.Equal(t, "validation_failed", body.Error.Code)
 			assert.NotEmpty(t, body.Error.Message)
 
 			expected := []fieldErrorData{}
@@ -231,7 +231,7 @@ func TestTranslateError_UsesOneEnvelope(t *testing.T) {
 	}{
 		{
 			desc:       "use case error",
-			err:        usecase.NewError("USERNAME_ALREADY_EXISTS", usecase.ErrorKindConflict),
+			err:        usecase.NewError("username_already_exists", usecase.ErrorKindConflict),
 			wantFields: false,
 		},
 		{

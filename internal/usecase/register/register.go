@@ -24,7 +24,7 @@ type Register struct {
 }
 
 var ErrUsernameAlreadyExists = usecase.NewError(
-	"USERNAME_ALREADY_EXISTS",
+	"username_already_exists",
 	usecase.ErrorKindConflict,
 )
 

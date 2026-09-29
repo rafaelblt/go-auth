@@ -137,7 +137,7 @@ exist. Accounts created after the change are not affected. Raising the cost
 also leaves the old hashes as easy to crack offline as before.
 
 This matters little in practice: registration already answers
-`409 USERNAME_ALREADY_EXISTS` for a taken username, so whether an account
+`409 username_already_exists` for a taken username, so whether an account
 exists is not secret. If it matters for your deployment, choose `BCRYPT_COST`
 before the first user registers, and keep it.
 

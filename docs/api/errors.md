@@ -7,7 +7,7 @@ failed. A client reads `error.code` first, whatever the status.
 ```json
 {
   "error": {
-    "code": "INVALID_CREDENTIALS",
+    "code": "invalid_credentials",
     "message": "Not authorized."
   }
 }
@@ -17,7 +17,7 @@ failed. A client reads `error.code` first, whatever the status.
 |---|---|
 | `code` | A stable identifier for the failure. Branch on this. |
 | `message` | Text for humans, set by the error's class rather than by its code. Do not parse it, and reword it before showing it to users. |
-| `fields` | Present only when `code` is `VALIDATION_FAILED`: every field that failed. See [Validation errors](#validation-errors). |
+| `fields` | Present only when `code` is `validation_failed`: every field that failed. See [Validation errors](#validation-errors). |
 
 Because the message comes from the class, several codes share one text: every
 `401` reads `"Not authorized."`, whether the credentials were wrong or the
@@ -25,13 +25,13 @@ refresh token was spent. Only `code` says what happened.
 
 ## Validation errors
 
-A `422` has the code `VALIDATION_FAILED`, and its `fields` reports every field
+A `422` has the code `validation_failed`, and its `fields` reports every field
 that failed, in one response.
 
 ```json
 {
   "error": {
-    "code": "VALIDATION_FAILED",
+    "code": "validation_failed",
     "message": "The input failed validation.",
     "fields": [
       {
@@ -105,16 +105,16 @@ The values of `error.code`.
 
 | Code | Status | Endpoint | Meaning |
 |---|---|---|---|
-| `INVALID_JSON_BODY` | 400 | every `POST` | The body could not be decoded: not JSON, not valid UTF-8, not an object, or a field of the wrong type |
-| `ROUTE_NOT_FOUND` | 404 | any unknown path | No endpoint has this path |
-| `METHOD_NOT_ALLOWED` | 405 | every endpoint | The endpoint does not accept this method; `Allow` lists the ones it does |
-| `REQUEST_BODY_TOO_LARGE` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
-| `UNSUPPORTED_MEDIA_TYPE` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
-| `INVALID_CREDENTIALS` | 401 | `/v1/auth/login` | Login failed, for any reason |
-| `INVALID_TOKEN` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
-| `USERNAME_ALREADY_EXISTS` | 409 | `/v1/auth/register` | The username is taken |
-| `VALIDATION_FAILED` | 422 | `/v1/auth/register` | The input failed validation; `fields` says how |
-| `INTERNAL_SERVER_ERROR` | 500 | all | An unexpected failure |
+| `invalid_json_body` | 400 | every `POST` | The body could not be decoded: not JSON, not valid UTF-8, not an object, or a field of the wrong type |
+| `route_not_found` | 404 | any unknown path | No endpoint has this path |
+| `method_not_allowed` | 405 | every endpoint | The endpoint does not accept this method; `Allow` lists the ones it does |
+| `request_body_too_large` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
+| `unsupported_media_type` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
+| `invalid_credentials` | 401 | `/v1/auth/login` | Login failed, for any reason |
+| `invalid_token` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
+| `username_already_exists` | 409 | `/v1/auth/register` | The username is taken |
+| `validation_failed` | 422 | `/v1/auth/register` | The input failed validation; `fields` says how |
+| `internal_server_error` | 500 | all | An unexpected failure |
 
 ### Field codes
 
@@ -160,13 +160,13 @@ serves several codes, which is the reason to branch on `code`.
 
 Two endpoints say less than they know, on purpose.
 
-**Login** answers `INVALID_CREDENTIALS` to a malformed username, an unknown
+**Login** answers `invalid_credentials` to a malformed username, an unknown
 user, a user with no password, and a wrong password alike. Saying which one
 failed would let anyone check whether an account exists. For the same reason,
 login answers a malformed username with `401`, not `422`, and takes as long
 for an unknown user as for a wrong password.
 
-**Refresh** answers `INVALID_TOKEN` to a token that never existed, one that
+**Refresh** answers `invalid_token` to a token that never existed, one that
 expired, one already used, and one whose session was revoked. Someone holding
 a stolen token learns nothing about its state, and in particular not whether
 reuse detection has already fired.
