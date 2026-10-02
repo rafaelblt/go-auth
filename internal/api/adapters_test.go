@@ -457,8 +457,8 @@ type testRequestBody struct {
 }
 
 // These pin what docs/api/reference.md#request-bodies describes. Only ignoring
-// unknown fields is a rule; the rest may still be tightened before v1, and a
-// change here updates that section.
+// unknown fields is a rule; the rest may still be tightened, which is why that
+// section tells clients not to depend on them, and a change here updates it.
 func TestDecodeJSONBody_Tolerances(t *testing.T) {
 	testCases := []struct {
 		desc     string
