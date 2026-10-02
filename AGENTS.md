@@ -35,6 +35,17 @@ values, params structs past two arguments, protected structs.
 
 ## Rules a single file does not reveal
 
+- **v1 is a published contract; keep it backward compatible.** Client
+  applications and the services that verify tokens depend on the `/v1`
+  endpoints (paths, status codes, error codes, request and response fields, as
+  in [`api/`](docs/api/reference.md) and `openapi.yaml`), on the access token's
+  header and claims, on the JWKS, and on the configuration variables. Adding is
+  compatible: a new endpoint, a new response field, a setting with a default.
+  Removing, renaming, or changing the type or meaning of any of these is not.
+  Data already stored must keep loading, which is why `Restore` skips input
+  rules, and a released migration is never edited: a change is a new one. When
+  a change cannot avoid breaking the contract, stop and ask rather than work
+  around it.
 - **Simplicity and readability come first.** The patterns serve that, not the
   other way round, and a comment is for what the simplest code cannot say. See
   [Principles](docs/architecture/conventions.md#principles).
