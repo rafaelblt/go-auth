@@ -103,7 +103,7 @@ The level is a claim about who should care, and it is applied consistently:
 | Level | Means | Who acts |
 |---|---|---|
 | `INFO` | Something happened, including a request that was rejected | Nobody. Read when investigating |
-| `WARN` | Handled, but needs attention: a catalog is incomplete, or a deprecated setting is in use | The developer or the operator, eventually |
+| `WARN` | Handled, but needs attention: a catalog is incomplete, or a setting is deprecated or has no effect | The developer or the operator, eventually |
 | `ERROR` | A defect or an operational failure | Whoever is on call |
 
 A wrong password, a spent refresh token, a wrong content type, a rate-limited
@@ -228,6 +228,7 @@ All written by `bootstrap.Run`, except where the table says otherwise.
 | `app build failed` | `ERROR` | `error` | Wiring, migrations or the schema check failed. Exit 1 |
 | `rate limiting on` | `INFO` | `rate_limit`, `trusted_proxies` | The [`RATE_LIMIT`](../configuration.md#rate_limit) level in force, and the proxies, from [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies), whose `X-Forwarded-For` is read |
 | `rate limiting is off; from v2 it cannot be turned off, only set to a level` | `WARN` | — | Rate limiting is off, the v1 default; v2 removes [`off`](../configuration.md#rate_limit) |
+| `trusted proxies ignored while rate limiting is off` | `WARN` | `trusted_proxies` | [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies) is set, but only rate limiting reads it, and it is off |
 | `running app...` | `INFO` | — | The server is about to listen |
 | `app run failed` | `ERROR` | `error` | The server failed, or graceful shutdown did. Exit 1 |
 | `stopping app...` | `INFO` | — | Clean shutdown after `SIGINT` or `SIGTERM`. Exit 0 |
@@ -360,8 +361,8 @@ The conventions, in order of how often they are broken:
    `error` for an error, `elapsed` and `duration` for times, `*_id` for
    identifiers.
 5. **`ERROR` means a defect**, `WARN` means handled but needing attention (a
-   degraded catalog, a deprecated setting), and everything expected is
-   `INFO`, however unwelcome it is to the client.
+   degraded catalog, a deprecated or ineffective setting), and everything
+   expected is `INFO`, however unwelcome it is to the client.
 6. **Log no value that came from a request body**, and no token.
 
 To assert on a line in a test, put a logger writing to a buffer into the

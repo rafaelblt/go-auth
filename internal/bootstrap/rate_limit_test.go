@@ -111,6 +111,20 @@ func TestLogRateLimit_WarnsThatV2CannotTurnItOff_WhenOff(t *testing.T) {
 	assert.Equal(t, "rate limiting is off; from v2 it cannot be turned off, only set to a level", line["msg"])
 }
 
+func TestLogRateLimit_WarnsThatTrustedProxiesAreIgnored_WhenOff(t *testing.T) {
+	logger, buf := loggerWithLoggedLines()
+	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+	cfg := rateLimitConfigForTest(t, config.RateLimitOff, trusted)
+
+	logRateLimit(logger, cfg)
+
+	lines := loggedLines(t, buf)
+	require.Len(t, lines, 2)
+	assert.Equal(t, "WARN", lines[1]["level"])
+	assert.Equal(t, "trusted proxies ignored while rate limiting is off", lines[1]["msg"])
+	assert.Equal(t, []any{"10.0.0.0/8"}, lines[1]["trusted_proxies"])
+}
+
 func TestLogRateLimit_LogsLevelAndTrustedProxies_WhenOn(t *testing.T) {
 	logger, buf := loggerWithLoggedLines()
 	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}

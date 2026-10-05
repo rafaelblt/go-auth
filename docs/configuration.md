@@ -202,7 +202,8 @@ counts as its /64. Only `X-Forwarded-For` is read; `Forwarded` and
 It affects rate limiting only: the `ip` field of the
 [logs](architecture/logging.md#request-correlation) stays the peer. Behind a
 proxy, with rate limiting on and this unset, every client is counted as the
-proxy, and they all share its allowance.
+proxy, and they all share its allowance. While `RATE_LIMIT` is `off`, it has
+no effect, and startup logs a `WARN` line saying so.
 
 An entry that is neither an address nor a prefix, an empty entry, an address
 with a zone, and an IPv4-mapped prefix shorter than `/96` stop the service
