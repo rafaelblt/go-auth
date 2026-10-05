@@ -15,6 +15,8 @@ var envKeyByField = map[string]string{
 	fieldAccessTokenTTL:  envAccessTokenTTL.Key,
 	fieldRefreshTokenTTL: envRefreshTokenTTL.Key,
 	fieldLogFormat:       envLogFormat.Key,
+	fieldRateLimit:       envRateLimit.Key,
+	fieldTrustedProxies:  envTrustedProxies.Key,
 }
 
 // envLoad collects the failures of the conversion stage and remembers which

@@ -18,6 +18,8 @@ problems at once and exits, rather than starting half-configured.
 | `ACCESS_TOKEN_TTL` | no | `30m` | Go duration, or a preset |
 | `REFRESH_TOKEN_TTL` | no | `168h` (7 days) | Go duration, or a preset |
 | `LOG_FORMAT` | no | `json` | `json` / `text` |
+| `RATE_LIMIT` | no | `off` | `off` / `relaxed` / `normal` / `strict` |
+| `TRUSTED_PROXIES` | no | none | comma-separated IP addresses and CIDR prefixes |
 
 ### `DATABASE_URL`
 
@@ -119,14 +121,96 @@ JSON object per line, or `text`, as `key=value` pairs, which is easier to
 read in a terminal. The value is case-insensitive.
 
 Every line logged while handling a request carries a `request_id`, along with
-the method, the path and the client address. Tokens, passwords and hashes are
-never logged.
+the method, the path and the address of the peer that sent it (`ip`). Tokens,
+passwords and hashes are never logged.
 
 An error while loading the configuration is logged before the format is
 known, so it goes to standard error in Go's default log format.
 
 Every line the service can write, and how to read them, is in
 [Logging](architecture/logging.md).
+
+### `RATE_LIMIT`
+
+How strictly the three `POST` endpoints are rate limited, per client address:
+`off`, the default, `relaxed`, `normal` or `strict`. The value is
+case-insensitive. `GET /.well-known/jwks.json`, unknown paths and wrong
+methods are never limited.
+
+| Endpoint | `relaxed` | `normal` | `strict` |
+|---|---|---|---|
+| `POST /v1/auth/register` | 30 per hour | 10 per hour | 3 per hour |
+| `POST /v1/auth/login` | 30 per minute | 10 per minute | 3 per minute |
+| `POST /v1/auth/refresh` | 300 per minute | 100 per minute | 30 per minute |
+
+"10 per minute" means up to 10 requests at once, then one more every 6
+seconds: the allowance refills steadily, not all at once at the start of each
+minute. Each level is three times stricter than the one before.
+
+Every `application/json` request to an endpoint counts, whatever its answer,
+and each endpoint keeps its own count, so using up login leaves register and
+refresh untouched. A request answered `415` never counts. Past the limit, the
+endpoint answers `429 too_many_requests`, with a `Retry-After` header giving
+the seconds to wait. The refused request is not counted, and nothing of it was
+read or run.
+
+Why these numbers: every login past the format checks pays a bcrypt
+comparison (see [`BCRYPT_COST`](#bcrypt_cost)), so `normal` holds one address
+to about 10 guesses a minute, while a user who mistypes a few times never
+notices. Registration happens once per user, but several users can share an
+address and each one costs a bcrypt hash, so it is counted per hour. Refresh
+costs no bcrypt, and a client refreshes about once per `ACCESS_TOKEN_TTL` per
+session, so `normal` still covers about 3000 sessions behind one address.
+
+The client address is the TCP peer, or, behind a proxy listed in
+[`TRUSTED_PROXIES`](#trusted_proxies), the address that proxy forwards. The
+counts are kept in the process's memory, so a restart clears them
+([Limitations](limitations.md#rate-limiting-is-per-address-and-per-process)).
+The numbers are constants in `internal/bootstrap/rate_limit.go`.
+
+**`off` is deprecated.** It is the v1 default so that upgrading changes
+nothing. v2 removes it: rate limiting is always on there, and `RATE_LIMIT`
+only chooses the level. While it is `off`, startup logs a `WARN` line saying
+so.
+
+### `TRUSTED_PROXIES`
+
+The reverse proxies whose `X-Forwarded-For` header is believed, as a
+comma-separated list of IP addresses and CIDR prefixes:
+
+```
+TRUSTED_PROXIES=10.0.0.0/8, 192.0.2.10
+```
+
+Spaces around entries are ignored, and a bare address means that one address.
+The default is none: the header is never read, so no client can choose the
+address it is counted as.
+
+When the peer of a request is listed, `X-Forwarded-For` is read from the
+right: each listed address is skipped, and the first one that is not listed
+is the client. When every entry is listed, the leftmost one is the client. A
+malformed entry, `ip:port` included, stops the walk at the last good address.
+List every proxy hop between the client and the service: the walk stops at
+the first hop that is missing.
+
+An address written as IPv4-mapped IPv6 (`::ffff:a.b.c.d`) counts as IPv4
+wherever it appears: in this list, as a bare address or as a prefix of `/96`
+or longer, as the peer, or in the header. A zone is ignored. An IPv6 client
+counts as its /64. Only `X-Forwarded-For` is read; `Forwarded` and
+`X-Real-IP` are not.
+
+It affects rate limiting only: the `ip` field of the
+[logs](architecture/logging.md#request-correlation) stays the peer. Behind a
+proxy, with rate limiting on and this unset, every client is counted as the
+proxy, and they all share its allowance.
+
+An entry that is neither an address nor a prefix, an empty entry, an address
+with a zone, and an IPv4-mapped prefix shorter than `/96` stop the service
+from starting:
+
+```
+invalid environment configuration: 'TRUSTED_PROXIES': invalid trusted proxy "proxy.local": ParseAddr("proxy.local"): unexpected character (at "proxy.local")
+```
 
 ## Duration format
 
@@ -161,12 +245,12 @@ one run lists every problem:
 1. **Environment** (`LoadConfig`): every variable is looked up, matched
    against its presets, and parsed. A variable that is not set is not an error
    here: it resolves to "not given". Only values that fail to parse are
-   collected at this stage.
+   collected at this stage, such as a malformed `TRUSTED_PROXIES` entry.
 2. **Values** (`NewConfig`): "not given" becomes the default for an optional
    variable, and the result is validated. Required values must not be empty,
-   numbers and durations must be positive, and `LOG_FORMAT` must be one of the
-   accepted values. This is where a missing `DATABASE_URL` or `ADDRESS` is
-   caught.
+   numbers and durations must be positive, and `LOG_FORMAT` and `RATE_LIMIT`
+   must be one of the accepted values. This is where a missing `DATABASE_URL`
+   or `ADDRESS` is caught.
 
 `LoadConfig` ends by calling `NewConfig`, so a `Config` is built in one place
 only, whether it comes from the environment or from code. It then merges the
@@ -199,6 +283,8 @@ starts half-configured.
 | Signing key rotation interval | 7 days | `internal/bootstrap/app.go` |
 | Background task timeout, per run | 3s | `internal/bootstrap/app.go` |
 | Schema version check timeout | 5s | `internal/bootstrap/schema.go` |
+| Rate limits of each level | see [`RATE_LIMIT`](#rate_limit) | `internal/bootstrap/rate_limit.go` |
+| Rate limiter sweep interval | 1 minute | `internal/infra/ratelimit/in_memory.go` |
 | Username length | 3–32 code points | `internal/domain/user/username.go` |
 | Username characters | `a-z0-9._-` | `internal/domain/user/username.go` |
 | Password minimum length | 8 code points | `internal/domain/password/plain.go` |
@@ -226,4 +312,6 @@ Optional fields are pointers. For a number or a duration, zero is an invalid
 setting, so a plain field could not tell "not given, use the default" from
 "set to zero", which must be an error rather than quietly replaced by the
 default. A `nil` pointer means not given. `AutoMigrate` is a plain `bool`,
-because `false` is a valid setting.
+because `false` is a valid setting. `RateLimit` is a pointer like the other
+optional fields, and `TrustedProxies` takes parsed `netip.Prefix` values,
+`nil` meaning none.

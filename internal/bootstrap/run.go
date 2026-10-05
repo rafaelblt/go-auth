@@ -32,6 +32,7 @@ func Run(ctx context.Context) error {
 	}
 	defer app.Close()
 
+	logRateLimit(logger, cfg)
 	logger.Info("running app...")
 	if err := app.Run(ctx); err != nil {
 		logger.Error("app run failed", "error", err)

@@ -14,6 +14,7 @@ import (
 )
 
 type TestApp struct {
+	cfg      config.Config
 	client   *testutil.HTTPClient
 	fixtures *Fixtures
 	asserts  *Asserts
@@ -37,6 +38,7 @@ func NewTestApp(ctx context.Context, cfg config.Config) *TestApp {
 	fixtures := &Fixtures{pool: pool, cfg: cfg}
 	asserts := &Asserts{pool: pool}
 	testApp := TestApp{
+		cfg:      cfg,
 		client:   cli,
 		fixtures: fixtures,
 		asserts:  asserts,

@@ -36,6 +36,15 @@ one with `..` segments) gets a `307` redirect to its cleaned form from Go's
 `http.ServeMux`, not a JSON error: a `GET` gets a short HTML body, any other
 method an empty one.
 
+**Rate limiting.** When the operator turns it on
+([`RATE_LIMIT`](../configuration.md#rate_limit)), each `POST` endpoint allows
+each client address a number of requests, then answers `429 too_many_requests`
+with a `Retry-After` header giving the seconds to wait. The limit is decided
+after the `Content-Type` check, so a `415` is never counted, and before the
+body is read, so nothing ran: send the same request again after the delay, and
+on `/v1/auth/refresh` the same token, which was not spent. The JWKS endpoint is
+never limited.
+
 **Timestamps.** RFC 3339, in UTC, to the whole second: `2026-09-08T12:00:00Z`.
 A fraction of a second is dropped, never rounded up, so an `expires_at` is
 never later than the real expiry.
@@ -135,6 +144,7 @@ body is decoded: an escaped lone surrogate becomes `U+FFFD` (see
 | `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
 | `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
 | `422` | `validation_failed` | The username or the password is invalid |
+| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
 
 A validation error names every field at fault, so one request reports every
 problem:
@@ -212,6 +222,7 @@ a password: keep it private, never log it, never put it in a URL.
 | `401` | `invalid_credentials` | Any other failure |
 | `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
 | `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
+| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
 
 Every login failure gets the same response: a malformed username, an unknown
 username, a user without a password, and a wrong password. Login never returns
@@ -248,6 +259,7 @@ revokes the whole session.
 | `401` | `invalid_token` | Any other failure |
 | `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
 | `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
+| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
 
 Every failure gets the same response: a token that never existed, one that
 expired, one already used, and one whose session was revoked. A caller cannot

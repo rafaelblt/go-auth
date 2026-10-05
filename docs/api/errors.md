@@ -95,6 +95,7 @@ count code points with `[...str].length`, and bytes with
 | `413 Request Entity Too Large` | A `POST` body whose JSON value runs past 64 KiB |
 | `415 Unsupported Media Type` | A `POST` whose `Content-Type` is not `application/json` |
 | `422 Unprocessable Entity` | The input failed validation |
+| `429 Too Many Requests` | Rate limiting is on and the address used up a `POST` endpoint's allowance; `Retry-After` gives the seconds to wait |
 | `500 Internal Server Error` | An unexpected failure |
 
 ## Code catalog
@@ -110,6 +111,7 @@ The values of `error.code`.
 | `method_not_allowed` | 405 | every endpoint | The endpoint does not accept this method; `Allow` lists the ones it does |
 | `request_body_too_large` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
 | `unsupported_media_type` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
+| `too_many_requests` | 429 | every `POST` | Rate limiting is on and the address made too many requests to the endpoint; `Retry-After` gives the seconds to wait |
 | `invalid_credentials` | 401 | `/v1/auth/login` | Login failed, for any reason |
 | `invalid_token` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
 | `username_already_exists` | 409 | `/v1/auth/register` | The username is taken |
@@ -147,11 +149,13 @@ For completeness, since the message is set by the error's class:
 | `413` | `Request body is too large.` |
 | `415` | `Content-Type must be application/json.` |
 | `422` | `The input failed validation.` |
+| `429` | `Too many requests.` |
 | `500` | `An internal error occurred.` |
 
 The `401` and `409` texts come from the error's `kind`, so they cover every code
 of that class: a wrong password and a spent refresh token read the same. The
-`400`, `404`, `405`, `413`, `415`, `422` and `500` texts belong to one code each.
+`400`, `404`, `405`, `413`, `415`, `422`, `429` and `500` texts belong to one
+code each.
 
 Do not depend on any of them. They are listed so that it is obvious one text
 serves several codes, which is the reason to branch on `code`.
@@ -196,6 +200,8 @@ status.
 413  →  bug in your client: the body is too large
 415  →  bug in your client: send Content-Type: application/json
 422  →  map error.fields[].field to your form fields and show a message for each
+429  →  wait Retry-After seconds, then send the same request again (on /refresh,
+        the same token: it was not spent)
 404  →  bug in your client: the path is wrong
 405  →  bug in your client: use the method in the Allow header
 500  →  retry with backoff; if it persists, check the service's logs

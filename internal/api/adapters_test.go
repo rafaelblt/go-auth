@@ -3,13 +3,17 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil"
+	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,6 +137,7 @@ type TestAdapterUseCaseHelper struct {
 	fakeDecoder       *FakeDecoder
 	fakeEncoder       *FakeEncoder
 	fakeSuccessLogger *FakeSuccessLogger
+	rateLimit         *endpointRateLimit
 }
 
 func NewTestAdapterUseCaseHelper(t *testing.T) *TestAdapterUseCaseHelper {
@@ -156,7 +161,16 @@ func (h *TestAdapterUseCaseHelper) NewHandler() http.HandlerFunc {
 		Decoder:    h.fakeDecoder.Decode,
 		Encoder:    h.fakeEncoder.Encode,
 		SuccessLog: h.fakeSuccessLogger.Log,
+		RateLimit:  h.rateLimit,
 	})
+}
+
+func (h *TestAdapterUseCaseHelper) SetRateLimit(limiter port.RateLimiter, limit port.RateLimit) {
+	h.rateLimit = &endpointRateLimit{
+		limiter:  limiter,
+		endpoint: "fake",
+		limit:    limit,
+	}
 }
 
 func (h *TestAdapterUseCaseHelper) Handle(w http.ResponseWriter, r *http.Request) {
@@ -597,4 +611,100 @@ func TestWriteJSON_LogsBodyTypeWithoutBody_WhenMarshalFails(t *testing.T) {
 	entry := testutil.Only(t, loggedLines(t, buf))
 	assert.Equal(t, "api.unmarshalableBody", entry["body_type"])
 	assert.NotContains(t, logs, token)
+}
+
+var fakeRateLimit = port.RateLimit{Requests: 5, Period: time.Minute}
+
+func TestAdaptUseCase_ChecksRateLimit_WithEndpointAndClientAddress(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	limiter := porttest.NewFakeRateLimiter()
+	helper.SetRateLimit(limiter, fakeRateLimit)
+	req := helper.NewRequest("value")
+	req.RemoteAddr = "198.51.100.7:4321"
+
+	helper.Handle(httptest.NewRecorder(), req)
+
+	call := testutil.Only(t, limiter.Calls())
+	assert.Equal(t, "fake 198.51.100.7", call.Key)
+	assert.Equal(t, fakeRateLimit, call.Limit)
+	testutil.Only(t, helper.InputsProvidedToUseCase())
+}
+
+func TestAdaptUseCase_WritesTooManyRequestsError_WhenRateLimitIsExceeded(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	limiter := porttest.NewFakeRateLimiter()
+	limiter.SetDecision(port.RateLimitDecision{Allowed: false, RetryAfter: 2500 * time.Millisecond})
+	helper.SetRateLimit(limiter, fakeRateLimit)
+	recorder := httptest.NewRecorder()
+	req := helper.NewRequest("value")
+	req.RemoteAddr = "198.51.100.7:4321"
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, http.StatusTooManyRequests, recorder.Code)
+	body := decodeErrorBody(t, recorder)
+	assert.Equal(t, tooManyRequestsError().Body, body)
+	assert.Equal(t, "too_many_requests", body.Error.Code)
+	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
+	assert.Equal(t, "3", recorder.Header().Get("Retry-After"))
+	assert.Empty(t, helper.RequestsProvidedToDecoder())
+	assert.Empty(t, helper.InputsProvidedToUseCase())
+}
+
+func TestAdaptUseCase_WritesUnsupportedMediaTypeError_WithoutCheckingRateLimit(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	limiter := porttest.NewFakeRateLimiter()
+	limiter.SetDecision(port.RateLimitDecision{Allowed: false, RetryAfter: time.Minute})
+	helper.SetRateLimit(limiter, fakeRateLimit)
+	recorder := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", "url", strings.NewReader(`{"req_value":"v"}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "text/plain;charset=UTF-8")
+	req.RemoteAddr = "198.51.100.7:4321"
+
+	helper.Handle(recorder, req)
+
+	require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
+	assert.Equal(t, unsupportedMediaTypeError().Body, decodeErrorBody(t, recorder))
+	assert.Empty(t, recorder.Header().Get("Retry-After"))
+	assert.Empty(t, limiter.Calls())
+}
+
+func TestAdaptUseCase_LogsRateLimitExceeded(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	limiter := porttest.NewFakeRateLimiter()
+	limiter.SetDecision(port.RateLimitDecision{Allowed: false, RetryAfter: 2500 * time.Millisecond})
+	helper.SetRateLimit(limiter, fakeRateLimit)
+	ctx, buf := contextWithLoggedLines(t)
+	req := helper.NewRequest("value")
+	req.RemoteAddr = "198.51.100.7:4321"
+
+	helper.Handle(httptest.NewRecorder(), req.WithContext(ctx))
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "rate limit exceeded", line["msg"])
+	assert.Equal(t, "INFO", line["level"])
+	assert.Equal(t, "198.51.100.7", line["client_ip"])
+	assert.Equal(t, float64(2500*time.Millisecond), line["retry_after"])
+}
+
+func TestAdaptUseCase_WritesInternalServerError_WhenRateLimitCheckFails(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	limiter := porttest.NewFakeRateLimiter()
+	limiter.SetError(errors.New("rate limit store down"))
+	helper.SetRateLimit(limiter, fakeRateLimit)
+	ctx, buf := contextWithLoggedLines(t)
+	recorder := httptest.NewRecorder()
+	req := helper.NewRequest("value")
+	req.RemoteAddr = "198.51.100.7:4321"
+
+	helper.Handle(recorder, req.WithContext(ctx))
+
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.Equal(t, internalServerError().Body, decodeErrorBody(t, recorder))
+	assert.Empty(t, helper.InputsProvidedToUseCase())
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "rate limit check failed", line["msg"])
+	assert.Equal(t, "ERROR", line["level"])
+	assert.Equal(t, "rate limit store down", line["error"])
 }

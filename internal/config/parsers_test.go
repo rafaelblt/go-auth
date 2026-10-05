@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"testing"
 	"time"
 
@@ -199,6 +200,148 @@ func TestLogFormatEnvParser(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestRateLimitLevelEnvParser(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected RateLimitLevel
+	}{
+		{
+			desc:     "lowercase off",
+			value:    "off",
+			expected: RateLimitOff,
+		},
+		{
+			desc:     "uppercase normal",
+			value:    "NORMAL",
+			expected: RateLimitNormal,
+		},
+		{
+			desc:     "mixed case strict",
+			value:    "Strict",
+			expected: RateLimitStrict,
+		},
+		{
+			desc:     "lowercase relaxed",
+			value:    "relaxed",
+			expected: RateLimitRelaxed,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := rateLimitLevelEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestTrustedProxiesEnvParser(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected []netip.Prefix
+	}{
+		{
+			desc:     "empty",
+			value:    "",
+			expected: nil,
+		},
+		{
+			desc:     "spaces only",
+			value:    "   ",
+			expected: nil,
+		},
+		{
+			desc:     "one cidr",
+			value:    "10.0.0.0/8",
+			expected: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")},
+		},
+		{
+			desc:     "bare ipv4",
+			value:    "192.0.2.1",
+			expected: []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32")},
+		},
+		{
+			desc:     "bare ipv6",
+			value:    "2001:db8::1",
+			expected: []netip.Prefix{netip.MustParsePrefix("2001:db8::1/128")},
+		},
+		{
+			desc:     "bare ipv4-mapped ipv6",
+			value:    "::ffff:10.0.0.1",
+			expected: []netip.Prefix{netip.MustParsePrefix("10.0.0.1/32")},
+		},
+		{
+			desc:     "ipv4-mapped ipv6 cidr",
+			value:    "::ffff:10.0.0.0/104",
+			expected: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")},
+		},
+		{
+			desc:  "several with spaces",
+			value: " 10.0.0.0/8 ,192.0.2.1,  2001:db8::/32 ",
+			expected: []netip.Prefix{
+				netip.MustParsePrefix("10.0.0.0/8"),
+				netip.MustParsePrefix("192.0.2.1/32"),
+				netip.MustParsePrefix("2001:db8::/32"),
+			},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := trustedProxiesEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestTrustedProxiesEnvParser_ReturnsError(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		value string
+	}{
+		{
+			desc:  "not an address",
+			value: "proxy.local",
+		},
+		{
+			desc:  "empty entry between commas",
+			value: "10.0.0.1,,10.0.0.2",
+		},
+		{
+			desc:  "trailing comma",
+			value: "10.0.0.1,",
+		},
+		{
+			desc:  "prefix length out of range",
+			value: "10.0.0.0/33",
+		},
+		{
+			desc:  "ipv6 zone",
+			value: "fe80::1%eth0",
+		},
+		{
+			desc:  "ipv4-mapped prefix shorter than /96",
+			value: "::ffff:0:0/80",
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := trustedProxiesEnvParser(tC.value)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid trusted proxy")
+			assert.Nil(t, value)
 		})
 	}
 }

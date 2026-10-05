@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"strconv"
 	"testing"
 	"time"
@@ -27,6 +28,8 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	t.Setenv(envAccessTokenTTL.Key, accessTokenTTL.String())
 	t.Setenv(envRefreshTokenTTL.Key, refreshTokenTTL.String())
 	t.Setenv(envLogFormat.Key, string(logFormat))
+	t.Setenv(envRateLimit.Key, "STRICT")
+	t.Setenv(envTrustedProxies.Key, " 10.0.0.0/8, 192.0.2.1 ")
 
 	cfg, err := LoadConfig()
 
@@ -38,6 +41,11 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	assert.Equal(t, accessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, refreshTokenTTL, cfg.RefreshTokenTTL())
 	assert.Equal(t, logFormat, cfg.LogFormat())
+	assert.Equal(t, RateLimitStrict, cfg.RateLimit())
+	assert.Equal(t, []netip.Prefix{
+		netip.MustParsePrefix("10.0.0.0/8"),
+		netip.MustParsePrefix("192.0.2.1/32"),
+	}, cfg.TrustedProxies())
 }
 
 func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
@@ -52,6 +60,8 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
 	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
+	assert.Equal(t, RateLimitOff, cfg.RateLimit())
+	assert.Empty(t, cfg.TrustedProxies())
 }
 
 func setRequiredEnvs(t *testing.T) {
@@ -92,6 +102,20 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 		{
 			desc:  "log format unknown",
 			setup: func(t *testing.T) { t.Setenv(envLogFormat.Key, "xml") },
+		},
+		{
+			desc: "rate limit unknown",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envRateLimit.Key, "extreme")
+			},
+		},
+		{
+			desc: "trusted proxies not an address",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envTrustedProxies.Key, "proxy.local")
+			},
 		},
 		{
 			desc: "bcrypt cost zero",
@@ -158,6 +182,8 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 		AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 		RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
 		LogFormat:       shared.Ptr(LogFormatText),
+		RateLimit:       shared.Ptr(RateLimitNormal),
+		TrustedProxies:  []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")},
 	}
 
 	cfg, err := NewConfig(params)
@@ -171,6 +197,8 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	assert.Equal(t, *params.AccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, *params.RefreshTokenTTL, cfg.RefreshTokenTTL())
 	assert.Equal(t, *params.LogFormat, cfg.LogFormat())
+	assert.Equal(t, *params.RateLimit, cfg.RateLimit())
+	assert.Equal(t, params.TrustedProxies, cfg.TrustedProxies())
 }
 
 func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
@@ -187,6 +215,8 @@ func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultAccessTokenTTL, cfg.AccessTokenTTL())
 	assert.Equal(t, defaultRefreshTokenTTL, cfg.RefreshTokenTTL())
 	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
+	assert.Equal(t, RateLimitOff, cfg.RateLimit())
+	assert.Empty(t, cfg.TrustedProxies())
 }
 
 func TestNewConfig_ReturnsError(t *testing.T) {
@@ -244,6 +274,14 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 			desc:   "log format unknown",
 			mutate: func(p *ConfigParams) { p.LogFormat = shared.Ptr(LogFormat("xml")) },
 		},
+		{
+			desc:   "rate limit empty",
+			mutate: func(p *ConfigParams) { p.RateLimit = shared.Ptr(RateLimitLevel("")) },
+		},
+		{
+			desc:   "rate limit unknown",
+			mutate: func(p *ConfigParams) { p.RateLimit = shared.Ptr(RateLimitLevel("extreme")) },
+		},
 	}
 
 	for _, tC := range testCases {
@@ -261,6 +299,22 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 
 func TestConfig_IsZero(t *testing.T) {
 	assert.True(t, Config{}.IsZero())
+}
+
+func TestConfig_TrustedProxies_IsACopy(t *testing.T) {
+	trusted := netip.MustParsePrefix("10.0.0.0/8")
+	params := ConfigParams{
+		Address:        "add ress vlaue",
+		DatabaseURL:    "db url vlaue",
+		TrustedProxies: []netip.Prefix{trusted},
+	}
+	cfg, err := NewConfig(params)
+	require.NoError(t, err)
+
+	params.TrustedProxies[0] = netip.MustParsePrefix("0.0.0.0/0")
+	cfg.TrustedProxies()[0] = netip.MustParsePrefix("0.0.0.0/0")
+
+	assert.Equal(t, []netip.Prefix{trusted}, cfg.TrustedProxies())
 }
 
 func TestNewConfig_ReturnsErrorsTaggedWithTheirField(t *testing.T) {
@@ -298,6 +352,7 @@ func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
 	t.Setenv(envBcryptCost.Key, "twelve")
 	t.Setenv(envAccessTokenTTL.Key, "-5m")
 	t.Setenv(envLogFormat.Key, "xml")
+	t.Setenv(envRateLimit.Key, "extreme")
 
 	_, err := LoadConfig()
 
@@ -308,6 +363,7 @@ func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
 	assert.Contains(t, msg, envBcryptCost.Key)
 	assert.Contains(t, msg, envAccessTokenTTL.Key)
 	assert.Contains(t, msg, envLogFormat.Key)
+	assert.Contains(t, msg, envRateLimit.Key)
 	assert.Contains(t, msg, validation.CodeRequired)
 	assert.Contains(t, msg, validation.CodeNotPositive)
 	assert.Contains(t, msg, validation.CodeNotAllowed)

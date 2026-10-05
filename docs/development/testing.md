@@ -205,9 +205,9 @@ database their migrations have not touched. For a migrated one, use
 `tests/e2e` runs the **real application**, with the real bootstrap, router and
 repositories, against a migrated testcontainer, and drives it over HTTP.
 
-`TestMain` builds and starts the app once. Each test calls
-`testApp.NewEnv(t)`, which empties the tables so tests do not affect each
-other.
+`TestMain` builds and starts the app once, on the default configuration, so
+rate limiting is off. Each test calls `testApp.NewEnv(t)`, which empties the
+tables so tests do not affect each other.
 
 ```go
 func TestSomething(t *testing.T) {
@@ -225,6 +225,10 @@ The `TestEnv` holds:
 
 The suite uses `BcryptCost: 6`, so hashing does not dominate the login tests.
 
-It covers register, login, refresh, JWKS and unknown paths, and in
-`mix_test.go`, sequences across endpoints, including rotation and reuse
+`tests/e2e/rate_limit_test.go` starts a second app of its own, with
+`RATE_LIMIT` `strict` on `localhost:8081`, over the same database: limits on
+the shared app would interfere with every other test.
+
+It covers register, login, refresh, JWKS, unknown paths and rate limiting,
+and in `mix_test.go`, sequences across endpoints, including rotation and reuse
 detection, the flow most worth testing end to end.

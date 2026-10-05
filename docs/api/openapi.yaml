@@ -12,7 +12,9 @@ info:
 
     The three `POST` endpoints require `Content-Type: application/json`
     (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
-    decoded only up to its first 64 KiB, else `413`.
+    decoded only up to its first 64 KiB, else `413`. When the operator turns
+    rate limiting on, each `POST` endpoint answers `429` with `Retry-After` once
+    a client address has used up its allowance.
 
     A path no endpoint has is answered `404` with code `route_not_found`, in the
     usual error shape. A path not in canonical form (`//v1/auth/login`, or one
@@ -113,6 +115,8 @@ paths:
                           details:
                             min: 8
                             unit: code_point
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -175,6 +179,8 @@ paths:
           $ref: '#/components/responses/RequestBodyTooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -237,6 +243,8 @@ paths:
           $ref: '#/components/responses/RequestBodyTooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -527,6 +535,30 @@ components:
                 error:
                   code: unsupported_media_type
                   message: Content-Type must be application/json.
+
+    TooManyRequests:
+      description: |
+        Rate limiting is on, and this client address used up the endpoint's
+        allowance. Nothing was read or run: send the same request again after
+        `Retry-After`, on `/v1/auth/refresh` with the same token.
+      headers:
+        Retry-After:
+          required: true
+          description: The seconds to wait before sending the request again.
+          schema:
+            type: integer
+            minimum: 1
+          example: 20
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            too_many_requests:
+              value:
+                error:
+                  code: too_many_requests
+                  message: Too many requests.
 
     InternalServerError:
       description: An unexpected failure.

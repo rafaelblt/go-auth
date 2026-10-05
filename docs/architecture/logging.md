@@ -86,10 +86,13 @@ of one request**, and is the first move in any investigation.
 
 Two things the fields do not tell you:
 
-- **`ip` is the peer, not the client.** No proxy header is read, so behind the
-  [reverse proxy the service expects](../limitations.md#run-it-behind-a-reverse-proxy)
+- **`ip` is the peer, not the client.** No proxy header is read for it, so
+  behind the [reverse proxy the service expects](../limitations.md#run-it-behind-a-reverse-proxy)
   every request appears to come from the proxy. The client address is in the
-  proxy's own log.
+  proxy's own log. Rate limiting does resolve the client address, reading
+  `X-Forwarded-For` only when the peer is in
+  [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies), and its
+  `rate limit exceeded` line carries it as `client_ip`.
 - **`request_id` is generated here.** No inbound header is honoured, so it
   does not match an ID the proxy or the calling service assigned.
 
@@ -100,11 +103,11 @@ The level is a claim about who should care, and it is applied consistently:
 | Level | Means | Who acts |
 |---|---|---|
 | `INFO` | Something happened, including a request that was rejected | Nobody. Read when investigating |
-| `WARN` | Handled, but a catalog is incomplete | The developer, eventually |
+| `WARN` | Handled, but needs attention: a catalog is incomplete, or a deprecated setting is in use | The developer or the operator, eventually |
 | `ERROR` | A defect or an operational failure | Whoever is on call |
 
-A wrong password, a spent refresh token, a wrong content type, an oversized
-body and a malformed body are all `INFO`.
+A wrong password, a spent refresh token, a wrong content type, a rate-limited
+request, an oversized body and a malformed body are all `INFO`.
 They are the traffic an authentication service exists to reject, and paging on
 them would page on every bot that finds the login endpoint.
 
@@ -147,6 +150,7 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415 unsupported_media_type` |
+| `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `429 too_many_requests` |
 | `request body too large error` | `INFO` | — | `413 request_body_too_large` |
 | `invalid json body error` | `INFO` | `error` | `400 invalid_json_body` |
 | `validation error` | `INFO` | `pairs` | `422 validation_failed` |
@@ -158,6 +162,11 @@ left out. It is an array in `json` and a bracketed string in `text`.
 
 `content_type` is the `Content-Type` header as the client sent it, empty when
 there was none.
+
+`client_ip` is the [client address](http.md#client-address) the request was
+counted against: an IPv4 address, or an IPv6 /64. `retry_after` is the wait
+sent in `Retry-After`, in nanoseconds as a number in `json`, and a string such
+as `2.5s` in `text`.
 
 `reason` is the field to read, and the reason these lines exist. The API
 answers several distinct failures with one deliberately generic code, so that
@@ -192,6 +201,7 @@ answer `500`.
 | `error field not found in field catalog, using raw name` | `WARN` | `field` | A field is missing from `errorFieldCatalog`. The `422` body names it with its internal name, breaking the `snake_case` of every other field | Add the field to the catalog |
 | `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`. A real answer was turned into a `500` | Add the `kind` to the catalog |
 | `unexpected error for translation` | `ERROR` | `error` | An error reached the boundary that is neither a `UseCaseError` nor a `ValidationError`, usually from the database. `error` holds the text kept from the client | Read `error`. Usually the database: check it is reachable. Otherwise a missing translation, which is a bug |
+| `rate limit check failed` | `ERROR` | `error` | The rate limiter returned an error, and the request was answered `500` without running. The in-memory limiter never fails | Read `error` |
 | `panic recovered` | `ERROR` | `panic` | A handler panicked. `panic` is the recovered value | Always a bug. The `request_id` gives the request that triggered it |
 | `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled. The client gets `500` with an empty body | Always a bug, in the type named by `body_type` |
 
@@ -216,6 +226,8 @@ All written by `bootstrap.Run`, except where the table says otherwise.
 | `config load failed` | `ERROR` | `error` | Invalid configuration. **Standard error, default format.** Exit 1 |
 | `building app...` | `INFO` | — | `NewApp` started |
 | `app build failed` | `ERROR` | `error` | Wiring, migrations or the schema check failed. Exit 1 |
+| `rate limiting on` | `INFO` | `rate_limit`, `trusted_proxies` | The [`RATE_LIMIT`](../configuration.md#rate_limit) level in force, and the proxies, from [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies), whose `X-Forwarded-For` is read |
+| `rate limiting is off; from v2 it cannot be turned off, only set to a level` | `WARN` | — | Rate limiting is off, the v1 default; v2 removes [`off`](../configuration.md#rate_limit) |
 | `running app...` | `INFO` | — | The server is about to listen |
 | `app run failed` | `ERROR` | `error` | The server failed, or graceful shutdown did. Exit 1 |
 | `stopping app...` | `INFO` | — | Clean shutdown after `SIGINT` or `SIGTERM`. Exit 0 |
@@ -263,7 +275,7 @@ Two supports for this. Secret-bearing value objects deliberately have no
 `String` method, so `slog` cannot print them through `%v`
 ([why](conventions.md#value-rather-than-string)); and the only place a
 configured value is echoed is a parse failure, which can only happen to a
-number or a duration.
+number, a duration, a boolean or a trusted proxy entry, none of them secret.
 
 Identifiers are the exception, and deliberately so: every success line carries
 a UUID that names the account without describing it. `user_id` ties register,
@@ -347,8 +359,9 @@ The conventions, in order of how often they are broken:
 4. **Attribute keys are `snake_case`**, and reused as they are here:
    `error` for an error, `elapsed` and `duration` for times, `*_id` for
    identifiers.
-5. **`ERROR` means a defect**, `WARN` means degraded but handled, and
-   everything expected is `INFO`, however unwelcome it is to the client.
+5. **`ERROR` means a defect**, `WARN` means handled but needing attention (a
+   degraded catalog, a deprecated setting), and everything expected is
+   `INFO`, however unwelcome it is to the client.
 6. **Log no value that came from a request body**, and no token.
 
 To assert on a line in a test, put a logger writing to a buffer into the

@@ -99,6 +99,7 @@ POST /v1/auth/login
   │                          no route → 404, wrong method → 405 (JSON, jsonRouteErrors)
   │
   ├─ adaptUseCase            Content-Type not application/json → 415
+  │                          rate limit for this endpoint and address used up → 429
   │                          decoder reads at most 64 KiB; past it → 413
   ├─ loginDecoder            JSON body → login.Input
   ├─ login.Execute           validate → find user → find password → verify

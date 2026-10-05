@@ -114,3 +114,7 @@ Point 3 is the sharp edge. A client that refreshes, loses the response to a
 network error and retries with the same token gets its session revoked. Make
 refresh calls one at a time, serialise them across tabs or threads, and log in
 again rather than retry blindly.
+
+A `429` is the exception to point 3. It is answered before the body is read,
+so the token was not spent: wait for `Retry-After` and send the same token
+([rate limiting](../http.md#rate-limiting)).

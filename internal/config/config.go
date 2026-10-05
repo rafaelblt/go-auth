@@ -8,6 +8,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/netip"
+	"reflect"
+	"slices"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
@@ -25,6 +28,8 @@ const (
 	fieldAccessTokenTTL  = "access_token_ttl"
 	fieldRefreshTokenTTL = "refresh_token_ttl"
 	fieldLogFormat       = "log_format"
+	fieldRateLimit       = "rate_limit"
+	fieldTrustedProxies  = "trusted_proxies"
 )
 
 type Config struct {
@@ -35,6 +40,8 @@ type Config struct {
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	logFormat       LogFormat
+	rateLimit       RateLimitLevel
+	trustedProxies  []netip.Prefix
 }
 
 type ConfigParams struct {
@@ -45,6 +52,8 @@ type ConfigParams struct {
 	AccessTokenTTL  *time.Duration
 	RefreshTokenTTL *time.Duration
 	LogFormat       *LogFormat
+	RateLimit       *RateLimitLevel
+	TrustedProxies  []netip.Prefix
 }
 
 // Fallbacks for the params NewConfig accepts as optional.
@@ -54,6 +63,7 @@ const (
 	defaultAccessTokenTTL  = 30 * time.Minute
 	defaultRefreshTokenTTL = 7 * 24 * time.Hour
 	defaultLogFormat       = LogFormatJSON
+	defaultRateLimit       = RateLimitOff
 )
 
 var (
@@ -74,6 +84,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 	accessTokenTTL := shared.DerefOr(params.AccessTokenTTL, defaultAccessTokenTTL)
 	refreshTokenTTL := shared.DerefOr(params.RefreshTokenTTL, defaultRefreshTokenTTL)
 	logFormat := shared.DerefOr(params.LogFormat, defaultLogFormat)
+	rateLimit := shared.DerefOr(params.RateLimit, defaultRateLimit)
 
 	acc := validation.NewAccumulator()
 	acc.Add(fieldAddress, validation.Validate(params.Address, requiredStringValidators...))
@@ -82,6 +93,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 	acc.Add(fieldAccessTokenTTL, validation.Validate(accessTokenTTL, ttlValidators...))
 	acc.Add(fieldRefreshTokenTTL, validation.Validate(refreshTokenTTL, ttlValidators...))
 	acc.Add(fieldLogFormat, validation.Validate(logFormat, logFormatValidators...))
+	acc.Add(fieldRateLimit, validation.Validate(rateLimit, rateLimitLevelValidators...))
 
 	if err := acc.Err(); err != nil {
 		return Config{}, err
@@ -95,6 +107,8 @@ func NewConfig(params ConfigParams) (Config, error) {
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 		logFormat:       logFormat,
+		rateLimit:       rateLimit,
+		trustedProxies:  slices.Clone(params.TrustedProxies),
 	}
 	return cfg, nil
 }
@@ -109,6 +123,8 @@ func LoadConfig() (Config, error) {
 	accessTokenTTL := resolveEnv(load, envAccessTokenTTL, fieldAccessTokenTTL)
 	refreshTokenTTL := resolveEnv(load, envRefreshTokenTTL, fieldRefreshTokenTTL)
 	logFormat := resolveEnv(load, envLogFormat, fieldLogFormat)
+	rateLimit := resolveEnv(load, envRateLimit, fieldRateLimit)
+	trustedProxies := resolveEnv(load, envTrustedProxies, fieldTrustedProxies)
 
 	cfg, err := NewConfig(ConfigParams{
 		Address:         shared.Deref(address),
@@ -118,6 +134,8 @@ func LoadConfig() (Config, error) {
 		AccessTokenTTL:  accessTokenTTL,
 		RefreshTokenTTL: refreshTokenTTL,
 		LogFormat:       logFormat,
+		RateLimit:       rateLimit,
+		TrustedProxies:  shared.Deref(trustedProxies),
 	})
 
 	errs := load.merge(err)
@@ -130,7 +148,7 @@ func LoadConfig() (Config, error) {
 }
 
 func (c Config) IsZero() bool {
-	return c == Config{}
+	return reflect.DeepEqual(c, Config{})
 }
 
 func (c Config) Address() string {
@@ -159,4 +177,12 @@ func (c Config) RefreshTokenTTL() time.Duration {
 
 func (c Config) LogFormat() LogFormat {
 	return c.logFormat
+}
+
+func (c Config) RateLimit() RateLimitLevel {
+	return c.rateLimit
+}
+
+func (c Config) TrustedProxies() []netip.Prefix {
+	return slices.Clone(c.trustedProxies)
 }

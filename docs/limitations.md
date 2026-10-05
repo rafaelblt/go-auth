@@ -20,7 +20,7 @@ provide:
 - multi-tenancy: one deployment serves one application;
 - an audit trail: authentication events are log lines, not stored records;
 - health or readiness endpoints, or metrics;
-- TLS, CORS or rate limiting (see
+- TLS or CORS (see
   [Run it behind a reverse proxy](#run-it-behind-a-reverse-proxy)).
 
 ## Deployment
@@ -53,25 +53,49 @@ should refresh when a service answers `401`.
 
 ### Run it behind a reverse proxy
 
-`go-auth` serves plain HTTP, with no rate limiting and no CORS handling. Put
-it behind a reverse proxy that:
+`go-auth` serves plain HTTP, with no CORS handling, and its rate limiting is
+off unless [`RATE_LIMIT`](configuration.md#rate_limit) turns it on. Put it
+behind a reverse proxy that:
 
 - terminates TLS;
-- rate limits the three `POST` endpoints. Nothing else limits password
-  guessing, apart from the cost of a bcrypt comparison;
+- rate limits the three `POST` endpoints when `RATE_LIMIT` is `off`. Nothing
+  else limits password guessing then, apart from the cost of a bcrypt
+  comparison;
 - exposes only the four endpoints.
 
-A proxy limits by client address, not by account, so guesses against one
-account spread over many addresses are not limited.
+With the service's own rate limiting on, set
+[`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
+client is counted as the proxy and they all share its allowance.
+
+A rate limit by client address, the proxy's or the service's, is not a limit
+by account, so guesses against one account spread over many addresses are not
+limited.
 
 A browser sends a cross-site `POST` as `text/plain`, a form or a URL-encoded
 body without asking first, but asks (a CORS preflight) before sending
 `application/json`, and `go-auth` never allows it. Answering `415` to anything
 but `application/json` is therefore what stops a page on another site from
 sending logins and registrations through its visitors' browsers, one client
-address each, past the proxy's rate limit. A proxy that answers those
+address each, past any per-address rate limit. A proxy that answers those
 preflights for these endpoints, for origins you do not control, undoes that
 ([why](development/decisions/0051-post-endpoints-require-application-json.md)).
+
+### Rate limiting is per address and per process
+
+When [`RATE_LIMIT`](configuration.md#rate_limit) turns it on, the service
+counts requests per client address:
+
+- **per address, not per account.** Guesses against one account spread over
+  many addresses are not limited.
+- **an address can be many users.** Clients behind one NAT share an
+  allowance, and an IPv6 /64 counts as one address. `relaxed` exists for
+  that.
+- **in memory.** The counts live in the process, so a restart restores every
+  allowance.
+- **only `X-Forwarded-For`** is read, and only from a
+  [trusted proxy](configuration.md#trusted_proxies); `Forwarded` and
+  `X-Real-IP` are ignored.
+- **off by default in v1.** `off` is deprecated, and v2 removes it.
 
 ### Refresh token rows are never deleted
 

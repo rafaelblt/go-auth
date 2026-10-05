@@ -67,6 +67,13 @@ func requestBodyTooLargeError() response {
 	})
 }
 
+func tooManyRequestsError() response {
+	return errorResponse(http.StatusTooManyRequests, errorData{
+		Code:    "too_many_requests",
+		Message: "Too many requests.",
+	})
+}
+
 func routeNotFoundError() response {
 	return errorResponse(http.StatusNotFound, errorData{
 		Code:    "route_not_found",

@@ -28,9 +28,10 @@ on, so that nothing in `usecase` or `domain` names a concrete adapter:
 | Rate limiting | `RateLimiter` |
 | Time | `Clock` |
 
-Two of them are not used by a use case. `PublicKeyProvider` is consumed
+Three of them are not used by a use case. `PublicKeyProvider` is consumed
 directly by the [JWKS handler](../http.md#jwks-is-a-plain-handler), which has
-no use case behind it. `AccessTokenValidator` is used by nothing yet: it
+no use case behind it. `RateLimiter` is consumed by the use case adapter,
+before any use case runs ([HTTP](../http.md#rate-limiting)). `AccessTokenValidator` is used by nothing yet: it
 describes verifying an access token inside the service, for an endpoint that
 is not part of v1. `infra/jwt.AccessTokenService` already implements it
 ([Verifying access tokens](../../api/token-verification.md#what-to-verify)).

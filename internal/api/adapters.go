@@ -28,6 +28,8 @@ type useCaseAdapterParams[In, Out any] struct {
 	Decoder    decoder[In]
 	Encoder    encoder[Out]
 	SuccessLog successLog[Out]
+	// RateLimit nil leaves the endpoint unlimited.
+	RateLimit *endpointRateLimit
 }
 
 func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc {
@@ -40,6 +42,21 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 			logger.Info("unsupported media type error", "content_type", r.Header.Get("Content-Type"))
 			writeJSON(ctx, w, unsupportedMediaTypeError())
 			return
+		}
+
+		if p.RateLimit != nil {
+			decision, client, err := p.RateLimit.allow(r)
+			if err != nil {
+				logger.Error("rate limit check failed", "error", err)
+				writeJSON(ctx, w, internalServerError())
+				return
+			}
+			if !decision.Allowed {
+				logger.Info("rate limit exceeded", "client_ip", client, "retry_after", decision.RetryAfter)
+				w.Header().Set("Retry-After", retryAfterSeconds(decision.RetryAfter))
+				writeJSON(ctx, w, tooManyRequestsError())
+				return
+			}
 		}
 
 		r.Body = http.MaxBytesReader(w, r.Body, requestBodyMaxBytes)

@@ -185,7 +185,8 @@ it, with examples: [Verifying access tokens](api/token-verification.md).
 Before deploying, read [Limitations](limitations.md). The two things most
 likely to matter:
 
-- `go-auth` has no TLS or rate limiting of its own. Run it
+- `go-auth` has no TLS of its own, and its rate limiting is off unless you
+  set [`RATE_LIMIT`](configuration.md#rate_limit). Run it
   [behind a reverse proxy](limitations.md#run-it-behind-a-reverse-proxy).
 - The signing key is held in memory, so every restart invalidates all
   outstanding access tokens, and the service runs as
@@ -230,7 +231,7 @@ the closest thing, and it will not notice a database that has gone away.
 ## Where to next
 
 - [Configuration](configuration.md): token lifetimes, bcrypt cost, log
-  format.
+  format, rate limiting.
 - [API reference](api/reference.md): the full contract.
 - [Architecture overview](architecture/overview.md): how the code is laid
   out.

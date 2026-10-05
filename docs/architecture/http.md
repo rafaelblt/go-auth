@@ -30,6 +30,9 @@ Before it decodes anything, the adapter answers `415` to a request whose
 `Content-Type` is not `application/json`, so every endpoint it serves requires
 that header ([API reference](../api/reference.md),
 [why](../development/decisions/0051-post-endpoints-require-application-json.md)).
+Next, when rate limiting is on, it counts the request against the endpoint's
+allowance for the client address and answers `429` once that is used up, still
+without reading the body ([Rate limiting](#rate-limiting)).
 It then limits the body the decoder reads to 64 KiB (`requestBodyMaxBytes`,
 with `http.MaxBytesReader`) and answers `413` when the decoder reaches the
 limit, so every endpoint it serves has it
@@ -92,6 +95,43 @@ The shapes these responses take, and every code they can carry, are in the
 [Error model](../api/errors.md).
 
 ## Rate limiting
+
+Rate limiting is off unless [`RATE_LIMIT`](../configuration.md#rate_limit)
+sets a level. It is checked in the use case adapter, right after the `415`, so
+only the three `POST` endpoints are limited: JWKS, a `404` and a `405` never
+are.
+
+Every `application/json` request counts against the allowance, whatever its
+answer. A request answered `415` is never counted: those are the requests a
+browser sends cross-site without a preflight, and counting them would let any
+web page spend its visitors' allowance. Each endpoint has its own allowance per
+client address; the key is `<endpoint> <address>`, such as
+`login 203.0.113.9`.
+
+A refused request gets `429 too_many_requests` with `Retry-After`, and is not
+counted. Nothing of it was read or run, so the same request can be sent again
+after the wait. A limiter error is answered `500`, like any other failing
+dependency.
+
+### Client address
+
+The client address starts as the TCP peer, `r.RemoteAddr`. `X-Forwarded-For`
+is read only when the peer is in
+[`TRUSTED_PROXIES`](../configuration.md#trusted_proxies): every header line is
+joined, the entries are read from the right, and each trusted proxy is
+skipped, so the first address that is not one is the client. When every entry
+is trusted, the leftmost is the client. An empty entry, or one that is not a
+bare address (`ip:port` included), stops the walk at the last good address.
+Reading from the right is what keeps the address from being chosen by the
+client: the leftmost entries are whatever the client sent, and only those a
+trusted proxy appended can be believed.
+
+Every address, the peer and each header entry, is normalised the same way: an
+IPv4-mapped IPv6 address (`::ffff:a.b.c.d`) becomes IPv4, and a zone is
+dropped. An IPv4 client counts as its address, and an IPv6 client as its /64,
+since one host normally holds a whole /64 and could otherwise rotate through
+it. A `RemoteAddr` that is not `ip:port` is used as it is, and no header is
+read.
 
 ### The limiter
 

@@ -28,6 +28,8 @@ GET  /.well-known/jwks.json  public keys for verifying access tokens
   its whole session.
 - Login answers every failure the same way: one error for every cause, and a
   bcrypt comparison even when the account does not exist.
+- Optional rate limiting of the three `POST` endpoints per client address, at
+  three levels.
 - Structured logs, with an ID for each request.
 - Migrations embedded in the binary, and a startup check that the database
   schema matches the binary.
@@ -35,8 +37,8 @@ GET  /.well-known/jwks.json  public keys for verifying access tokens
 ## What it does not do
 
 It has no email, OAuth or passwordless login, no password reset, no logout,
-no roles or scopes, and no multi-tenancy. It has no TLS or rate limiting of
-its own, so run it behind a reverse proxy. The signing key is held in memory:
+no roles or scopes, and no multi-tenancy. It has no TLS of its own, and its
+rate limiting is off by default, so run it behind a reverse proxy. The signing key is held in memory:
 a restart invalidates outstanding access tokens, and the service runs as a
 single replica. Read [Limitations](docs/limitations.md) before deciding
 whether it fits your project.

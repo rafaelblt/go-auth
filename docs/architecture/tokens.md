@@ -82,5 +82,5 @@ key; see [Limitations](../limitations.md#deployment).
 | Access tokens can be revoked | **no** ([why](../api/token-verification.md#revocation-is-not-immediate)) |
 | Signing key survives a restart | **no** ([why](../limitations.md#one-replica-and-a-restart-invalidates-access-tokens)) |
 | Key rotation keeps issued tokens valid | **no** ([why](../limitations.md#key-rotation-has-no-overlap)) |
-| Rate limiting | **no**, use a reverse proxy ([why](../limitations.md#run-it-behind-a-reverse-proxy)) |
+| Rate limiting | only when [`RATE_LIMIT`](../configuration.md#rate_limit) is set; otherwise use a reverse proxy ([why](../limitations.md#run-it-behind-a-reverse-proxy)) |
 | Maximum session age | **no** ([why](../limitations.md#sessions-have-no-maximum-age)) |

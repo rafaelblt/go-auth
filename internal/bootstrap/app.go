@@ -76,7 +76,7 @@ func NewApp(ctx context.Context, params AppParams) (_ *App, err error) {
 
 	deps := dependencies{Logger: logger, Infra: infra, UseCases: uc}
 
-	router, err := newRouter(deps)
+	router, err := newRouter(cfg, deps)
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/infra/jwt"
 	"github.com/rafaelblt/go-auth/internal/infra/jwt/ed25519"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
+	"github.com/rafaelblt/go-auth/internal/infra/ratelimit"
 	"github.com/rafaelblt/go-auth/internal/port"
 )
 
@@ -29,6 +30,7 @@ type infraDeps struct {
 	Ed25519Keyring     *ed25519.Keyring
 	Ed25519Signer      *ed25519.Signer
 	AccessTokenService *jwt.AccessTokenService
+	RateLimiter        *ratelimit.InMemory
 }
 
 func (deps infraDeps) close() {
@@ -110,6 +112,12 @@ func newInfra(ctx context.Context, cfg config.Config) (deps infraDeps, err error
 		return deps, err
 	}
 	deps.AccessTokenService = accessTokens
+
+	rateLimiter, err := buildRateLimiter(clock)
+	if err != nil {
+		return deps, err
+	}
+	deps.RateLimiter = rateLimiter
 
 	return deps, nil
 }
@@ -201,4 +209,12 @@ func buildAccessTokenService(signer jwt.Signer, clock port.Clock, exp time.Durat
 		return nil, fmt.Errorf("new access token service failed: %w", err)
 	}
 	return service, nil
+}
+
+func buildRateLimiter(clock port.Clock) (*ratelimit.InMemory, error) {
+	limiter, err := ratelimit.NewInMemory(ratelimit.Config{Clock: clock})
+	if err != nil {
+		return nil, fmt.Errorf("rate limiter creation failed: %w", err)
+	}
+	return limiter, nil
 }

@@ -32,7 +32,9 @@ Then, for the layer you are touching, the document for it:
 - **Nothing logs a credential, a token or a password.** This holds because of the
   call sites, not a filter.
 - **`docs/` describes only what exists.** An idea, a planned feature or an open
-  question does not go there.
+  question does not go there. A deprecation does: a value that works today but
+  that the next major version removes, such as `RATE_LIMIT=off`, is documented
+  as deprecated, with what replaces it.
 
 ## Running the tests
 

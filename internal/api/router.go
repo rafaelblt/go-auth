@@ -10,6 +10,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/netip"
 
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
@@ -19,6 +20,8 @@ import (
 
 type Config struct {
 	Dependencies Dependencies
+	// RateLimiting nil turns rate limiting off.
+	RateLimiting *RateLimiting
 }
 
 type Dependencies struct {
@@ -28,6 +31,14 @@ type Dependencies struct {
 	Login             useCase[login.Input, login.Output]
 	Refresh           useCase[refresh.Input, refresh.Output]
 	PublicKeyProvider port.PublicKeyProvider
+}
+
+type RateLimiting struct {
+	Limiter        port.RateLimiter
+	TrustedProxies []netip.Prefix
+	Register       port.RateLimit
+	Login          port.RateLimit
+	Refresh        port.RateLimit
 }
 
 func NewRouter(cfg Config) (http.Handler, error) {
@@ -50,23 +61,45 @@ func NewRouter(cfg Config) (http.Handler, error) {
 		return nil, errors.New("public key provider nil")
 	}
 
+	var registerLimit, loginLimit, refreshLimit *endpointRateLimit
+	if rl := cfg.RateLimiting; rl != nil {
+		if rl.Limiter == nil {
+			return nil, errors.New("rate limiter nil")
+		}
+		if !validRateLimit(rl.Register) {
+			return nil, errors.New("register rate limit invalid")
+		}
+		if !validRateLimit(rl.Login) {
+			return nil, errors.New("login rate limit invalid")
+		}
+		if !validRateLimit(rl.Refresh) {
+			return nil, errors.New("refresh rate limit invalid")
+		}
+		registerLimit = newEndpointRateLimit(*rl, "register", rl.Register)
+		loginLimit = newEndpointRateLimit(*rl, "login", rl.Login)
+		refreshLimit = newEndpointRateLimit(*rl, "refresh", rl.Refresh)
+	}
+
 	register := adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
 		UseCase:    cfg.Dependencies.Register,
 		Decoder:    registerDecoder,
 		Encoder:    registerEncoder,
 		SuccessLog: registerSuccessLog,
+		RateLimit:  registerLimit,
 	})
 	login := adaptUseCase(useCaseAdapterParams[login.Input, login.Output]{
 		UseCase:    cfg.Dependencies.Login,
 		Decoder:    loginDecoder,
 		Encoder:    loginEncoder,
 		SuccessLog: loginSuccessLog,
+		RateLimit:  loginLimit,
 	})
 	refresh := adaptUseCase(useCaseAdapterParams[refresh.Input, refresh.Output]{
 		UseCase:    cfg.Dependencies.Refresh,
 		Decoder:    refreshDecoder,
 		Encoder:    refreshEncoder,
 		SuccessLog: refreshSuccessLog,
+		RateLimit:  refreshLimit,
 	})
 
 	mux := http.NewServeMux()

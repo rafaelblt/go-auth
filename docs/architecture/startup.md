@@ -12,13 +12,14 @@ handler and turns the returned error into an exit code, nothing else.
 it, and hands both to `NewApp` in an `AppParams`, which runs, in order:
 
 1. Build the infrastructure: pool, repositories, hasher, keyring, signer,
-   token service (`infra.go`).
+   token service, rate limiter (`infra.go`).
 2. Apply the migrations, if `AUTO_MIGRATE` is set (`schema.go`).
 3. Check that the schema version matches the latest embedded migration, and
    fail if not (`schema.go`).
 4. Build the use cases from the config and the infrastructure
    (`usecases.go`).
-5. Build the router (`router.go`).
+5. Build the router (`router.go`), with the limits of the `RATE_LIMIT` level
+   from `rate_limit.go`, or none when it is `off`.
 
 A failure at any step after the pool exists closes the pool before
 returning, so a startup that fails leaves no open connections behind. Both

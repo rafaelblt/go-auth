@@ -97,6 +97,6 @@ would need an `if err != nil` after every field. `Err()` returns a
 This is how registration reports a bad username and a bad password in one
 response.
 
-`internal/config` uses it the same way, over six fields instead of two, which is
+`internal/config` uses it the same way, over seven fields instead of two, which is
 how a startup failure lists every misconfigured variable at once instead of the
 first one.

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"time"
 )
 
@@ -52,4 +53,14 @@ var envRefreshTokenTTL = env[time.Duration]{
 var envLogFormat = env[LogFormat]{
 	Key:    "LOG_FORMAT",
 	Parser: logFormatEnvParser,
+}
+
+var envRateLimit = env[RateLimitLevel]{
+	Key:    "RATE_LIMIT",
+	Parser: rateLimitLevelEnvParser,
+}
+
+var envTrustedProxies = env[[]netip.Prefix]{
+	Key:    "TRUSTED_PROXIES",
+	Parser: trustedProxiesEnvParser,
 }
