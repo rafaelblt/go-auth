@@ -44,6 +44,7 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 			return
 		}
 
+		// See docs/development/decisions/0052-rate-limit-is-decided-before-the-body-is-read.md.
 		if p.RateLimit != nil {
 			decision, client, err := p.RateLimit.allow(r)
 			if err != nil {
