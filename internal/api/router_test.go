@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,24 @@ func TestNewRouter_RateLimitsEachPostEndpoint_WithItsOwnLimit(t *testing.T) {
 		{Key: "register 192.0.2.1", Limit: rateLimiting.Register},
 		{Key: "login 192.0.2.1", Limit: rateLimiting.Login},
 		{Key: "refresh 192.0.2.1", Limit: rateLimiting.Refresh},
+	}, limiter.Calls())
+}
+
+func TestNewRouter_CountsTheForwardedClient_WhenThePeerIsATrustedProxy(t *testing.T) {
+	deps, _ := newRouterTestDependencies(t)
+	limiter := porttest.NewFakeRateLimiter()
+	rateLimiting := newRouterTestRateLimiting(limiter)
+	rateLimiting.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+	handler, err := NewRouter(Config{Dependencies: deps, RateLimiting: rateLimiting})
+	require.NoError(t, err)
+	req := newJSONPost("/v1/auth/login")
+	req.RemoteAddr = "10.0.0.1:1234"
+	req.Header.Set("X-Forwarded-For", "203.0.113.9")
+
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	assert.Equal(t, []porttest.FakeRateLimiterCall{
+		{Key: "login 203.0.113.9", Limit: rateLimiting.Login},
 	}, limiter.Calls())
 }
 
