@@ -65,7 +65,9 @@ behind a reverse proxy that:
 
 With the service's own rate limiting on, set
 [`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
-client is counted as the proxy and they all share its allowance.
+client is counted as the proxy and they all share its allowance. The same
+holds for an application server that calls the service for its users: it
+has to forward their addresses, and be listed too.
 
 A rate limit by client address, the proxy's or the service's, is not a limit
 by account, so guesses against one account spread over many addresses are not
@@ -89,7 +91,10 @@ counts requests per client address:
   many addresses are not limited.
 - **an address can be many users.** Clients behind one NAT share an
   allowance, and an IPv6 /64 counts as one address. `relaxed` exists for
-  that.
+  that. The users of an application server that calls the service for them
+  share its allowance too, unless it forwards their addresses
+  ([`TRUSTED_PROXIES`](configuration.md#trusted_proxies)). v2 cannot turn
+  rate limiting off, so by then such a server has to forward them.
 - **in memory.** The counts live in the process, so a restart restores every
   allowance.
 - **only `X-Forwarded-For`** is read, and only from a

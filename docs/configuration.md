@@ -193,6 +193,12 @@ malformed entry, `ip:port` included, stops the walk at the last good address.
 List every proxy hop between the client and the service: the walk stops at
 the first hop that is missing.
 
+An application server that calls the service for its users, such as a
+backend that relays their logins, is a proxy too: every request it sends
+comes from its own address. List it, and have it append the address of the
+user's request to `X-Forwarded-For` the way a reverse proxy does, or all of
+its users share one allowance.
+
 An address written as IPv4-mapped IPv6 (`::ffff:a.b.c.d`) counts as IPv4
 wherever it appears: in this list, as a bare address or as a prefix of `/96`
 or longer, as the peer, or in the header. A zone is ignored. An IPv6 client
