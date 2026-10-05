@@ -25,6 +25,7 @@ on, so that nothing in `usecase` or `domain` names a concrete adapter:
 | Passwords | `PasswordHasher`, `PasswordChecker` |
 | Access tokens | `AccessTokenIssuer`, `AccessTokenValidator` |
 | Keys | `PublicKeyProvider` |
+| Rate limiting | `RateLimiter` |
 | Time | `Clock` |
 
 Two of them are not used by a use case. `PublicKeyProvider` is consumed

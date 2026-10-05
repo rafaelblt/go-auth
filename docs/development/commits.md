@@ -60,7 +60,7 @@ leave it out when it spans several packages or the repository as a whole.
 | `validation`, `shared`, `port` | `internal/validation`, `internal/shared`, `internal/port` |
 | `usecase`, `usecase/register`, `usecase/login`, `usecase/refresh` | `internal/usecase/...` |
 | `api` | `internal/api` |
-| `infra/postgres`, `infra/bcrypt`, `infra/jwt`, `infra/migrate` | `internal/infra/*` |
+| `infra/postgres`, `infra/bcrypt`, `infra/jwt`, `infra/migrate`, `infra/ratelimit` | `internal/infra/*` |
 | `bootstrap`, `config`, `cmd` | `internal/bootstrap`, `internal/config`, `cmd` |
 | `testutil`, `apitest`, `porttest`, `postgrestest`, `usertest`, `passwordtest`, `sessiontest`, `migratetest` | `internal/testutil/...` |
 | `migrations`, `e2e`, `docstest` | `migrations`, `tests/e2e`, `tests/docs` |

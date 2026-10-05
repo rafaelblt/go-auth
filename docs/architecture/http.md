@@ -90,3 +90,17 @@ Every reason a generic code can hide is listed in
 
 The shapes these responses take, and every code they can carry, are in the
 [Error model](../api/errors.md).
+
+## Rate limiting
+
+### The limiter
+
+`port.RateLimiter` counts requests per key and says whether a request was
+within its limit. `ratelimit.InMemory` is the only implementation. A limit of
+N per period allows N requests at once, then one more every period/N; a
+refused request is not counted.
+
+Per key it keeps a single time: the moment at which the key has its whole
+allowance back. A sweep, at most once a minute, drops the keys past that time,
+so an idle key costs nothing. The counts live in the process, and a restart
+forgets them. A store shared between processes would implement the same port.
