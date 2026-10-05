@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -152,6 +154,41 @@ func TestClientAddress(t *testing.T) {
 			assert.Equal(t, tC.expected, client)
 		})
 	}
+}
+
+func TestClientAddress_AllocatesLessThanTheHeader_WhenItIsLong(t *testing.T) {
+	commas := strings.Repeat(",", 1<<20)
+	testCases := []struct {
+		desc         string
+		remoteAddr   string
+		forwardedFor string
+		expected     string
+	}{
+		{desc: "untrusted peer", remoteAddr: "198.51.100.7:4321", forwardedFor: commas, expected: "198.51.100.7"},
+		{desc: "trusted peer", remoteAddr: "10.0.0.1:1234", forwardedFor: commas + "203.0.113.9", expected: "203.0.113.9"},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", nil)
+			req.RemoteAddr = tC.remoteAddr
+			req.Header.Set("X-Forwarded-For", tC.forwardedFor)
+			trustedProxies := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+			var client string
+
+			allocated := allocatedBytes(func() { client = clientAddress(req, trustedProxies) })
+
+			assert.Equal(t, tC.expected, client)
+			assert.Less(t, allocated, uint64(len(tC.forwardedFor)))
+		})
+	}
+}
+
+func allocatedBytes(f func()) uint64 {
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	f()
+	runtime.ReadMemStats(&after)
+	return after.TotalAlloc - before.TotalAlloc
 }
 
 func TestRetryAfterSeconds(t *testing.T) {

@@ -47,13 +47,8 @@ func clientAddress(r *http.Request, trustedProxies []netip.Prefix) string {
 	}
 
 	client := normalizeAddr(peer.Addr())
-	forwardedFor := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
-	for i := len(forwardedFor) - 1; i >= 0 && isTrustedProxy(client, trustedProxies); i-- {
-		addr, err := netip.ParseAddr(strings.TrimSpace(forwardedFor[i]))
-		if err != nil {
-			break
-		}
-		client = normalizeAddr(addr)
+	if isTrustedProxy(client, trustedProxies) {
+		client = forwardedClient(r.Header.Values("X-Forwarded-For"), client, trustedProxies)
 	}
 
 	if client.Is4() {
@@ -61,6 +56,27 @@ func clientAddress(r *http.Request, trustedProxies []netip.Prefix) string {
 	}
 	prefix, _ := client.Prefix(64)
 	return prefix.String()
+}
+
+// forwardedClient cuts the header from the right, one entry at a time, rather
+// than splitting it: its length is the client's choice, and the walk stops at
+// the first address that is not a trusted proxy.
+func forwardedClient(header []string, peer netip.Addr, trustedProxies []netip.Prefix) netip.Addr {
+	client := peer
+	forwardedFor := strings.Join(header, ",")
+	for isTrustedProxy(client, trustedProxies) {
+		comma := strings.LastIndexByte(forwardedFor, ',')
+		addr, err := netip.ParseAddr(strings.TrimSpace(forwardedFor[comma+1:]))
+		if err != nil {
+			return client
+		}
+		client = normalizeAddr(addr)
+		if comma < 0 {
+			return client
+		}
+		forwardedFor = forwardedFor[:comma]
+	}
+	return client
 }
 
 func normalizeAddr(addr netip.Addr) netip.Addr {
