@@ -72,7 +72,8 @@ Every 10 minutes each instance reads the table again, adds the next key when
 it is due, and deletes the retired ones
 ([Startup](startup.md#background-tasks)). Each instance's own clock decides
 which key signs, so the switch needs no coordination: by then every instance
-has had the next key for most of a day. When two instances add the same
+has had the next key for most of a day
+([why](../development/decisions/0053-signing-keys-are-shared-through-the-database.md)). When two instances add the same
 generation, its primary key keeps the first, and both read it back
 ([guarded writes](persistence/repositories.md#guarded-writes)).
 

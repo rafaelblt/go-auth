@@ -82,6 +82,8 @@ func NewKeyring(ctx context.Context, cfg KeyringConfig) (*Keyring, error) {
 // Sync reads the stored keys, adds the next one when rotation is due, and
 // publishes them without the retired ones. Then it deletes the retired keys
 // from the store: when that fails, the keys are published all the same.
+//
+// See docs/development/decisions/0053-signing-keys-are-shared-through-the-database.md.
 func (k *Keyring) Sync(ctx context.Context) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()

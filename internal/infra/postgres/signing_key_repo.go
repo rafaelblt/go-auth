@@ -44,6 +44,8 @@ func (repo *SigningKeyRepo) List(ctx context.Context) ([]port.StoredSigningKey, 
 
 // Add absorbs a conflict on the generation on purpose: the caller lists the
 // keys again either way, so it needs what is stored, not who stored it.
+//
+// See docs/development/decisions/0053-signing-keys-are-shared-through-the-database.md.
 func (repo *SigningKeyRepo) Add(ctx context.Context, key port.StoredSigningKey) error {
 	model := mapSigningKeyToModel(key)
 

@@ -10,7 +10,7 @@ weighed, and what it costs.
 
 ## Records
 
-There are seven in force, and **the numbers have gaps.** Records 0001 to 0044
+There are eight in force, and **the numbers have gaps.** Records 0001 to 0044
 were short
 rationales, and on 2026-09-19 they were folded into the main documentation, next
 to what they explain. A reference to one of them, in an older commit message, can
@@ -27,6 +27,7 @@ message years later.
 | 5 | 0050 | [Refresh token use is settled at write, and losing that race is reuse](0050-refresh-token-use-is-settled-at-write.md) | `MarkUsed` is the only write to `refresh_tokens.used_at`, applies only while the column is `NULL`, and decides on `RowsAffected`. `session.ErrTokenAlreadyUsed` revokes the session whatever its origin. |
 | 6 | 0051 | [The POST endpoints require Content-Type: application/json](0051-post-endpoints-require-application-json.md) | Every endpoint served by `adaptUseCase` answers `415` to a `Content-Type` other than `application/json` before reading the body, and the service sends no CORS headers. |
 | 7 | 0052 | [The rate limit is decided per client address before the body is read](0052-rate-limit-is-decided-before-the-body-is-read.md) | An endpoint served by `adaptUseCase` that is rate limited decides its limit after the `415` and before reading the body or running the use case, counting every request past the `415`; `X-Forwarded-For` is read only from a trusted peer, from the right, and the client is the first address that is not a trusted proxy. |
+| 8 | 0053 | [Signing keys are shared through the database, and the clock decides which one signs](0053-signing-keys-are-shared-through-the-database.md) | Every signing key is a row of `signing_keys`, added only through `SigningKeyStore.Add`, which applies only while its generation is free, after which the keyring lists the keys again. Every instance signs with the key whose `active_at` is the latest not after its own clock, or, while none is active yet, the first to activate. A key other than the first is added a day before its `active_at`, and a key is deleted only once a later key has been active for 25 hours, longer than any access token lives. |
 
 Superseded, kept for the history they carry:
 
