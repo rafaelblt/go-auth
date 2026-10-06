@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/config"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,4 +68,59 @@ func (ta *TestApp) ResetDB(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("truncate tables failed: %w", err)
 	}
 	return nil
+}
+
+// startSecondApp starts another app with params, on its own address and over
+// the suite's database unless params names another, and stops it when the test
+// ends. The shared app keeps the defaults every other test relies on.
+func startSecondApp(t *testing.T, params config.ConfigParams) *testutil.HTTPClient {
+	t.Helper()
+
+	params.Address = "localhost:8081"
+	if params.DatabaseURL == "" {
+		params.DatabaseURL = testApp.cfg.DatabaseURL()
+	}
+	params.BcryptCost = shared.Ptr(6)
+	cfg, err := config.NewConfig(params)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	app, err := bootstrap.NewApp(ctx, bootstrap.AppParams{Config: cfg})
+	require.NoError(t, err)
+
+	var runErr error
+	stopped := make(chan struct{})
+	go func() {
+		runErr = app.Run(ctx)
+		close(stopped)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-stopped
+		app.Close()
+		assert.NoError(t, runErr)
+	})
+
+	baseURL := "http://" + cfg.Address()
+	deadline := time.After(5 * time.Second)
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		resp, err := http.Get(baseURL + JWKSPath)
+		if err == nil {
+			resp.Body.Close()
+			break
+		}
+		select {
+		case <-stopped:
+			t.Fatalf("second app stopped before serving: %v", runErr)
+		case <-deadline:
+			t.Fatalf("second app not serving after 5s: %v", err)
+		case <-ticker.C:
+		}
+	}
+
+	client, err := testutil.NewHTTPClient(baseURL)
+	require.NoError(t, err)
+	return client
 }

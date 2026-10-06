@@ -69,6 +69,10 @@ func NewApp(ctx context.Context, params AppParams) (_ *App, err error) {
 		return nil, err
 	}
 
+	if err = infra.buildSigning(ctx, cfg); err != nil {
+		return nil, err
+	}
+
 	uc, err := newUsecases(cfg, infra)
 	if err != nil {
 		return nil, err
@@ -127,9 +131,9 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 	tasks := []periodicTask{
 		{
 			name:     "jwt_keyring_rotation",
-			interval: 7 * 24 * time.Hour,
+			interval: 10 * time.Minute,
 			timeout:  3 * time.Second,
-			run:      app.deps.Infra.Ed25519Keyring.Rotate,
+			run:      app.deps.Infra.Ed25519Keyring.Sync,
 		},
 	}
 

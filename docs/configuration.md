@@ -287,7 +287,10 @@ starts half-configured.
 | HTTP idle timeout | 60s | `internal/bootstrap/app.go` |
 | Request body decoding limit | 64 KiB | `internal/api/adapters.go` |
 | Graceful shutdown timeout | 10s | `internal/bootstrap/app.go` |
-| Signing key rotation interval | 7 days | `internal/bootstrap/app.go` |
+| Signing key rotation interval | 7 days | `internal/bootstrap/infra.go` |
+| Signing key published before it signs | 1 day | `internal/bootstrap/infra.go` |
+| Signing key published after it stops signing | 25 hours | `internal/bootstrap/infra.go` |
+| Signing key sync interval | 10 minutes | `internal/bootstrap/app.go` |
 | Background task timeout, per run | 3s | `internal/bootstrap/app.go` |
 | Schema version check timeout | 5s | `internal/bootstrap/schema.go` |
 | Rate limits of each level | see [`RATE_LIMIT`](#rate_limit) | `internal/bootstrap/rate_limit.go` |

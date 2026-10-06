@@ -197,8 +197,10 @@ database their migrations have not touched. For a migrated one, use
 - `internal/infra/postgres` uses `postgrestest.PoolFactory`. `Acquire` drops
   and recreates the schema before each test; `AcquireWithMigrations` then
   applies the migrations.
-- `tests/e2e` empties every table except `schema_migrations` with
-  `postgrestest.TruncateTables` before each test.
+- `tests/e2e` empties every table except `schema_migrations` and
+  `signing_keys` with `postgrestest.TruncateTables` before each test. The
+  signing keys stay because the running app holds them: a second app started
+  after a truncation would add other ones.
 
 ## End-to-end tests
 
@@ -228,7 +230,11 @@ The suite uses `BcryptCost: 6`, so hashing does not dominate the login tests.
 `tests/e2e/rate_limit_test.go` starts a second app of its own, with
 `RATE_LIMIT` `strict` on `localhost:8081`, over the same database: limits on
 the shared app would interfere with every other test.
+`tests/e2e/signing_keys_test.go` starts a second app over the same database
+too, to check that both sign and publish with the same keys, and one over an
+empty database with `AUTO_MIGRATE` on, to check that startup migrates before
+it reads the signing keys.
 
-It covers register, login, refresh, JWKS, unknown paths and rate limiting,
-and in `mix_test.go`, sequences across endpoints, including rotation and reuse
+It covers register, login, refresh, JWKS, unknown paths, rate limiting and
+signing keys shared between instances, and in `mix_test.go`, sequences across endpoints, including rotation and reuse
 detection, the flow most worth testing end to end.

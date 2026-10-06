@@ -25,31 +25,21 @@ provide:
 
 ## Deployment
 
-### One replica, and a restart invalidates access tokens
+### Signing keys are stored in the database
 
-The key that signs access tokens is generated at startup and held only in
-memory. As a result:
+The keys that sign access tokens are rows of the `signing_keys` table, so
+every instance signs and publishes the same keys, and a restart changes
+nothing ([how](architecture/tokens.md#signing-keys)). As a result:
 
-- **every restart invalidates every outstanding access token.** Your services
-  reject them until each client refreshes. Refresh tokens are stored in the
-  database and survive the restart, so refreshing works.
-- **`go-auth` runs as a single replica.** Two instances sign with different
-  keys, and each publishes only its own, so a token issued by one fails
-  verification against the other's JWKS.
-
-### Key rotation has no overlap
-
-The signing key is replaced every 7 days, and on every restart. Only the
-current key is published:
-
-- the previous key leaves `/.well-known/jwks.json` at once, so tokens it
-  signed stop verifying before they expire;
-- the new key is published only when it starts signing, so a verifier with a
-  cached JWKS rejects fresh tokens until it fetches the document again.
-
-Verifiers should refetch the JWKS on an unknown `kid`
-([how](api/token-verification.md#fetching-and-caching-keys)), and clients
-should refresh when a service answers `401`.
+- **they are stored unencrypted.** Whoever reads the database, or a backup of
+  it, can sign access tokens that every verifier accepts while that key is
+  published. A key is published for about 9 days from when it is added: a day
+  before it signs, 7 days signing, and 25 hours after. So, while rotation
+  runs, a backup holds no usable key after that. Protect the database and its
+  backups like the keys they hold.
+- **instances go by their own clocks** for when a key starts signing and when
+  an old one is dropped. The margins absorb up to an hour of skew, so keep the
+  clocks synchronised.
 
 ### Run it behind a reverse proxy
 
@@ -96,7 +86,8 @@ counts requests per client address:
   ([`TRUSTED_PROXIES`](configuration.md#trusted_proxies)). v2 cannot turn
   rate limiting off, so by then such a server has to forward them.
 - **in memory.** The counts live in the process, so a restart restores every
-  allowance.
+  allowance, and each instance counts on its own: N instances allow N times
+  the limit.
 - **only `X-Forwarded-For`** is read, and only from a
   [trusted proxy](configuration.md#trusted_proxies); `Forwarded` and
   `X-Real-IP` are ignored.

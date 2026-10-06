@@ -410,8 +410,9 @@ components:
           items:
             $ref: '#/components/schemas/Jwk'
           description: |
-            The key signing now (exactly one today). Select a key by the `kid`
-            in the token's header.
+            The key signing now, the next one from a day before it signs, and
+            the previous one for 25 hours after it stops. Select a key by the
+            `kid` in the token's header.
 
     Error:
       type: object

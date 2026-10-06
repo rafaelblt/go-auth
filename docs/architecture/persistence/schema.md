@@ -1,7 +1,7 @@
 # Schema
 
-Five tables: one per entity, plus `signing_keys`, which stands alone, with no
-foreign key to or from any other.
+Five tables: one per entity, plus `signing_keys`, which holds the keys that
+sign access tokens and stands alone, with no foreign key to or from any other.
 
 ```
 users ──1:0..1── passwords
@@ -113,8 +113,10 @@ CREATE TABLE signing_keys (
   settles two instances adding the same next key: the insert targets it with
   `ON CONFLICT (generation) DO NOTHING`, so the second inserts nothing.
 - **`seed`** is the key's Ed25519 private key, in its 32-byte form,
-  unencrypted.
+  [unencrypted](../../limitations.md#signing-keys-are-stored-in-the-database).
 - **`active_at`** is when the key starts signing.
-- **`created_at`** is when it was added.
+- **`created_at`** is when it was added, and from then on published.
 
-The key ID (`kid`) is not stored: it is derived from the key.
+The key ID (`kid`) is not stored: it is derived from the key. A row is
+deleted once the next key has been signing for 25 hours; the whole lifecycle
+is in [Signing keys](../tokens.md#signing-keys).

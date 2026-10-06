@@ -52,21 +52,33 @@ verifier would hold the signing secret, and any of them could mint tokens.
 Ed25519 keys and signatures are much smaller than RSA's, signing is faster,
 and JWKS supports its keys (`OKP`) as standard.
 
-The `Keyring` holds the signing key. A key's ID is its RFC 7638 thumbprint,
+The `Keyring` holds every published key, loaded from the `signing_keys`
+table through `port.SigningKeyStore`, so the keys survive a restart and every
+instance signs with the same ones. A key's ID is its RFC 7638 thumbprint,
 derived from the key itself, so it needs no storage of its own. The signer
 puts the ID in the JWT's `kid` header, and the keyring publishes the matching
-public key at `/.well-known/jwks.json`, so a verifier picks the right key
+public keys at `/.well-known/jwks.json`, so a verifier picks the right key
 without trying each one.
 
-A background task rotates the key every 7 days: it generates a key, stores
-it, and swaps it in atomically. Reads go through an `atomic.Pointer` and only
-rotation takes a lock, so signing never waits for it. See
-[Startup](startup.md#background-tasks).
+Each key goes through three windows:
 
-`KeyStoreInMemory` is the only key store, and the keyring keeps only the
-current key. So a restart invalidates every outstanding access token, the
-service runs as one replica, and a rotation breaks tokens signed with the old
-key; see [Limitations](../limitations.md#deployment).
+- it is added, and published, a day before its `active_at`. The first key is
+  the exception: it signs at once;
+- it signs from its `active_at` until the next key's, 7 days later;
+- it stays published for 25 hours more, longer than any access token lives,
+  and is then deleted.
+
+Every 10 minutes each instance reads the table again, adds the next key when
+it is due, and deletes the retired ones
+([Startup](startup.md#background-tasks)). Each instance's own clock decides
+which key signs, so the switch needs no coordination: by then every instance
+has had the next key for most of a day. When two instances add the same
+generation, its primary key keeps the first, and both read it back
+([guarded writes](persistence/repositories.md#guarded-writes)).
+
+Reads go through an `atomic.Pointer`, and only a sync takes a lock, so
+signing never waits for it. The keys are stored unencrypted
+([Limitations](../limitations.md#signing-keys-are-stored-in-the-database)).
 
 ## Security properties
 
@@ -80,7 +92,8 @@ key; see [Limitations](../limitations.md#deployment).
 | Login timing does not reveal whether an account exists | yes, unless `BCRYPT_COST` changed ([why](../limitations.md#login-timing-after-a-bcrypt_cost-change)) |
 | Refresh errors do not reveal a token's state | yes |
 | Access tokens can be revoked | **no** ([why](../api/token-verification.md#revocation-is-not-immediate)) |
-| Signing key survives a restart | **no** ([why](../limitations.md#one-replica-and-a-restart-invalidates-access-tokens)) |
-| Key rotation keeps issued tokens valid | **no** ([why](../limitations.md#key-rotation-has-no-overlap)) |
+| Signing key survives a restart | yes |
+| Key rotation keeps issued tokens valid | yes |
+| Signing keys encrypted at rest | **no** ([why](../limitations.md#signing-keys-are-stored-in-the-database)) |
 | Rate limiting | only when [`RATE_LIMIT`](../configuration.md#rate_limit) is set; otherwise use a reverse proxy ([why](../limitations.md#run-it-behind-a-reverse-proxy)) |
 | Maximum session age | **no** ([why](../limitations.md#sessions-have-no-maximum-age)) |

@@ -188,9 +188,8 @@ likely to matter:
 - `go-auth` has no TLS of its own, and its rate limiting is off unless you
   set [`RATE_LIMIT`](configuration.md#rate_limit). Run it
   [behind a reverse proxy](limitations.md#run-it-behind-a-reverse-proxy).
-- The signing key is held in memory, so every restart invalidates all
-  outstanding access tokens, and the service runs as
-  [a single replica](limitations.md#one-replica-and-a-restart-invalidates-access-tokens).
+- The signing keys are stored unencrypted in the database, so protect it and
+  its backups ([why](limitations.md#signing-keys-are-stored-in-the-database)).
 
 ### The production image
 

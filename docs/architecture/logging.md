@@ -225,7 +225,7 @@ All written by `bootstrap.Run`, except where the table says otherwise.
 |---|---|---|---|
 | `config load failed` | `ERROR` | `error` | Invalid configuration. **Standard error, default format.** Exit 1 |
 | `building app...` | `INFO` | — | `NewApp` started |
-| `app build failed` | `ERROR` | `error` | Wiring, migrations or the schema check failed. Exit 1 |
+| `app build failed` | `ERROR` | `error` | Wiring, migrations, the schema check or loading the signing keys failed. Exit 1 |
 | `rate limiting on` | `INFO` | `rate_limit`, `trusted_proxies` | The [`RATE_LIMIT`](../configuration.md#rate_limit) level in force, and the proxies, from [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies), whose `X-Forwarded-For` is read |
 | `rate limiting is off; from v2 it cannot be turned off, only set to a level` | `WARN` | — | Rate limiting is off, the v1 default; v2 removes [`off`](../configuration.md#rate_limit) |
 | `trusted proxies ignored while rate limiting is off` | `WARN` | `trusted_proxies` | [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies) is set, but only rate limiting reads it, and it is off |
@@ -240,9 +240,10 @@ available, and a port already in use surfaces as `app run failed`.
 ### Background tasks
 
 All carry `task`, the task's name. There is one task,
-`jwt_keyring_rotation`, which rotates the
-[signing key](tokens.md#signing-keys) every 7 days, with a 3 second timeout per
-run.
+`jwt_keyring_rotation`, which syncs the
+[signing keys](tokens.md#signing-keys) every 10 minutes, with a 3 second
+timeout per run. So `background task done` appears every 10 minutes on each
+instance.
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
@@ -251,13 +252,22 @@ run.
 | `background task failed` | `ERROR` | `error`, `elapsed` | One run failed or timed out. The ticker keeps going |
 | `background task stopped` | `INFO` | — | The app's context was cancelled |
 
-A failed rotation is not retried before the next tick. `elapsed` compared with
-the task's timeout says whether the run failed or ran out of time: an `elapsed`
-at or just over 3s means it timed out, and a shorter one means the run itself
-returned an error.
+A failed run is retried at the next tick, 10 minutes later. `elapsed` compared
+with the task's timeout says whether the run failed or ran out of time: an
+`elapsed` at or just over 3s means it timed out, and a shorter one means the
+run itself returned an error.
 
-A rotation that keeps failing leaves the old key signing, which is not dangerous
-but means the key is older than the 7 days the design assumes.
+A sync that keeps failing leaves the instance with the keys it last loaded. It
+keeps signing, and switches to a key it already holds when that key's time
+comes, but it does not see the keys that other instances add. If every
+instance keeps failing, no key is added, and the current one signs past its 7
+days, which is not dangerous.
+
+A run deletes the retired keys only after it has published the others, so a
+delete that fails, for instance because the database role cannot `DELETE`
+from `signing_keys`, fails the run and nothing else: the retired keys stay in
+the table until a delete succeeds. Startup leaves the deleting to the task, so
+it does not fail for that.
 
 ## What is never logged
 

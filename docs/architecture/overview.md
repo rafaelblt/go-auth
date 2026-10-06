@@ -80,7 +80,7 @@ Each layer has its own document:
 | `internal/infra/migrate` | Runs the embedded migrations with golang-migrate |
 | `internal/infra/bcrypt` | Password hashing and verification |
 | `internal/infra/jwt` | Issues and validates access tokens |
-| `internal/infra/jwt/ed25519` | Ed25519 keys, keyring, key store, JWT signer |
+| `internal/infra/jwt/ed25519` | Ed25519 keys, keyring and key rotation, JWT signer |
 | `internal/infra/ratelimit` | Counts requests per key for rate limiting, in memory |
 | `migrations` | Embedded `.sql` files, and `Latest()` |
 | `internal/testutil` | Test helpers, shared across packages |

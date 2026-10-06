@@ -11,14 +11,18 @@ handler and turns the returned error into an exit code, nothing else.
 `Run` loads the configuration, builds the [logger](logging.md#the-setup) from
 it, and hands both to `NewApp` in an `AppParams`, which runs, in order:
 
-1. Build the infrastructure: pool, repositories, hasher, keyring, signer,
-   token service, rate limiter (`infra.go`).
+1. Build the infrastructure: pool, repositories, hasher, rate limiter
+   (`infra.go`).
 2. Apply the migrations, if `AUTO_MIGRATE` is set (`schema.go`).
 3. Check that the schema version matches the latest embedded migration, and
    fail if not (`schema.go`).
-4. Build the use cases from the config and the infrastructure
+4. Build the keyring, which reads the signing keys and adds the first one
+   when there is none, then the signer and the token service
+   (`infra.go`, `buildSigning`). It comes after the check because it reads
+   the database.
+5. Build the use cases from the config and the infrastructure
    (`usecases.go`).
-5. Build the router (`router.go`), with the limits of the `RATE_LIMIT` level
+6. Build the router (`router.go`), with the limits of the `RATE_LIMIT` level
    from `rate_limit.go`, or none when it is `off`.
 
 A failure at any step after the pool exists closes the pool before
@@ -49,5 +53,6 @@ The schema check in steps 2 and 3 is described in
 ## Background tasks
 
 `periodic.go` runs functions on a ticker, with a timeout for each run, until
-the app's context is cancelled. There is one task: rotating the JWT
-[signing key](tokens.md#signing-keys) every 7 days.
+the app's context is cancelled. There is one task: every 10 minutes it syncs
+the [signing keys](tokens.md#signing-keys). It reads them again, adds the next
+one when it is due, and deletes the retired ones.

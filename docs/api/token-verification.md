@@ -79,12 +79,11 @@ it for a few minutes, fetch it again when a token has a `kid` you do not
 know, and limit how often that refetch can happen, so tokens with random
 `kid` values cannot force a flood of requests.
 
-The document holds only the key that is signing now. When the key rotates,
-every 7 days and on every restart, the old key leaves the document and tokens
-it signed stop verifying, even before they expire. Refetching on an unknown
-`kid` covers the new key; for the old tokens, clients refresh when your
-service answers `401`. See
-[Limitations](../limitations.md#key-rotation-has-no-overlap).
+A key is in the document a day before it starts signing, and stays for 25
+hours after it stops, longer than any access token lives. So a verifier that
+fetches the document at least every 23 hours never meets a valid token whose
+`kid` it lacks, and no valid token loses its key. Restarts change nothing. See
+[Signing keys](../architecture/tokens.md#signing-keys).
 
 ## Examples
 

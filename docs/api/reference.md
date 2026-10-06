@@ -310,6 +310,8 @@ needs no authentication.
 A token's `kid` header matches the `kid` of the key that signed it, so a
 verifier can pick the right key without trying each one.
 
-The document holds exactly one key, the one signing now, and the response has
-no cache headers. How to cache it, and what happens when the key rotates:
+The document holds the key signing now, the next one from a day before it
+starts signing, and the previous one for 25 hours after it stops: usually one
+or two keys. The response has no cache headers. How to cache it, and what
+happens when the key rotates:
 [Fetching and caching keys](token-verification.md#fetching-and-caching-keys).

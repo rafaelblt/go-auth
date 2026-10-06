@@ -35,8 +35,9 @@ before any use case runs ([HTTP](../http.md#rate-limiting)). `AccessTokenValidat
 describes verifying an access token inside the service, for an endpoint that
 is not part of v1. `infra/jwt.AccessTokenService` already implements it
 ([Verifying access tokens](../../api/token-verification.md#what-to-verify)).
-`SigningKeyStore` is implemented by `postgres.SigningKeyRepo`, and is used by
-nothing yet.
+`SigningKeyStore` is consumed by the keyring in `internal/infra/jwt/ed25519`,
+so the PostgreSQL repository implements a port like every other, and no
+adapter imports another.
 
 Reading and writing are separate interfaces, even where one type implements
 both: `postgres.UserRepo` is a `UserReader`, a `UserWriter` *and* a
@@ -44,8 +45,8 @@ both: `postgres.UserRepo` is a `UserReader`, a `UserWriter` *and* a
 `Config` struct says what it can do. `register.Config` has a
 `UserExistsChecker` and no `UserReader`: registration cannot read users, and
 that is visible without reading its code. `SigningKeyStore` is the exception:
-one interface lists, adds and deletes the signing keys, because whoever adds a
-key lists them again right after.
+one interface lists, adds and deletes the signing keys, because the keyring,
+its only consumer, uses all three.
 
 `Clock` is a port so that tests control time. Nothing in the domain or the use
 cases calls `time.Now()`.

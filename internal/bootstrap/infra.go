@@ -25,8 +25,8 @@ type infraDeps struct {
 	Passwords          *postgres.PasswordRepo
 	Sessions           *postgres.SessionRepo
 	RefreshTokens      *postgres.RefreshTokenRepo
+	SigningKeys        *postgres.SigningKeyRepo
 	PasswordHasher     *bcrypt.Hasher
-	Ed25519KeyStore    *ed25519.KeyStoreInMemory
 	Ed25519Keyring     *ed25519.Keyring
 	Ed25519Signer      *ed25519.Signer
 	AccessTokenService *jwt.AccessTokenService
@@ -86,32 +86,17 @@ func newInfra(ctx context.Context, cfg config.Config) (deps infraDeps, err error
 	}
 	deps.RefreshTokens = refreshTokens
 
+	signingKeys, err := buildSigningKeyRepo(pool)
+	if err != nil {
+		return deps, err
+	}
+	deps.SigningKeys = signingKeys
+
 	hasher, err := buildPasswordHasher(cfg.BcryptCost())
 	if err != nil {
 		return deps, err
 	}
 	deps.PasswordHasher = hasher
-
-	keystore := ed25519.NewKeyStoreInMemory()
-	deps.Ed25519KeyStore = keystore
-
-	keyring, err := buildEd25519Keyring(ctx, keystore)
-	if err != nil {
-		return deps, err
-	}
-	deps.Ed25519Keyring = keyring
-
-	signer, err := buildEd25519Signer(keyring, clock)
-	if err != nil {
-		return deps, err
-	}
-	deps.Ed25519Signer = signer
-
-	accessTokens, err := buildAccessTokenService(signer, clock, cfg.AccessTokenTTL())
-	if err != nil {
-		return deps, err
-	}
-	deps.AccessTokenService = accessTokens
 
 	rateLimiter, err := buildRateLimiter(clock)
 	if err != nil {
@@ -120,6 +105,30 @@ func newInfra(ctx context.Context, cfg config.Config) (deps infraDeps, err error
 	deps.RateLimiter = rateLimiter
 
 	return deps, nil
+}
+
+// buildSigning builds what signs access tokens. It runs after the schema check,
+// because the keyring reads the signing keys from the database.
+func (deps *infraDeps) buildSigning(ctx context.Context, cfg config.Config) error {
+	keyring, err := buildEd25519Keyring(ctx, deps.SigningKeys, deps.Clock)
+	if err != nil {
+		return err
+	}
+	deps.Ed25519Keyring = keyring
+
+	signer, err := buildEd25519Signer(keyring, deps.Clock)
+	if err != nil {
+		return err
+	}
+	deps.Ed25519Signer = signer
+
+	accessTokens, err := buildAccessTokenService(signer, deps.Clock, cfg.AccessTokenTTL())
+	if err != nil {
+		return err
+	}
+	deps.AccessTokenService = accessTokens
+
+	return nil
 }
 
 func buildPool(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
@@ -170,6 +179,14 @@ func buildRefreshTokenRepo(db postgres.DB) (*postgres.RefreshTokenRepo, error) {
 	return repo, nil
 }
 
+func buildSigningKeyRepo(db postgres.DB) (*postgres.SigningKeyRepo, error) {
+	repo, err := postgres.NewSigningKeyRepo(db)
+	if err != nil {
+		return nil, fmt.Errorf("signing key repo creation failed: %w", err)
+	}
+	return repo, nil
+}
+
 func buildPasswordHasher(cost int) (*bcrypt.Hasher, error) {
 	hasher, err := bcrypt.NewHasher(bcrypt.Config{Cost: cost})
 	if err != nil {
@@ -178,9 +195,20 @@ func buildPasswordHasher(cost int) (*bcrypt.Hasher, error) {
 	return hasher, nil
 }
 
-func buildEd25519Keyring(ctx context.Context, keyStore ed25519.KeyStore) (*ed25519.Keyring, error) {
+const (
+	signingKeyRotationInterval = 7 * 24 * time.Hour
+	signingKeyPublishBefore    = 24 * time.Hour
+	// An hour past the longest ACCESS_TOKEN_TTL that infra/jwt accepts (24h).
+	signingKeyPublishAfter = 25 * time.Hour
+)
+
+func buildEd25519Keyring(ctx context.Context, store port.SigningKeyStore, clock port.Clock) (*ed25519.Keyring, error) {
 	keyring, err := ed25519.NewKeyring(ctx, ed25519.KeyringConfig{
-		KeyStore: keyStore,
+		KeyStore:         store,
+		Clock:            clock,
+		RotationInterval: signingKeyRotationInterval,
+		PublishBefore:    signingKeyPublishBefore,
+		PublishAfter:     signingKeyPublishAfter,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new ed25519 keyring failed: %w", err)

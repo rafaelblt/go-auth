@@ -1,13 +1,10 @@
 package e2e
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"testing"
-	"time"
 
-	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -17,59 +14,12 @@ import (
 
 const TooManyRequestsCode = "too_many_requests"
 
-// startRateLimitedApp starts a second app, on its own address and with
-// rate limiting at level, over the suite's database. The shared app stays at
-// the default, off, since its limits would interfere with every other test.
+// startRateLimitedApp starts a second app with rate limiting at level. The
+// shared app stays at the default, off, since its limits would interfere with
+// every other test.
 func startRateLimitedApp(t *testing.T, level config.RateLimitLevel) *testutil.HTTPClient {
 	t.Helper()
-
-	cfg, err := config.NewConfig(config.ConfigParams{
-		Address:     "localhost:8081",
-		DatabaseURL: testApp.cfg.DatabaseURL(),
-		BcryptCost:  shared.Ptr(6),
-		RateLimit:   shared.Ptr(level),
-	})
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	app, err := bootstrap.NewApp(ctx, bootstrap.AppParams{Config: cfg})
-	require.NoError(t, err)
-
-	var runErr error
-	stopped := make(chan struct{})
-	go func() {
-		runErr = app.Run(ctx)
-		close(stopped)
-	}()
-	t.Cleanup(func() {
-		cancel()
-		<-stopped
-		app.Close()
-		assert.NoError(t, runErr)
-	})
-
-	baseURL := "http://" + cfg.Address()
-	deadline := time.After(5 * time.Second)
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		resp, err := http.Get(baseURL + JWKSPath)
-		if err == nil {
-			resp.Body.Close()
-			break
-		}
-		select {
-		case <-stopped:
-			t.Fatalf("rate limited app stopped before serving: %v", runErr)
-		case <-deadline:
-			t.Fatalf("rate limited app not serving after 5s: %v", err)
-		case <-ticker.C:
-		}
-	}
-
-	client, err := testutil.NewHTTPClient(baseURL)
-	require.NoError(t, err)
-	return client
+	return startSecondApp(t, config.ConfigParams{RateLimit: shared.Ptr(level)})
 }
 
 func TestLogin_ReturnsTooManyRequests_WhenStrictLimitIsUsedUp(t *testing.T) {

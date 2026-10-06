@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const migrationsTable = "schema_migrations"
+// keptTables survive TruncateTables: a running app holds the signing keys in
+// memory, and a second app started after a truncation would add other ones.
+var keptTables = []string{"schema_migrations", "signing_keys"}
 
 func ResetDB(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, `
@@ -29,8 +31,8 @@ func TruncateTables(ctx context.Context, pool *pgxpool.Pool) error {
 	rows, err := pool.Query(ctx, `
         SELECT quote_ident(tablename)
         FROM pg_tables
-        WHERE schemaname = 'public' AND tablename <> $1
-    `, migrationsTable)
+        WHERE schemaname = 'public' AND tablename <> ALL($1)
+    `, keptTables)
 	if err != nil {
 		return fmt.Errorf("list tables failed: %w", err)
 	}

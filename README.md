@@ -38,10 +38,9 @@ GET  /.well-known/jwks.json  public keys for verifying access tokens
 
 It has no email, OAuth or passwordless login, no password reset, no logout,
 no roles or scopes, and no multi-tenancy. It has no TLS of its own, and its
-rate limiting is off by default, so run it behind a reverse proxy. The signing key is held in memory:
-a restart invalidates outstanding access tokens, and the service runs as a
-single replica. Read [Limitations](docs/limitations.md) before deciding
-whether it fits your project.
+rate limiting is off by default, so run it behind a reverse proxy. The signing keys are stored,
+unencrypted, in its database. Read [Limitations](docs/limitations.md) before
+deciding whether it fits your project.
 
 ## Quick start
 
