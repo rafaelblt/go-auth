@@ -281,6 +281,7 @@ not of a filter, so it holds only as long as new lines respect it:
 | Refresh token secrets | The same, and `use case error` describes the failure instead of the token |
 | Usernames | Success lines identify the account by `user_id`, never by name |
 | `DATABASE_URL` | Configuration errors name the variable, not its value |
+| Signing key seeds | `background task failed` and `app build failed` log the keyring's errors, which name a key's generation and a size, never its seed |
 
 Two supports for this. Secret-bearing value objects deliberately have no
 `String` method, so `slog` cannot print them through `%v`

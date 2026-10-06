@@ -55,10 +55,10 @@ an error: updating a row that vanished is a bug, not a no-op.
 `RefreshTokenRepo.MarkUsed` apply only while a condition holds, and report
 the domain error (`user.ErrUsernameAlreadyExists`,
 `session.ErrTokenAlreadyUsed`) when nothing changed, instead of inspecting the
-driver's error. `SigningKeyRepo.Add` applies only while the generation is free
+driver's error. The pattern has its own section, below.
+`SigningKeyRepo.Add` applies only while the generation is free
 (`ON CONFLICT (generation) DO NOTHING`) and reports nothing when it is taken,
-because its caller reads the keys again either way. This one has its own
-section, below.
+because its caller reads the keys again either way.
 
 ## Guarded writes
 
@@ -101,6 +101,13 @@ absorbs exactly one conflict and leaves a primary key collision an error.
 reports a fact about stored state; what to do about that fact stays in the use
 case. `port` holds the abstractions, not the vocabulary, and it documents the
 error on the method that can return it.
+
+**One guarded write reports nothing.** `SigningKeyRepo.Add` targets its column
+like the others, with `ON CONFLICT (generation) DO NOTHING`, but reads no
+`RowsAffected` and returns no sentinel. Its only caller, the keyring, lists the
+keys again after every `Add`, because it needs the key that is stored, not who
+stored it
+([decision 0053](../../development/decisions/0053-signing-keys-are-shared-through-the-database.md)).
 
 **A named method, not a guarded `Update`.** `MarkUsed` says what it does and when
 it fails. A generic `Update` that silently refused when `used_at` was set would
