@@ -80,7 +80,8 @@ generation, its primary key keeps the first, and both read it back
 Reads go through an `atomic.Pointer`, and only a sync takes a lock, so
 signing never waits for it. A key's seed is stored sealed with AES-256-GCM
 when [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key)
-is set, and as it is otherwise
+is set ([why](../development/decisions/0054-signing-key-seeds-are-sealed-when-a-key-is-set.md)),
+and as it is otherwise
 ([Limitations](../limitations.md#signing-keys-are-stored-in-the-database)).
 
 ## Security properties

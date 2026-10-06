@@ -10,7 +10,7 @@ weighed, and what it costs.
 
 ## Records
 
-There are eight in force, and **the numbers have gaps.** Records 0001 to 0044
+There are nine in force, and **the numbers have gaps.** Records 0001 to 0044
 were short
 rationales, and on 2026-09-19 they were folded into the main documentation, next
 to what they explain. A reference to one of them, in an older commit message, can
@@ -28,6 +28,7 @@ message years later.
 | 6 | 0051 | [The POST endpoints require Content-Type: application/json](0051-post-endpoints-require-application-json.md) | Every endpoint served by `adaptUseCase` answers `415` to a `Content-Type` other than `application/json` before reading the body, and the service sends no CORS headers. |
 | 7 | 0052 | [The rate limit is decided per client address before the body is read](0052-rate-limit-is-decided-before-the-body-is-read.md) | An endpoint served by `adaptUseCase` that is rate limited decides its limit after the `415` and before reading the body or running the use case, counting every request past the `415`; `X-Forwarded-For` is read only from a trusted peer, from the right, and the client is the first address that is not a trusted proxy. |
 | 8 | 0053 | [Signing keys are shared through the database, and the clock decides which one signs](0053-signing-keys-are-shared-through-the-database.md) | Every signing key is a row of `signing_keys`, added only through `SigningKeyStore.Add`, which applies only while its generation is free, after which the keyring lists the keys again. Every instance signs with the key whose `active_at` is the latest not after its own clock, or, while none is active yet, the first to activate. A key other than the first is added a day before its `active_at`, and a key is deleted only once a later key has been active for 25 hours, longer than any access token lives. |
+| 9 | 0054 | [Signing key seeds are sealed when an encryption key is set, and plaintext seeds still load](0054-signing-key-seeds-are-sealed-when-a-key-is-set.md) | When `SIGNING_KEY_ENCRYPTION_KEY` is set, every seed the keyring adds is stored sealed with AES-256-GCM under it, with the key's generation as additional data, and the encryption key itself is never stored, logged or echoed. A stored seed of 32 bytes is plaintext and one of 60 bytes is sealed: a plaintext seed loads whether or not the key is set, and a sealed one only with the key it was sealed under. |
 
 Superseded, kept for the history they carry:
 

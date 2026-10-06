@@ -48,6 +48,10 @@ func (c seedCipher) seal(generation int64, seed []byte) []byte {
 	return c.aead.Seal(nil, nil, seed, additionalData(generation))
 }
 
+// open returns the seed of a stored key. A plaintext seed opens whether or not
+// a key is set, so that setting one needs no migration.
+//
+// See docs/development/decisions/0054-signing-key-seeds-are-sealed-when-a-key-is-set.md.
 func (c seedCipher) open(generation int64, stored []byte) ([]byte, error) {
 	switch len(stored) {
 	case ed25519.SeedSize:
