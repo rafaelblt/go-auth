@@ -75,8 +75,8 @@ func TestSigningKeys_AreSharedBetweenInstances(t *testing.T) {
 	assert.Equal(t, usr.ID().String(), claims.Subject)
 }
 
-// The suite's database is migrated before its app starts, so only this test
-// starts an app that migrates the database itself, as the quick start does.
+// The suite's database is migrated before its app starts, so this test starts
+// an app that migrates an empty database itself, as the quick start does.
 func TestSigningKeys_FirstKeyIsAdded_WhenTheAppMigratesAnEmptyDatabase(t *testing.T) {
 	db := testutil.NewDatabaseForTest(t, context.Background())
 
