@@ -159,7 +159,7 @@ func TestNewAccessTokenService_ReturnsError_WhenConfigIsInvalid(t *testing.T) {
 			cfg: AccessTokenServiceConfig{
 				Signer:     NewFakeSigner(),
 				Clock:      porttest.NewFakeClock(),
-				Expiration: maxExpiration + 1,
+				Expiration: MaxExpiration + 1,
 			},
 		},
 	}

@@ -289,7 +289,7 @@ starts half-configured.
 | Graceful shutdown timeout | 10s | `internal/bootstrap/app.go` |
 | Signing key rotation interval | 7 days | `internal/bootstrap/infra.go` |
 | Signing key published before it signs | 1 day | `internal/bootstrap/infra.go` |
-| Signing key published after it stops signing | 25 hours | `internal/bootstrap/infra.go` |
+| Signing key published after it stops signing | 25 hours: the longest `ACCESS_TOKEN_TTL`, plus one | `internal/bootstrap/infra.go` |
 | Signing key sync interval | 10 minutes | `internal/bootstrap/app.go` |
 | Background task timeout, per run | 3s | `internal/bootstrap/app.go` |
 | Schema version check timeout | 5s | `internal/bootstrap/schema.go` |

@@ -198,8 +198,8 @@ func buildPasswordHasher(cost int) (*bcrypt.Hasher, error) {
 const (
 	signingKeyRotationInterval = 7 * 24 * time.Hour
 	signingKeyPublishBefore    = 24 * time.Hour
-	// An hour past the longest ACCESS_TOKEN_TTL that infra/jwt accepts (24h).
-	signingKeyPublishAfter = 25 * time.Hour
+	// An hour past the longest access token, to absorb clock skew between instances.
+	signingKeyPublishAfter = jwt.MaxExpiration + time.Hour
 )
 
 func buildEd25519Keyring(ctx context.Context, store port.SigningKeyStore, clock port.Clock) (*ed25519.Keyring, error) {

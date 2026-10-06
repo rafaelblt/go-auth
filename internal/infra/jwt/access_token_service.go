@@ -18,7 +18,9 @@ import (
 
 const (
 	minExpiration = 1 * time.Minute
-	maxExpiration = 24 * time.Hour
+	// MaxExpiration is the longest access token lifetime NewAccessTokenService
+	// accepts.
+	MaxExpiration = 24 * time.Hour
 )
 
 type AccessTokenService struct {
@@ -45,7 +47,7 @@ func NewAccessTokenService(cfg AccessTokenServiceConfig) (*AccessTokenService, e
 	if cfg.Clock == nil {
 		return nil, errors.New("clock nil")
 	}
-	if cfg.Expiration < minExpiration || cfg.Expiration > maxExpiration {
+	if cfg.Expiration < minExpiration || cfg.Expiration > MaxExpiration {
 		return nil, errors.New("expiration must be between 1m and 24h")
 	}
 
