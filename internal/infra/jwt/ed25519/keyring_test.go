@@ -383,6 +383,31 @@ func TestKeyring_Sync_DeletesThePreviousKey_OncePublishAfterHasPassed(t *testing
 	assert.ErrorIs(t, err, errKidUnknown)
 }
 
+// A late rotation tells the rule decision 0053 states from an age-based one:
+// the first key is RotationInterval + PublishAfter old, and still signs.
+func TestKeyring_Sync_KeepsTheSigningKey_WhenRotationRanLate(t *testing.T) {
+	cfg := keyringConfigForTest(nil, nil)
+	first := storedKeyForTest(t, 1, t0)
+	store := porttest.NewFakeSigningKeyStore()
+	store.Insert(first)
+	clock := clockAt(t0)
+	keyring := newKeyringForTest(t, store, clock)
+	// Every sync failed from day 6 to day 8.
+	clock.SetNow(t0.Add(8 * 24 * time.Hour))
+	require.NoError(t, keyring.Sync(t.Context()))
+	require.Len(t, store.Keys(), 2)
+	second := store.Keys()[1]
+	require.Equal(t, clock.Now().Add(cfg.PublishBefore), second.ActiveAt)
+	clock.SetNow(clock.Now().Add(time.Hour))
+
+	err := keyring.Sync(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, restoredKeyForTest(t, first).id, keyring.SigningKey().id)
+	assert.Equal(t, dtosOf(restoredKeyForTest(t, first), restoredKeyForTest(t, second)), keyring.PublicKeys())
+	assert.Equal(t, []int64{1, 2}, generationsOf(store.Keys()))
+}
+
 func TestKeyring_Sync_LoadsKeysAddedByAnotherInstance(t *testing.T) {
 	clock := clockAt(t0)
 	store := porttest.NewFakeSigningKeyStore()
