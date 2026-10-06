@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bytes"
+	"encoding/base64"
 	"net/netip"
 	"testing"
 	"time"
@@ -342,6 +344,84 @@ func TestTrustedProxiesEnvParser_ReturnsError(t *testing.T) {
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid trusted proxy")
 			assert.Nil(t, value)
+		})
+	}
+}
+
+// encryptionKeyForTest is a fixed key of the 32 bytes SIGNING_KEY_ENCRYPTION_KEY
+// takes.
+var encryptionKeyForTest = bytes.Repeat([]byte{0x2a}, 32)
+
+func TestEncryptionKeyEnvParser(t *testing.T) {
+	encoded := base64.StdEncoding.EncodeToString(encryptionKeyForTest)
+
+	testCases := []struct {
+		desc     string
+		value    string
+		expected []byte
+	}{
+		{
+			desc:     "standard base64 of 32 bytes",
+			value:    encoded,
+			expected: encryptionKeyForTest,
+		},
+		{
+			desc:     "surrounding spaces",
+			value:    "  " + encoded + " ",
+			expected: encryptionKeyForTest,
+		},
+		{
+			desc:     "empty",
+			value:    "",
+			expected: nil,
+		},
+		{
+			desc:     "spaces only",
+			value:    "   ",
+			expected: nil,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := encryptionKeyEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestEncryptionKeyEnvParser_ReturnsError(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		value string
+	}{
+		{
+			desc:  "not base64",
+			value: "not base64!",
+		},
+		{
+			desc:  "base64 of 16 bytes",
+			value: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x2a}, 16)),
+		},
+		{
+			desc:  "base64 of 33 bytes",
+			value: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x2a}, 33)),
+		},
+		{
+			desc:  "url-safe base64 of 32 bytes",
+			value: base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0xfb}, 32)),
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := encryptionKeyEnvParser(tC.value)
+
+			require.Error(t, err)
+			assert.Nil(t, value)
+			assert.NotContains(t, err.Error(), tC.value)
 		})
 	}
 }

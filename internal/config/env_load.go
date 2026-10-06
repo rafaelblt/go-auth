@@ -17,6 +17,8 @@ var envKeyByField = map[string]string{
 	fieldLogFormat:       envLogFormat.Key,
 	fieldRateLimit:       envRateLimit.Key,
 	fieldTrustedProxies:  envTrustedProxies.Key,
+
+	fieldSigningKeyEncryptionKey: envSigningKeyEncryptionKey.Key,
 }
 
 // envLoad collects the failures of the conversion stage and remembers which

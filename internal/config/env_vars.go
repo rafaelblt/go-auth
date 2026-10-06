@@ -64,3 +64,8 @@ var envTrustedProxies = env[[]netip.Prefix]{
 	Key:    "TRUSTED_PROXIES",
 	Parser: trustedProxiesEnvParser,
 }
+
+var envSigningKeyEncryptionKey = env[[]byte]{
+	Key:    "SIGNING_KEY_ENCRYPTION_KEY",
+	Parser: encryptionKeyEnvParser,
+}

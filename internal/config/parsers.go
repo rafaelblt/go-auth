@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -71,6 +72,23 @@ func trustedProxiesEnvParser(val string) ([]netip.Prefix, error) {
 		prefixes = append(prefixes, prefix)
 	}
 	return prefixes, nil
+}
+
+// encryptionKeyEnvParser never puts the value in its errors: it is a secret.
+func encryptionKeyEnvParser(val string) ([]byte, error) {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return nil, nil
+	}
+
+	key, err := base64.StdEncoding.DecodeString(val)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 value: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("decoded to %d bytes, not 32", len(key))
+	}
+	return key, nil
 }
 
 func parseTrustedProxy(entry string) (netip.Prefix, error) {

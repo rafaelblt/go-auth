@@ -3,12 +3,16 @@ package e2e
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rafaelblt/go-auth/internal/bootstrap"
 	"github.com/rafaelblt/go-auth/internal/config"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -85,4 +89,42 @@ func TestSigningKeys_FirstKeyIsAdded_WhenTheAppMigratesAnEmptyDatabase(t *testin
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	jwks := DecodeBody[JWKSResponseBody](t, resp)
 	assert.Len(t, jwks.Keys, 1)
+}
+
+func TestSigningKeys_AreSealed_WhenAnEncryptionKeyIsSet(t *testing.T) {
+	db := testutil.NewDatabaseForTest(t, context.Background())
+	encryptionKey := make([]byte, 32)
+	_, err := rand.Read(encryptionKey)
+	require.NoError(t, err)
+
+	client := startSecondApp(t, config.ConfigParams{
+		DatabaseURL:             db.ConnectionString(),
+		AutoMigrate:             shared.Ptr(true),
+		SigningKeyEncryptionKey: encryptionKey,
+	})
+
+	resp := client.Get(t, JWKSPath)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	jwks := DecodeBody[JWKSResponseBody](t, resp)
+	assert.Len(t, jwks.Keys, 1)
+
+	pool, err := pgxpool.New(t.Context(), db.ConnectionString())
+	require.NoError(t, err)
+	t.Cleanup(pool.Close)
+	rows, err := pool.Query(t.Context(), "SELECT octet_length(seed) FROM signing_keys")
+	require.NoError(t, err)
+	seedSizes, err := pgx.CollectRows(rows, pgx.RowTo[int])
+	require.NoError(t, err)
+	assert.Equal(t, []int{60}, seedSizes)
+
+	cfg, err := config.NewConfig(config.ConfigParams{
+		Address:     "localhost:8082",
+		DatabaseURL: db.ConnectionString(),
+		BcryptCost:  shared.Ptr(6),
+	})
+	require.NoError(t, err)
+	app, err := bootstrap.NewApp(t.Context(), bootstrap.AppParams{Config: cfg})
+	assert.Nil(t, app)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "seed sealed, but no encryption key set")
 }

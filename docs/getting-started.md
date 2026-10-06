@@ -188,8 +188,11 @@ likely to matter:
 - `go-auth` has no TLS of its own, and its rate limiting is off unless you
   set [`RATE_LIMIT`](configuration.md#rate_limit). Run it
   [behind a reverse proxy](limitations.md#run-it-behind-a-reverse-proxy).
-- The signing keys are stored unencrypted in the database, so protect it and
-  its backups ([why](limitations.md#signing-keys-are-stored-in-the-database)).
+- Set [`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key),
+  or the signing keys are stored unencrypted in the database. Either way,
+  protect it and its backups
+  ([why](limitations.md#signing-keys-are-stored-in-the-database)). v2 requires
+  it.
 
 ### The production image
 

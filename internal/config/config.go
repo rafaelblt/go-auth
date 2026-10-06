@@ -30,6 +30,8 @@ const (
 	fieldLogFormat       = "log_format"
 	fieldRateLimit       = "rate_limit"
 	fieldTrustedProxies  = "trusted_proxies"
+
+	fieldSigningKeyEncryptionKey = "signing_key_encryption_key"
 )
 
 type Config struct {
@@ -42,6 +44,8 @@ type Config struct {
 	logFormat       LogFormat
 	rateLimit       RateLimitLevel
 	trustedProxies  []netip.Prefix
+
+	signingKeyEncryptionKey []byte
 }
 
 type ConfigParams struct {
@@ -54,6 +58,9 @@ type ConfigParams struct {
 	LogFormat       *LogFormat
 	RateLimit       *RateLimitLevel
 	TrustedProxies  []netip.Prefix
+	// SigningKeyEncryptionKey is the raw 32-byte key. Nil or empty means not
+	// set.
+	SigningKeyEncryptionKey []byte
 }
 
 // Fallbacks for the params NewConfig accepts as optional.
@@ -99,6 +106,11 @@ func NewConfig(params ConfigParams) (Config, error) {
 		return Config{}, err
 	}
 
+	var signingKeyEncryptionKey []byte
+	if len(params.SigningKeyEncryptionKey) > 0 {
+		signingKeyEncryptionKey = slices.Clone(params.SigningKeyEncryptionKey)
+	}
+
 	cfg := Config{
 		address:         params.Address,
 		databaseURL:     params.DatabaseURL,
@@ -109,6 +121,8 @@ func NewConfig(params ConfigParams) (Config, error) {
 		logFormat:       logFormat,
 		rateLimit:       rateLimit,
 		trustedProxies:  slices.Clone(params.TrustedProxies),
+
+		signingKeyEncryptionKey: signingKeyEncryptionKey,
 	}
 	return cfg, nil
 }
@@ -125,6 +139,7 @@ func LoadConfig() (Config, error) {
 	logFormat := resolveEnv(load, envLogFormat, fieldLogFormat)
 	rateLimit := resolveEnv(load, envRateLimit, fieldRateLimit)
 	trustedProxies := resolveEnv(load, envTrustedProxies, fieldTrustedProxies)
+	signingKeyEncryptionKey := resolveEnv(load, envSigningKeyEncryptionKey, fieldSigningKeyEncryptionKey)
 
 	cfg, err := NewConfig(ConfigParams{
 		Address:         shared.Deref(address),
@@ -136,6 +151,8 @@ func LoadConfig() (Config, error) {
 		LogFormat:       logFormat,
 		RateLimit:       rateLimit,
 		TrustedProxies:  shared.Deref(trustedProxies),
+
+		SigningKeyEncryptionKey: shared.Deref(signingKeyEncryptionKey),
 	})
 
 	errs := load.merge(err)
@@ -185,4 +202,8 @@ func (c Config) RateLimit() RateLimitLevel {
 
 func (c Config) TrustedProxies() []netip.Prefix {
 	return slices.Clone(c.trustedProxies)
+}
+
+func (c Config) SigningKeyEncryptionKey() []byte {
+	return slices.Clone(c.signingKeyEncryptionKey)
 }

@@ -20,6 +20,7 @@ problems at once and exits, rather than starting half-configured.
 | `LOG_FORMAT` | no | `json` | `json` / `text` |
 | `RATE_LIMIT` | no | `off` | `off` / `relaxed` / `normal` / `strict` |
 | `TRUSTED_PROXIES` | no | none | comma-separated IP addresses and CIDR prefixes |
+| `SIGNING_KEY_ENCRYPTION_KEY` | no | none | base64 of 32 bytes |
 
 ### `DATABASE_URL`
 
@@ -219,6 +220,53 @@ from starting:
 invalid environment configuration: 'TRUSTED_PROXIES': invalid trusted proxy "proxy.local": ParseAddr("proxy.local"): unexpected character (at "proxy.local")
 ```
 
+### `SIGNING_KEY_ENCRYPTION_KEY`
+
+The AES-256 key that seals the private seed of each signing key stored in
+`signing_keys`: 32 random bytes, in standard base64. Generate one with:
+
+```bash
+openssl rand -base64 32
+```
+
+Keep it out of the database and its backups. Once it is set, every signing
+key added is stored sealed with it, so a copy of the database holds no usable
+signing key without this value. Keys stored before it was set stay plaintext
+and keep working until they are deleted, about 9 days later. Nothing needs
+migrating.
+
+Every instance needs the same value. Once sealed keys are stored, an instance
+without it, or with another one, cannot read them and does not start:
+`app build failed`, with `seed sealed, but no encryption key set` or
+`seed open failed: …`. An instance already running without it keeps the keys
+it loaded, but from the first sealed key on, every sync fails
+(`background task failed`): it never loads the new key, and keeps signing
+with, and publishing, the old ones only. So the value has to reach every
+instance in the same rollout.
+
+It cannot be changed or removed in place. To change it:
+
+1. stop every instance;
+2. delete every row of `signing_keys`;
+3. start the instances with the new value.
+
+This invalidates outstanding access tokens once, since the keys that signed
+them are gone.
+
+A value that is not standard base64, or that does not decode to 32 bytes,
+stops the service from starting. The error names the variable, never the
+value:
+
+```
+invalid environment configuration: 'SIGNING_KEY_ENCRYPTION_KEY': decoded to 16 bytes, not 32
+```
+
+An empty value means not set.
+
+**Not setting it is deprecated.** It is the v1 default so that upgrading
+changes nothing. v2 requires it. While it is not set, startup logs a `WARN`
+line saying so.
+
 ## Duration format
 
 Durations are parsed with Go's `time.ParseDuration`, which accepts `ns`, `us`,
@@ -324,4 +372,6 @@ setting, so a plain field could not tell "not given, use the default" from
 default. A `nil` pointer means not given. `AutoMigrate` is a plain `bool`,
 because `false` is a valid setting. `RateLimit` is a pointer like the other
 optional fields, and `TrustedProxies` takes parsed `netip.Prefix` values,
-`nil` meaning none.
+`nil` meaning none. `SigningKeyEncryptionKey` takes the raw 32 bytes, `nil`
+meaning none, and any other length fails when the app is built
+(`new ed25519 keyring failed: encryption key size 16, not 32`).

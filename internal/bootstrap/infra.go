@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,7 +111,7 @@ func newInfra(ctx context.Context, cfg config.Config) (deps infraDeps, err error
 // buildSigning builds what signs access tokens. It runs after the schema check,
 // because the keyring reads the signing keys from the database.
 func (deps *infraDeps) buildSigning(ctx context.Context, cfg config.Config) error {
-	keyring, err := buildEd25519Keyring(ctx, deps.SigningKeys, deps.Clock)
+	keyring, err := buildEd25519Keyring(ctx, deps.SigningKeys, deps.Clock, cfg.SigningKeyEncryptionKey())
 	if err != nil {
 		return err
 	}
@@ -202,18 +203,25 @@ const (
 	signingKeyPublishAfter = jwt.MaxExpiration + time.Hour
 )
 
-func buildEd25519Keyring(ctx context.Context, store port.SigningKeyStore, clock port.Clock) (*ed25519.Keyring, error) {
+func buildEd25519Keyring(ctx context.Context, store port.SigningKeyStore, clock port.Clock, encryptionKey []byte) (*ed25519.Keyring, error) {
 	keyring, err := ed25519.NewKeyring(ctx, ed25519.KeyringConfig{
 		KeyStore:         store,
 		Clock:            clock,
 		RotationInterval: signingKeyRotationInterval,
 		PublishBefore:    signingKeyPublishBefore,
 		PublishAfter:     signingKeyPublishAfter,
+		EncryptionKey:    encryptionKey,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new ed25519 keyring failed: %w", err)
 	}
 	return keyring, nil
+}
+
+func logSigningKeyEncryption(logger *slog.Logger, cfg config.Config) {
+	if len(cfg.SigningKeyEncryptionKey()) == 0 {
+		logger.Warn("signing keys are stored unencrypted; from v2 SIGNING_KEY_ENCRYPTION_KEY is required")
+	}
 }
 
 func buildEd25519Signer(keyring *ed25519.Keyring, clock port.Clock) (*ed25519.Signer, error) {

@@ -233,7 +233,9 @@ the shared app would interfere with every other test.
 `tests/e2e/signing_keys_test.go` starts a second app over the same database
 too, to check that both sign and publish with the same keys, and one over an
 empty database with `AUTO_MIGRATE` on, to check that startup migrates before
-it reads the signing keys.
+it reads the signing keys. It starts one more, with
+`SIGNING_KEY_ENCRYPTION_KEY` set, over another empty database, to check that
+the seeds are stored sealed and that an app without the key does not start.
 
 It covers register, login, refresh, JWKS, unknown paths, rate limiting and
 signing keys shared between instances, and in `mix_test.go`, sequences across endpoints, including rotation and reuse

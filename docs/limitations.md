@@ -31,12 +31,19 @@ The keys that sign access tokens are rows of the `signing_keys` table, so
 every instance signs and publishes the same keys, and a restart changes
 nothing ([how](architecture/tokens.md#signing-keys)). As a result:
 
-- **they are stored unencrypted.** Whoever reads the database, or a backup of
-  it, can sign access tokens that every verifier accepts while that key is
-  published. A key is published for about 9 days from when it is added: a day
-  before it signs, 7 days signing, and 25 hours after. So, while rotation
-  runs, a backup holds no usable key after that. Protect the database and its
-  backups like the keys they hold.
+- **they are stored unencrypted unless
+  [`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key)
+  is set.** Without it, whoever reads the database, or a backup of it, can
+  sign access tokens that every verifier accepts while that key is published.
+  A key is published for about 9 days from when it is added: a day before it
+  signs, 7 days signing, and 25 hours after. So, while rotation runs, a backup
+  holds no usable key after that. Protect the database and its backups like
+  the keys they hold. With it set, the database holds only sealed keys, apart
+  from those stored before it was set, until they are deleted. v2 requires it.
+- **the encryption key cannot be rotated.** Changing or removing it leaves the
+  stored keys unreadable, and the service does not start. The way out deletes
+  them, which invalidates outstanding access tokens once
+  ([how](configuration.md#signing_key_encryption_key)).
 - **instances go by their own clocks** for when a key starts signing and when
   an old one is dropped. The margins absorb up to an hour of skew, so keep the
   clocks synchronised.

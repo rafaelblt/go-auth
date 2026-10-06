@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bytes"
+	"encoding/base64"
 	"net/netip"
 	"strconv"
 	"testing"
@@ -30,6 +32,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 	t.Setenv(envLogFormat.Key, string(logFormat))
 	t.Setenv(envRateLimit.Key, "STRICT")
 	t.Setenv(envTrustedProxies.Key, " 10.0.0.0/8, 192.0.2.1 ")
+	t.Setenv(envSigningKeyEncryptionKey.Key, base64.StdEncoding.EncodeToString(encryptionKeyForTest))
 
 	cfg, err := LoadConfig()
 
@@ -46,6 +49,7 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 		netip.MustParsePrefix("10.0.0.0/8"),
 		netip.MustParsePrefix("192.0.2.1/32"),
 	}, cfg.TrustedProxies())
+	assert.Equal(t, encryptionKeyForTest, cfg.SigningKeyEncryptionKey())
 }
 
 func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
@@ -62,6 +66,7 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
 	assert.Equal(t, RateLimitOff, cfg.RateLimit())
 	assert.Empty(t, cfg.TrustedProxies())
+	assert.Nil(t, cfg.SigningKeyEncryptionKey())
 }
 
 func setRequiredEnvs(t *testing.T) {
@@ -115,6 +120,13 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 			setup: func(t *testing.T) {
 				setRequiredEnvs(t)
 				t.Setenv(envTrustedProxies.Key, "proxy.local")
+			},
+		},
+		{
+			desc: "signing key encryption key not 32 bytes",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envSigningKeyEncryptionKey.Key, base64.StdEncoding.EncodeToString(encryptionKeyForTest[:16]))
 			},
 		},
 		{
@@ -184,6 +196,8 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 		LogFormat:       shared.Ptr(LogFormatText),
 		RateLimit:       shared.Ptr(RateLimitNormal),
 		TrustedProxies:  []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")},
+
+		SigningKeyEncryptionKey: encryptionKeyForTest,
 	}
 
 	cfg, err := NewConfig(params)
@@ -199,6 +213,7 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 	assert.Equal(t, *params.LogFormat, cfg.LogFormat())
 	assert.Equal(t, *params.RateLimit, cfg.RateLimit())
 	assert.Equal(t, params.TrustedProxies, cfg.TrustedProxies())
+	assert.Equal(t, params.SigningKeyEncryptionKey, cfg.SigningKeyEncryptionKey())
 }
 
 func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
@@ -217,6 +232,20 @@ func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 	assert.Equal(t, defaultLogFormat, cfg.LogFormat())
 	assert.Equal(t, RateLimitOff, cfg.RateLimit())
 	assert.Empty(t, cfg.TrustedProxies())
+	assert.Nil(t, cfg.SigningKeyEncryptionKey())
+}
+
+func TestNewConfig_TreatsAnEmptySigningKeyEncryptionKeyAsNotSet(t *testing.T) {
+	params := ConfigParams{
+		Address:                 "add ress vlaue",
+		DatabaseURL:             "db url vlaue",
+		SigningKeyEncryptionKey: []byte{},
+	}
+
+	cfg, err := NewConfig(params)
+
+	require.NoError(t, err)
+	assert.Nil(t, cfg.SigningKeyEncryptionKey())
 }
 
 func TestNewConfig_ReturnsError(t *testing.T) {
@@ -317,6 +346,21 @@ func TestConfig_TrustedProxies_IsACopy(t *testing.T) {
 	assert.Equal(t, []netip.Prefix{trusted}, cfg.TrustedProxies())
 }
 
+func TestConfig_SigningKeyEncryptionKey_IsACopy(t *testing.T) {
+	params := ConfigParams{
+		Address:                 "add ress vlaue",
+		DatabaseURL:             "db url vlaue",
+		SigningKeyEncryptionKey: bytes.Clone(encryptionKeyForTest),
+	}
+	cfg, err := NewConfig(params)
+	require.NoError(t, err)
+
+	params.SigningKeyEncryptionKey[0] ^= 0xff
+	cfg.SigningKeyEncryptionKey()[0] ^= 0xff
+
+	assert.Equal(t, encryptionKeyForTest, cfg.SigningKeyEncryptionKey())
+}
+
 func TestNewConfig_ReturnsErrorsTaggedWithTheirField(t *testing.T) {
 	params := ConfigParams{BcryptCost: shared.Ptr(0)}
 
@@ -346,6 +390,35 @@ func TestLoadConfig_ReportsTheEnvironmentVariableKey(t *testing.T) {
 	assert.Contains(t, err.Error(), envBcryptCost.Key)
 	assert.Contains(t, err.Error(), envAccessTokenTTL.Key)
 	assert.Contains(t, err.Error(), validation.CodeNotPositive)
+}
+
+func TestLoadConfig_ReportsTheEncryptionKeyVariable_WithoutItsValue(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		value string
+	}{
+		{
+			desc:  "not base64",
+			value: "not base64!",
+		},
+		{
+			desc:  "base64 of 16 bytes",
+			value: base64.StdEncoding.EncodeToString(encryptionKeyForTest[:16]),
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			setRequiredEnvs(t)
+			t.Setenv(envSigningKeyEncryptionKey.Key, tC.value)
+
+			_, err := LoadConfig()
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), envSigningKeyEncryptionKey.Key)
+			assert.NotContains(t, err.Error(), tC.value)
+		})
+	}
 }
 
 func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {

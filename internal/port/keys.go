@@ -30,7 +30,8 @@ type SigningKeyStore interface {
 }
 
 // StoredSigningKey is a signing key as stored. Seed is its Ed25519 private
-// key, in the 32-byte form of RFC 8032, and is never logged.
+// key, in the 32-byte form of RFC 8032, or that seed as the keyring sealed it
+// when an encryption key is set. Either way, it is never logged.
 type StoredSigningKey struct {
 	Generation int64
 	Seed       []byte

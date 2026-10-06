@@ -229,6 +229,7 @@ All written by `bootstrap.Run`, except where the table says otherwise.
 | `rate limiting on` | `INFO` | `rate_limit`, `trusted_proxies` | The [`RATE_LIMIT`](../configuration.md#rate_limit) level in force, and the proxies, from [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies), whose `X-Forwarded-For` is read |
 | `rate limiting is off; from v2 it cannot be turned off, only set to a level` | `WARN` | — | Rate limiting is off, the v1 default; v2 removes [`off`](../configuration.md#rate_limit) |
 | `trusted proxies ignored while rate limiting is off` | `WARN` | `trusted_proxies` | [`TRUSTED_PROXIES`](../configuration.md#trusted_proxies) is set, but only rate limiting reads it, and it is off |
+| `signing keys are stored unencrypted; from v2 SIGNING_KEY_ENCRYPTION_KEY is required` | `WARN` | — | [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key) is not set, so new signing keys are stored unencrypted; v2 requires it |
 | `running app...` | `INFO` | — | The server is about to listen |
 | `app run failed` | `ERROR` | `error` | The server failed, or graceful shutdown did. Exit 1 |
 | `stopping app...` | `INFO` | — | Clean shutdown after `SIGINT` or `SIGTERM`. Exit 0 |
@@ -282,12 +283,15 @@ not of a filter, so it holds only as long as new lines respect it:
 | Usernames | Success lines identify the account by `user_id`, never by name |
 | `DATABASE_URL` | Configuration errors name the variable, not its value |
 | Signing key seeds | `background task failed` and `app build failed` log the keyring's errors, which name a key's generation and a size, never its seed |
+| `SIGNING_KEY_ENCRYPTION_KEY` | Its parse errors give a byte offset or a size, never the value, and a seed that does not open is reported by generation |
 
 Two supports for this. Secret-bearing value objects deliberately have no
 `String` method, so `slog` cannot print them through `%v`
 ([why](conventions.md#value-rather-than-string)); and the only place a
-configured value is echoed is a parse failure, which can only happen to a
-number, a duration, a boolean or a trusted proxy entry, none of them secret.
+configured value is echoed is a parse failure, and only for a number, a
+duration, a boolean or a trusted proxy entry, none of them secret.
+`SIGNING_KEY_ENCRYPTION_KEY` can fail to parse too, but its errors give a byte
+offset or a size, never the value.
 
 Identifiers are the exception, and deliberately so: every success line carries
 a UUID that names the account without describing it. `user_id` ties register,

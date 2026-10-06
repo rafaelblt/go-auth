@@ -112,8 +112,12 @@ CREATE TABLE signing_keys (
 - **`generation`** orders the keys: 1, 2, and so on. As the primary key, it
   settles two instances adding the same next key: the insert targets it with
   `ON CONFLICT (generation) DO NOTHING`, so the second inserts nothing.
-- **`seed`** is the key's Ed25519 private key, in its 32-byte form,
-  [unencrypted](../../limitations.md#signing-keys-are-stored-in-the-database).
+- **`seed`** is the key's Ed25519 private key, either as its 32 bytes,
+  [unencrypted](../../limitations.md#signing-keys-are-stored-in-the-database),
+  or, when [`SIGNING_KEY_ENCRYPTION_KEY`](../../configuration.md#signing_key_encryption_key)
+  is set, sealed with AES-256-GCM into 60 bytes: a 12-byte nonce, the sealed
+  seed and a 16-byte tag, with the generation as additional data. The length
+  tells the two apart.
 - **`active_at`** is when the key starts signing.
 - **`created_at`** is when it was added, and from then on published.
 

@@ -78,7 +78,9 @@ generation, its primary key keeps the first, and both read it back
 ([guarded writes](persistence/repositories.md#guarded-writes)).
 
 Reads go through an `atomic.Pointer`, and only a sync takes a lock, so
-signing never waits for it. The keys are stored unencrypted
+signing never waits for it. A key's seed is stored sealed with AES-256-GCM
+when [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key)
+is set, and as it is otherwise
 ([Limitations](../limitations.md#signing-keys-are-stored-in-the-database)).
 
 ## Security properties
@@ -95,6 +97,6 @@ signing never waits for it. The keys are stored unencrypted
 | Access tokens can be revoked | **no** ([why](../api/token-verification.md#revocation-is-not-immediate)) |
 | Signing key survives a restart | yes |
 | Key rotation keeps issued tokens valid | yes |
-| Signing keys encrypted at rest | **no** ([why](../limitations.md#signing-keys-are-stored-in-the-database)) |
+| Signing keys encrypted at rest | only when [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key) is set, required from v2 ([why](../limitations.md#signing-keys-are-stored-in-the-database)) |
 | Rate limiting | only when [`RATE_LIMIT`](../configuration.md#rate_limit) is set; otherwise use a reverse proxy ([why](../limitations.md#run-it-behind-a-reverse-proxy)) |
 | Maximum session age | **no** ([why](../limitations.md#sessions-have-no-maximum-age)) |

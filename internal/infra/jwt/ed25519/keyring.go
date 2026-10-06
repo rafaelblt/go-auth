@@ -1,7 +1,8 @@
 // Package ed25519 holds the signing keys: the key type, the keyring that loads
 // them from a port.SigningKeyStore, rotates them in windows and serves them,
 // and the JWT signer. A key's ID is its RFC 7638 thumbprint, derived from the
-// key itself, so it needs no storage of its own.
+// key itself, so it needs no storage of its own. When it is given an
+// encryption key, the keyring seals the seeds of the keys it adds.
 //
 // See docs/architecture/tokens.md#signing-keys.
 package ed25519
@@ -24,6 +25,7 @@ type Keyring struct {
 	rotationInterval time.Duration
 	publishBefore    time.Duration
 	publishAfter     time.Duration
+	seeds            seedCipher
 
 	mu sync.Mutex
 	// keys holds the published keys, by generation, and is never empty. Sync
@@ -40,6 +42,10 @@ type KeyringConfig struct {
 	// PublishAfter is how long a key stays published after the next one
 	// starts signing.
 	PublishAfter time.Duration
+	// EncryptionKey is optional and, when set, 32 bytes. The seeds of the keys
+	// this keyring adds are sealed with it, and sealed seeds are opened with
+	// it. Nil stores new seeds in plaintext.
+	EncryptionKey []byte
 }
 
 func NewKeyring(ctx context.Context, cfg KeyringConfig) (*Keyring, error) {
@@ -61,6 +67,10 @@ func NewKeyring(ctx context.Context, cfg KeyringConfig) (*Keyring, error) {
 	if cfg.PublishBefore >= cfg.RotationInterval {
 		return nil, errors.New("publish before not shorter than rotation interval")
 	}
+	seeds, err := newSeedCipher(cfg.EncryptionKey)
+	if err != nil {
+		return nil, err
+	}
 
 	keyring := Keyring{
 		store:            cfg.KeyStore,
@@ -68,6 +78,7 @@ func NewKeyring(ctx context.Context, cfg KeyringConfig) (*Keyring, error) {
 		rotationInterval: cfg.RotationInterval,
 		publishBefore:    cfg.PublishBefore,
 		publishAfter:     cfg.PublishAfter,
+		seeds:            seeds,
 	}
 
 	// The retired keys are left for Sync to delete, so that a delete that
@@ -141,6 +152,11 @@ func (k *Keyring) list(ctx context.Context) ([]*key, error) {
 
 	keys := make([]*key, 0, len(stored))
 	for _, s := range stored {
+		seed, err := k.seeds.open(s.Generation, s.Seed)
+		if err != nil {
+			return nil, fmt.Errorf("signing key %d restore failed: %w", s.Generation, err)
+		}
+		s.Seed = seed
 		key, err := restoreKey(s)
 		if err != nil {
 			return nil, fmt.Errorf("signing key %d restore failed: %w", s.Generation, err)
@@ -176,7 +192,7 @@ func (k *Keyring) add(ctx context.Context, next port.StoredSigningKey) error {
 	if err != nil {
 		return err
 	}
-	next.Seed = seed
+	next.Seed = k.seeds.seal(next.Generation, seed)
 
 	if err := k.store.Add(ctx, next); err != nil {
 		return fmt.Errorf("signing key store add failed: %w", err)

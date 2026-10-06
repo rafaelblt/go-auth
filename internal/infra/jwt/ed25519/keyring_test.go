@@ -52,6 +52,18 @@ func restoredKeyForTest(t *testing.T, stored port.StoredSigningKey) *key {
 	return key
 }
 
+// openedKeyForTest restores a stored key whose seed may be sealed under
+// encryptionKey.
+func openedKeyForTest(t *testing.T, encryptionKey []byte, stored port.StoredSigningKey) *key {
+	t.Helper()
+
+	seed, err := seedCipherForTest(t, encryptionKey).open(stored.Generation, stored.Seed)
+	require.NoError(t, err)
+	stored.Seed = seed
+
+	return restoredKeyForTest(t, stored)
+}
+
 func clockAt(now time.Time) *porttest.FakeClock {
 	clock := porttest.NewFakeClock()
 	clock.SetNow(now)
@@ -166,6 +178,11 @@ func TestNewKeyring_ReturnsError(t *testing.T) {
 	corruptKey.Seed = corruptKey.Seed[:31]
 	corrupt.Insert(corruptKey)
 
+	sealed := porttest.NewFakeSigningKeyStore()
+	sealedKey := storedKeyForTest(t, 1, t0)
+	sealedKey.Seed = seedCipherForTest(t, encryptionKeyForTest(t)).seal(1, sealedKey.Seed)
+	sealed.Insert(sealedKey)
+
 	with := func(override func(cfg *KeyringConfig)) KeyringConfig {
 		cfg := keyringConfigForTest(porttest.NewFakeSigningKeyStore(), clockAt(t0))
 		override(&cfg)
@@ -184,6 +201,12 @@ func TestNewKeyring_ReturnsError(t *testing.T) {
 		{"publish after zero", with(func(cfg *KeyringConfig) { cfg.PublishAfter = 0 })},
 		{"store fails", with(func(cfg *KeyringConfig) { cfg.KeyStore = failing })},
 		{"store holds a key with a 31-byte seed", with(func(cfg *KeyringConfig) { cfg.KeyStore = corrupt })},
+		{"encryption key of 16 bytes", with(func(cfg *KeyringConfig) { cfg.EncryptionKey = make([]byte, 16) })},
+		{"store holds a sealed seed and no encryption key is set", with(func(cfg *KeyringConfig) { cfg.KeyStore = sealed })},
+		{"store holds a seed sealed under another encryption key", with(func(cfg *KeyringConfig) {
+			cfg.KeyStore = sealed
+			cfg.EncryptionKey = encryptionKeyForTest(t)
+		})},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -263,6 +286,37 @@ func TestNewKeyring_LeavesTheRetiredKeysForSyncToDelete(t *testing.T) {
 	store.assertCalledWith(t, t.Context(), "List")
 }
 
+func TestNewKeyring_SealsTheFirstKey_WhenAnEncryptionKeyIsSet(t *testing.T) {
+	store := porttest.NewFakeSigningKeyStore()
+	encryptionKey := encryptionKeyForTest(t)
+	cfg := keyringConfigForTest(store, clockAt(t0))
+	cfg.EncryptionKey = encryptionKey
+
+	keyring, err := NewKeyring(t.Context(), cfg)
+
+	require.NoError(t, err)
+	require.Len(t, store.Keys(), 1)
+	stored := store.Keys()[0]
+	assert.Len(t, stored.Seed, sealedSeedSize)
+	first := openedKeyForTest(t, encryptionKey, stored)
+	assert.Equal(t, first.id, keyring.SigningKey().id)
+	assert.Equal(t, dtosOf(first), keyring.PublicKeys())
+}
+
+func TestNewKeyring_LoadsAPlaintextSeed_WhenAnEncryptionKeyIsSet(t *testing.T) {
+	first := storedKeyForTest(t, 1, t0)
+	store := porttest.NewFakeSigningKeyStore()
+	store.Insert(first)
+	cfg := keyringConfigForTest(store, clockAt(t0))
+	cfg.EncryptionKey = encryptionKeyForTest(t)
+
+	keyring, err := NewKeyring(t.Context(), cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, restoredKeyForTest(t, first).id, keyring.SigningKey().id)
+	assert.Equal(t, []port.StoredSigningKey{first}, store.Keys(), "store changed")
+}
+
 func TestKeyring_Sync_AddsTheNextKey_PublishedBeforeItSigns_WhenRotationIsDue(t *testing.T) {
 	clock := clockAt(t0)
 	first := storedKeyForTest(t, 1, t0)
@@ -282,6 +336,27 @@ func TestKeyring_Sync_AddsTheNextKey_PublishedBeforeItSigns_WhenRotationIsDue(t 
 	assert.Equal(t, clock.Now(), second.CreatedAt)
 	assert.Equal(t, dtosOf(restoredKeyForTest(t, first), restoredKeyForTest(t, second)), keyring.PublicKeys())
 	assert.Equal(t, restoredKeyForTest(t, first).id, keyring.SigningKey().id)
+}
+
+func TestKeyring_Sync_SealsTheNextKey_WhenAnEncryptionKeyIsSet(t *testing.T) {
+	clock := clockAt(t0)
+	first := storedKeyForTest(t, 1, t0)
+	store := porttest.NewFakeSigningKeyStore()
+	store.Insert(first)
+	encryptionKey := encryptionKeyForTest(t)
+	cfg := keyringConfigForTest(store, clock)
+	cfg.EncryptionKey = encryptionKey
+	keyring, err := NewKeyring(t.Context(), cfg)
+	require.NoError(t, err)
+	clock.SetNow(t0.Add(cfg.RotationInterval - cfg.PublishBefore))
+
+	err = keyring.Sync(t.Context())
+
+	require.NoError(t, err)
+	require.Len(t, store.Keys(), 2)
+	second := store.Keys()[1]
+	assert.Len(t, second.Seed, sealedSeedSize)
+	assert.Equal(t, dtosOf(restoredKeyForTest(t, first), openedKeyForTest(t, encryptionKey, second)), keyring.PublicKeys())
 }
 
 func TestKeyring_Sync_AddsNoKey_BeforeRotationIsDue(t *testing.T) {
