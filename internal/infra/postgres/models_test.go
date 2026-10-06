@@ -7,6 +7,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/passwordtest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
@@ -399,4 +400,36 @@ func TestMapRefreshTokenToEntity(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMapSigningKeyToModel(t *testing.T) {
+	key := port.StoredSigningKey{
+		Generation: 7,
+		Seed:       []byte("0123456789abcdef0123456789abcdef"),
+		ActiveAt:   time.Now().UTC().Add(time.Hour),
+		CreatedAt:  time.Now().UTC(),
+	}
+
+	model := mapSigningKeyToModel(key)
+
+	assert.Equal(t, key.Generation, model.Generation)
+	assert.Equal(t, key.Seed, model.Seed)
+	assert.Equal(t, key.ActiveAt, model.ActiveAt)
+	assert.Equal(t, key.CreatedAt, model.CreatedAt)
+}
+
+func TestMapSigningKeyToRecord(t *testing.T) {
+	model := signingKeyModel{
+		Generation: 7,
+		Seed:       []byte("0123456789abcdef0123456789abcdef"),
+		ActiveAt:   time.Now().UTC().Add(time.Hour),
+		CreatedAt:  time.Now().UTC(),
+	}
+
+	key := mapSigningKeyToRecord(model)
+
+	assert.Equal(t, model.Generation, key.Generation)
+	assert.Equal(t, model.Seed, key.Seed)
+	assert.Equal(t, model.ActiveAt, key.ActiveAt)
+	assert.Equal(t, model.CreatedAt, key.CreatedAt)
 }

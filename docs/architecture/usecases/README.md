@@ -24,24 +24,28 @@ on, so that nothing in `usecase` or `domain` names a concrete adapter:
 | Persistence | `UserReader`, `UserWriter`, `UserExistsChecker`, `PasswordReader`, `PasswordWriter`, `SessionReader`, `SessionWriter`, `RefreshTokenReader`, `RefreshTokenWriter`, `UnitOfWork` |
 | Passwords | `PasswordHasher`, `PasswordChecker` |
 | Access tokens | `AccessTokenIssuer`, `AccessTokenValidator` |
-| Keys | `PublicKeyProvider` |
+| Keys | `PublicKeyProvider`, `SigningKeyStore` |
 | Rate limiting | `RateLimiter` |
 | Time | `Clock` |
 
-Three of them are not used by a use case. `PublicKeyProvider` is consumed
+Four of them are not used by a use case. `PublicKeyProvider` is consumed
 directly by the [JWKS handler](../http.md#jwks-is-a-plain-handler), which has
 no use case behind it. `RateLimiter` is consumed by the use case adapter,
 before any use case runs ([HTTP](../http.md#rate-limiting)). `AccessTokenValidator` is used by nothing yet: it
 describes verifying an access token inside the service, for an endpoint that
 is not part of v1. `infra/jwt.AccessTokenService` already implements it
 ([Verifying access tokens](../../api/token-verification.md#what-to-verify)).
+`SigningKeyStore` is implemented by `postgres.SigningKeyRepo`, and is used by
+nothing yet.
 
 Reading and writing are separate interfaces, even where one type implements
 both: `postgres.UserRepo` is a `UserReader`, a `UserWriter` *and* a
 `UserExistsChecker`. Each use case then declares only what it uses, and its
 `Config` struct says what it can do. `register.Config` has a
 `UserExistsChecker` and no `UserReader`: registration cannot read users, and
-that is visible without reading its code.
+that is visible without reading its code. `SigningKeyStore` is the exception:
+one interface lists, adds and deletes the signing keys, because whoever adds a
+key lists them again right after.
 
 `Clock` is a port so that tests control time. Nothing in the domain or the use
 cases calls `time.Now()`.

@@ -2,7 +2,7 @@
 
 `internal/infra/postgres`
 
-One per entity, each taking a `DB` interface rather than a pool:
+One per table, each taking a `DB` interface rather than a pool:
 
 ```go
 type DB interface {
@@ -21,6 +21,7 @@ serves a plain query and a write inside a transaction.
 | `PasswordRepo` | `PasswordReader`, `PasswordWriter` |
 | `SessionRepo` | `SessionReader`, `SessionWriter` |
 | `RefreshTokenRepo` | `RefreshTokenReader`, `RefreshTokenWriter` |
+| `SigningKeyRepo` | `SigningKeyStore` |
 
 The interfaces themselves are declared in
 [`internal/port`](../usecases/README.md#ports).
@@ -54,7 +55,10 @@ an error: updating a row that vanished is a bug, not a no-op.
 `RefreshTokenRepo.MarkUsed` apply only while a condition holds, and report
 the domain error (`user.ErrUsernameAlreadyExists`,
 `session.ErrTokenAlreadyUsed`) when nothing changed, instead of inspecting the
-driver's error. This one has its own section, below.
+driver's error. `SigningKeyRepo.Add` applies only while the generation is free
+(`ON CONFLICT (generation) DO NOTHING`) and reports nothing when it is taken,
+because its caller reads the keys again either way. This one has its own
+section, below.
 
 ## Guarded writes
 

@@ -91,17 +91,22 @@ func (helper *RefreshTokenRepoTestHelper) UsedCopy(token *session.RefreshToken, 
 	return cp
 }
 
-// RequireWaitingOnLock waits until the connection of tx is blocked on a lock
-// held by another transaction.
 func (helper *RefreshTokenRepoTestHelper) RequireWaitingOnLock(tx pgx.Tx) {
 	helper.t.Helper()
+	requireWaitingOnLock(helper.t, helper.db, tx)
+}
+
+// requireWaitingOnLock waits until the connection of tx is blocked on a lock
+// held by another transaction.
+func requireWaitingOnLock(t *testing.T, db *pgxpool.Pool, tx pgx.Tx) {
+	t.Helper()
 
 	pid := tx.Conn().PgConn().PID()
 	sql := "SELECT wait_event_type = 'Lock' FROM pg_stat_activity WHERE pid = $1"
 
-	require.Eventually(helper.t, func() bool {
+	require.Eventually(t, func() bool {
 		var waiting bool
-		err := helper.db.QueryRow(helper.t.Context(), sql, pid).Scan(&waiting)
+		err := db.QueryRow(t.Context(), sql, pid).Scan(&waiting)
 		return err == nil && waiting
 	}, time.Second, 10*time.Millisecond, "transaction is not waiting on a lock")
 }

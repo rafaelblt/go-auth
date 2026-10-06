@@ -12,7 +12,7 @@ import (
 func TestLatest(t *testing.T) {
 	latest, err := Latest()
 	assert.NoError(t, err)
-	assert.Equal(t, uint(4), latest)
+	assert.Equal(t, uint(5), latest)
 }
 
 var createTableRe = regexp.MustCompile(`(?is)CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)`)

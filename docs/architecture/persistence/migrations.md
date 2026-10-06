@@ -10,6 +10,7 @@ files on disk.
 000002_create_passwords.up.sql      000002_create_passwords.down.sql
 000003_create_sessions.up.sql       000003_create_sessions.down.sql
 000004_create_refresh_tokens.up.sql 000004_create_refresh_tokens.down.sql
+000005_create_signing_keys.up.sql   000005_create_signing_keys.down.sql
 ```
 
 Every migration has a `down`. golang-migrate records the applied version in a

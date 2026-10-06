@@ -1,6 +1,7 @@
 # Schema
 
-Four tables, one per entity.
+Five tables: one per entity, plus `signing_keys`, which stands alone, with no
+foreign key to or from any other.
 
 ```
 users ──1:0..1── passwords
@@ -96,3 +97,24 @@ CREATE TABLE refresh_tokens (
 
 Nothing deletes rows from this table; see
 [Limitations](../../limitations.md#refresh-token-rows-are-never-deleted).
+
+## `signing_keys`
+
+```sql
+CREATE TABLE signing_keys (
+    generation BIGINT PRIMARY KEY,
+    seed       BYTEA NOT NULL,
+    active_at  TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+```
+
+- **`generation`** orders the keys: 1, 2, and so on. As the primary key, it
+  settles two instances adding the same next key: the insert targets it with
+  `ON CONFLICT (generation) DO NOTHING`, so the second inserts nothing.
+- **`seed`** is the key's Ed25519 private key, in its 32-byte form,
+  unencrypted.
+- **`active_at`** is when the key starts signing.
+- **`created_at`** is when it was added.
+
+The key ID (`kid`) is not stored: it is derived from the key.

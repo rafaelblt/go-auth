@@ -8,6 +8,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
+	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/shared"
 )
 
@@ -48,6 +49,13 @@ type refreshTokenModel struct {
 	UsedAt    *time.Time `db:"used_at"`
 	CreatedAt time.Time  `db:"created_at"`
 	UpdatedAt time.Time  `db:"updated_at"`
+}
+
+type signingKeyModel struct {
+	Generation int64     `db:"generation"`
+	Seed       []byte    `db:"seed"`
+	ActiveAt   time.Time `db:"active_at"`
+	CreatedAt  time.Time `db:"created_at"`
 }
 
 func mapUserToModel(entity *user.User) (userModel, error) {
@@ -256,4 +264,22 @@ func mapRefreshTokenToEntity(model refreshTokenModel) (*session.RefreshToken, er
 	}
 
 	return token, nil
+}
+
+func mapSigningKeyToModel(key port.StoredSigningKey) signingKeyModel {
+	return signingKeyModel{
+		Generation: key.Generation,
+		Seed:       key.Seed,
+		ActiveAt:   key.ActiveAt,
+		CreatedAt:  key.CreatedAt,
+	}
+}
+
+func mapSigningKeyToRecord(model signingKeyModel) port.StoredSigningKey {
+	return port.StoredSigningKey{
+		Generation: model.Generation,
+		Seed:       model.Seed,
+		ActiveAt:   model.ActiveAt,
+		CreatedAt:  model.CreatedAt,
+	}
 }
