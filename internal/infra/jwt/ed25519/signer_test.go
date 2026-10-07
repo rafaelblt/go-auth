@@ -39,6 +39,15 @@ func validClaims() jwt.RegisteredClaims {
 	}
 }
 
+func tokenWithHeader(t *testing.T, signer *Signer, header string) string {
+	t.Helper()
+	token, err := signer.Sign(validClaims())
+	require.NoError(t, err)
+	parts := strings.Split(token, ".")
+	parts[0] = base64.RawURLEncoding.EncodeToString([]byte(header))
+	return strings.Join(parts, ".")
+}
+
 func assertNumericDate(t *testing.T, expected, actual *jwt.NumericDate) {
 	t.Helper()
 	if expected == nil {
@@ -204,6 +213,20 @@ func TestSigner_Parse_ReturnsErrTokenInvalid(t *testing.T) {
 					SignedString(jwt.UnsafeAllowNoneSignatureType)
 				require.NoError(t, err)
 				return raw
+			},
+		},
+		{
+			desc: "token with an unknown alg",
+			tokenFor: func(t *testing.T, signer *Signer) string {
+				kid := signer.keyring.SigningKey().id
+				return tokenWithHeader(t, signer, `{"alg":"ES999","kid":"`+kid+`","typ":"JWT"}`)
+			},
+		},
+		{
+			desc: "token without alg",
+			tokenFor: func(t *testing.T, signer *Signer) string {
+				kid := signer.keyring.SigningKey().id
+				return tokenWithHeader(t, signer, `{"kid":"`+kid+`","typ":"JWT"}`)
 			},
 		},
 		{

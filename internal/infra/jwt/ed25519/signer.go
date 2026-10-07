@@ -64,6 +64,7 @@ func (s *Signer) Parse(raw string) (jwt.RegisteredClaims, error) {
 	case errors.Is(err, jwt.ErrTokenExpired):
 		return jwt.RegisteredClaims{}, ErrTokenExpired
 	case errors.Is(err, jwt.ErrTokenMalformed),
+		errors.Is(err, jwt.ErrTokenUnverifiable),
 		errors.Is(err, jwt.ErrTokenSignatureInvalid),
 		errors.Is(err, jwt.ErrTokenNotValidYet),
 		errors.Is(err, jwt.ErrTokenInvalidClaims),
