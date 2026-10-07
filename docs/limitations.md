@@ -55,10 +55,10 @@ off unless [`RATE_LIMIT`](configuration.md#rate_limit) turns it on. Put it
 behind a reverse proxy that:
 
 - terminates TLS;
-- rate limits the three `POST` endpoints when `RATE_LIMIT` is `off`. Nothing
+- rate limits register, login and refresh when `RATE_LIMIT` is `off`. Nothing
   else limits password guessing then, apart from the cost of a bcrypt
   comparison;
-- exposes only the four endpoints.
+- exposes only the five endpoints.
 
 With the service's own rate limiting on, set
 [`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
@@ -116,7 +116,8 @@ delete. Deleting the session deletes its tokens with it.
 
 Revoking a session stops its refresh token at once, but access tokens already
 issued stay valid until they expire. `ACCESS_TOKEN_TTL` is how long a revoked
-session keeps working. See
+session keeps working. [`POST /v1/auth/verify`](api/reference.md#post-v1authverify)
+does not change that: it makes the checks a local verifier makes. See
 [Revocation is not immediate](api/token-verification.md#revocation-is-not-immediate).
 
 A refresh that is already running when its session is revoked can also still

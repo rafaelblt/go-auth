@@ -106,9 +106,13 @@ func (s *AccessTokenService) Validate(raw string) (port.AccessTokenClaims, error
 	if err != nil {
 		return port.AccessTokenClaims{}, fmt.Errorf("user id parse failed: %w", err)
 	}
+	if claims.ExpiresAt == nil {
+		return port.AccessTokenClaims{}, errors.New("claim ExpiresAt nil")
+	}
 
 	result := port.AccessTokenClaims{
-		UserID: userID,
+		UserID:    userID,
+		ExpiresAt: claims.ExpiresAt.UTC(),
 	}
 	return result, nil
 }

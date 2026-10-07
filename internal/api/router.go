@@ -16,6 +16,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 )
 
 type Config struct {
@@ -30,6 +31,7 @@ type Dependencies struct {
 	Register          useCase[register.Input, register.Output]
 	Login             useCase[login.Input, login.Output]
 	Refresh           useCase[refresh.Input, refresh.Output]
+	Verify            useCase[verify.Input, verify.Output]
 	PublicKeyProvider port.PublicKeyProvider
 }
 
@@ -56,6 +58,9 @@ func NewRouter(cfg Config) (http.Handler, error) {
 	}
 	if cfg.Dependencies.Refresh == nil {
 		return nil, errors.New("refresh nil")
+	}
+	if cfg.Dependencies.Verify == nil {
+		return nil, errors.New("verify nil")
 	}
 	if cfg.Dependencies.PublicKeyProvider == nil {
 		return nil, errors.New("public key provider nil")
@@ -101,11 +106,19 @@ func NewRouter(cfg Config) (http.Handler, error) {
 		SuccessLog: refreshSuccessLog,
 		RateLimit:  refreshLimit,
 	})
+	// Never rate limited. See docs/architecture/http.md#rate-limiting.
+	verify := adaptUseCase(useCaseAdapterParams[verify.Input, verify.Output]{
+		UseCase:    cfg.Dependencies.Verify,
+		Decoder:    verifyDecoder,
+		Encoder:    verifyEncoder,
+		SuccessLog: verifySuccessLog,
+	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/auth/register", register)
 	mux.HandleFunc("POST /v1/auth/login", login)
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
+	mux.HandleFunc("POST /v1/auth/verify", verify)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
 	handler := jsonRouteErrors(mux)

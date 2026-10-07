@@ -1,6 +1,6 @@
 # API reference
 
-Four endpoints. All request and response bodies are JSON. The same contract,
+Five endpoints. All request and response bodies are JSON. The same contract,
 in machine-readable form, is [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a
 change to the contract updates both.
 
@@ -9,6 +9,7 @@ change to the contract updates both.
 | `POST` | `/v1/auth/register` | Create a user |
 | `POST` | `/v1/auth/login` | Exchange credentials for a token pair |
 | `POST` | `/v1/auth/refresh` | Exchange a refresh token for a new pair |
+| `POST` | `/v1/auth/verify` | Check an access token, for a service that does not verify it itself |
 | `GET` | `/.well-known/jwks.json` | Public keys for verifying access tokens |
 
 ## Conventions
@@ -18,7 +19,7 @@ version, because [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) fixes its
 path.
 
 **Content type.** Every response the service writes is
-`Content-Type: application/json`. The three `POST` endpoints require
+`Content-Type: application/json`. The `POST` endpoints require
 `Content-Type: application/json`, matched regardless of case, with any
 parameters (`; charset=utf-8`) allowed and ignored. Anything else, including no
 header at all, is answered `415 unsupported_media_type` before the body is
@@ -37,13 +38,13 @@ one with `..` segments) gets a `307` redirect to its cleaned form from Go's
 method an empty one.
 
 **Rate limiting.** When the operator turns it on
-([`RATE_LIMIT`](../configuration.md#rate_limit)), each `POST` endpoint allows
-each client address a number of requests, then answers `429 too_many_requests`
-with a `Retry-After` header giving the seconds to wait. The limit is decided
-after the `Content-Type` check, so a `415` is never counted, and before the
-body is read, so nothing ran: send the same request again after the delay, and
-on `/v1/auth/refresh` the same token, which was not spent. The JWKS endpoint is
-never limited.
+([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login and refresh
+each allow each client address a number of requests, then answer
+`429 too_many_requests` with a `Retry-After` header giving the seconds to wait.
+The limit is decided after the `Content-Type` check, so a `415` is never
+counted, and before the body is read, so nothing ran: send the same request
+again after the delay, and on `/v1/auth/refresh` the same token, which was not
+spent. Verify and the JWKS endpoint are never limited.
 
 **Timestamps.** RFC 3339, in UTC, to the whole second: `2026-09-08T12:00:00Z`.
 A fraction of a second is dropped, never rounded up, so an `expires_at` is
@@ -80,8 +81,8 @@ A missing field is read as `""`.
 The decoder also tolerates the following. Send one well-formed object in valid
 UTF-8, with each field once and in lower case, and do not depend on these:
 
-- A body of `null` reads as `{}`: registration answers `422`, login and refresh
-  `401`.
+- A body of `null` reads as `{}`: registration answers `422`, login, refresh
+  and verify `401`.
 - A field set to `null` is read as `""`, like a missing one.
 - Anything after the first JSON value is ignored, and does not count toward
   the 64 KiB limit.
@@ -272,6 +273,56 @@ with the same token count as reuse: one succeeds, the other revokes the
 session. Clients must follow the
 [client obligations](../architecture/usecases/refresh.md#client-obligations) to
 avoid logging their own users out.
+
+---
+
+## POST /v1/auth/verify
+
+Checks an access token and returns the user it was issued to, for a service
+that would rather not verify access tokens itself. It makes the checks a
+correct local verifier makes, with the keys the JWKS publishes, and nothing
+else ([Letting go-auth verify](token-verification.md#letting-go-auth-verify)).
+
+### Request
+
+```json
+{
+  "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Response: `200 OK`
+
+```json
+{
+  "user_id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+  "expires_at": "2026-09-08T12:30:00Z",
+  "expires_in": 1342
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `user_id` | The user the token was issued to: its `sub` |
+| `expires_at` | When the token expires: its `exp` |
+| `expires_in` | Whole seconds from the moment the service checked the token to its expiry, rounded down |
+
+The answer holds until `expires_at`: nothing makes an access token invalid
+sooner, not even revoking its session
+([why](token-verification.md#revocation-is-not-immediate)).
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
+| `401` | `invalid_token` | Any other failure |
+| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
+| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
+
+Every failure gets the same response: a missing or malformed token, one signed
+with another algorithm or by a key the JWKS does not publish, one altered after
+it was signed, and an expired one.
 
 ---
 

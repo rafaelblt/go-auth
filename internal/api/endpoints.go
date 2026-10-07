@@ -11,6 +11,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 )
 
 type user struct {
@@ -147,6 +148,40 @@ func refreshSuccessLog(ctx context.Context, out refresh.Output) {
 	loggerFrom(ctx).Info("success refresh",
 		"user_id", out.UserID,
 		"session_id", out.SessionID)
+}
+
+type verifyRequestBody struct {
+	AccessToken string `json:"access_token"`
+}
+
+type verifyResponseBody struct {
+	UserID    string `json:"user_id"`
+	ExpiresAt string `json:"expires_at"`
+	ExpiresIn int64  `json:"expires_in"`
+}
+
+func verifyDecoder(r *http.Request) (verify.Input, error) {
+	var body verifyRequestBody
+	if err := decodeJSONBody(r, &body); err != nil {
+		return verify.Input{}, err
+	}
+	in := verify.Input{
+		AccessToken: body.AccessToken,
+	}
+	return in, nil
+}
+
+func verifyEncoder(out verify.Output) response {
+	body := verifyResponseBody{
+		UserID:    out.UserID,
+		ExpiresAt: out.ExpiresAt.UTC().Format(time.RFC3339),
+		ExpiresIn: int64(out.ExpiresIn / time.Second),
+	}
+	return response{StatusCode: http.StatusOK, Body: body}
+}
+
+func verifySuccessLog(ctx context.Context, out verify.Output) {
+	loggerFrom(ctx).Info("success verify", "user_id", out.UserID)
 }
 
 type jwksBody struct {

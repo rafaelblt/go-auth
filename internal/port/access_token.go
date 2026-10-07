@@ -26,5 +26,6 @@ type AccessTokenIssued struct {
 }
 
 type AccessTokenClaims struct {
-	UserID user.ID
+	UserID    user.ID
+	ExpiresAt time.Time
 }

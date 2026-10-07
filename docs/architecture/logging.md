@@ -149,6 +149,7 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success register` | `INFO` | `user_id` | `201` |
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
+| `success verify` | `INFO` | `user_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415 unsupported_media_type` |
 | `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `429 too_many_requests` |
 | `request body too large error` | `INFO` | — | `413 request_body_too_large` |
@@ -183,6 +184,8 @@ a client cannot tell them apart; the log is where they are told apart:
 | `invalid_token` | `token expired` | Refresh token past its expiry |
 | `invalid_token` | `token already used` | [Reuse detected](usecases/refresh.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | The session was already revoked |
+| `invalid_token` | `invalid token` | On `/v1/auth/verify`: access token malformed, not EdDSA, or not signed by a published key |
+| `invalid_token` | `token expired` | On `/v1/auth/verify`: access token past its `exp` |
 
 Errors whose code already says everything, such as `username_already_exists`,
 carry no reason, and the field is left out rather than logged empty.
@@ -295,7 +298,7 @@ offset or a size, never the value.
 
 Identifiers are the exception, and deliberately so: every success line carries
 a UUID that names the account without describing it. `user_id` ties register,
-login and refresh to one account, and `session_id` ties a login to the
+login, refresh and verify to one account, and `session_id` ties a login to the
 refreshes that follow it. Failures carry neither, because the account behind a
 rejected attempt is not always known and, when it is, saying so would put the
 existence of an account in the log line.

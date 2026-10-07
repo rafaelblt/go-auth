@@ -16,6 +16,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -258,6 +259,48 @@ func TestRefreshEncoder_ReturnsResponse(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expectedBody, actualBody)
+}
+
+func TestVerifyDecoder_ReturnsInput(t *testing.T) {
+	body := verifyRequestBody{
+		AccessToken: "access token",
+	}
+	buf, err := json.Marshal(body)
+	require.NoError(t, err)
+	req := httptest.NewRequest("POST", "localhost:8080", bytes.NewReader(buf))
+
+	in, err := verifyDecoder(req)
+
+	require.NoError(t, err)
+	assert.Equal(t, body.AccessToken, in.AccessToken)
+}
+
+func TestVerifyDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
+	req := httptest.NewRequest("POST", "localhost:8080", nil)
+
+	in, err := verifyDecoder(req)
+
+	assert.Error(t, err)
+	assert.Zero(t, in)
+}
+
+func TestVerifyEncoder_ReturnsResponse(t *testing.T) {
+	output := verify.Output{
+		UserID:    "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		ExpiresAt: time.Date(2026, 9, 8, 9, 30, 0, 999999999, time.FixedZone("UTC-3", -3*60*60)),
+		ExpiresIn: 1342*time.Second + 999*time.Millisecond,
+	}
+
+	resp := verifyEncoder(output)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	actualJSON, err := json.Marshal(resp.Body)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{
+		"user_id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		"expires_at": "2026-09-08T12:30:00Z",
+		"expires_in": 1342
+	}`, string(actualJSON))
 }
 
 type FakePublicKeyProvider struct {

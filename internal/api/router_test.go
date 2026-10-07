@@ -16,6 +16,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,6 +43,7 @@ func newRouterTestDependencies(t *testing.T) (Dependencies, *bytes.Buffer) {
 		Register:          stubUseCase[register.Input, register.Output]{},
 		Login:             stubUseCase[login.Input, login.Output]{},
 		Refresh:           stubUseCase[refresh.Input, refresh.Output]{},
+		Verify:            stubUseCase[verify.Input, verify.Output]{},
 		PublicKeyProvider: NewFakePublicKeyProvider(),
 	}, buf
 }
@@ -57,6 +59,7 @@ func TestNewRouter_ReturnsError_WhenADependencyIsNil(t *testing.T) {
 		{desc: "register", nilOne: func(d *Dependencies) { d.Register = nil }, expected: "register nil"},
 		{desc: "login", nilOne: func(d *Dependencies) { d.Login = nil }, expected: "login nil"},
 		{desc: "refresh", nilOne: func(d *Dependencies) { d.Refresh = nil }, expected: "refresh nil"},
+		{desc: "verify", nilOne: func(d *Dependencies) { d.Verify = nil }, expected: "verify nil"},
 		{desc: "public key provider", nilOne: func(d *Dependencies) { d.PublicKeyProvider = nil }, expected: "public key provider nil"},
 	}
 	for _, tC := range testCases {
@@ -176,6 +179,19 @@ func TestNewRouter_DoesNotRateLimit_JWKSOrUnmatchedRoutes(t *testing.T) {
 		assert.Equal(t, tC.expected, recorder.Code, tC.path)
 	}
 
+	assert.Empty(t, limiter.Calls())
+}
+
+func TestNewRouter_DoesNotRateLimit_Verify(t *testing.T) {
+	deps, _ := newRouterTestDependencies(t)
+	limiter := newRefusingRateLimiter(time.Second)
+	handler, err := NewRouter(Config{Dependencies: deps, RateLimiting: newRouterTestRateLimiting(limiter)})
+	require.NoError(t, err)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, newJSONPost("/v1/auth/verify"))
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Empty(t, limiter.Calls())
 }
 

@@ -10,12 +10,14 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 )
 
 type usecases struct {
 	Register *register.Register
 	Login    *login.Login
 	Refresh  *refresh.Refresh
+	Verify   *verify.Verify
 }
 
 func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
@@ -34,10 +36,16 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
+	verf, err := buildVerify(deps)
+	if err != nil {
+		return usecases{}, err
+	}
+
 	uc := usecases{
 		Register: &regst,
 		Login:    &logn,
 		Refresh:  refr,
+		Verify:   verf,
 	}
 	return uc, nil
 }
@@ -103,6 +111,17 @@ func buildRefresh(cfg config.Config, deps infraDeps) (*refresh.Refresh, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("refresh creation failed: %w", err)
+	}
+	return uc, nil
+}
+
+func buildVerify(deps infraDeps) (*verify.Verify, error) {
+	uc, err := verify.New(verify.Config{
+		AccessTokenValidator: deps.AccessTokenService,
+		Clock:                deps.Clock,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("verify creation failed: %w", err)
 	}
 	return uc, nil
 }

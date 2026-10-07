@@ -16,6 +16,7 @@ func newRouter(cfg config.Config, deps dependencies) (http.Handler, error) {
 			Register:          deps.UseCases.Register,
 			Login:             deps.UseCases.Login,
 			Refresh:           deps.UseCases.Refresh,
+			Verify:            deps.UseCases.Verify,
 			PublicKeyProvider: deps.Infra.Ed25519Keyring,
 		},
 		RateLimiting: newRateLimiting(cfg, deps.Infra.RateLimiter),

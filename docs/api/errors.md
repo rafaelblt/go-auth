@@ -88,7 +88,7 @@ count code points with `[...str].length`, and bytes with
 | `200 OK` | Success, except for registration |
 | `201 Created` | A user was registered |
 | `400 Bad Request` | The body is not a JSON object with fields of the expected types |
-| `401 Unauthorized` | Wrong credentials, or an unusable refresh token |
+| `401 Unauthorized` | Wrong credentials, or an unusable token |
 | `404 Not Found` | Unknown path |
 | `405 Method Not Allowed` | Known path, wrong method; the `Allow` header lists the accepted methods |
 | `409 Conflict` | The username is taken |
@@ -111,9 +111,9 @@ The values of `error.code`.
 | `method_not_allowed` | 405 | every endpoint | The endpoint does not accept this method; `Allow` lists the ones it does |
 | `request_body_too_large` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
 | `unsupported_media_type` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
-| `too_many_requests` | 429 | every `POST` | Rate limiting is on and the address made too many requests to the endpoint; `Retry-After` gives the seconds to wait |
+| `too_many_requests` | 429 | every `POST` but `/v1/auth/verify` | Rate limiting is on and the address made too many requests to the endpoint; `Retry-After` gives the seconds to wait |
 | `invalid_credentials` | 401 | `/v1/auth/login` | Login failed, for any reason |
-| `invalid_token` | 401 | `/v1/auth/refresh` | The refresh token cannot be used, for any reason |
+| `invalid_token` | 401 | `/v1/auth/refresh`, `/v1/auth/verify` | The token sent cannot be used, for any reason |
 | `username_already_exists` | 409 | `/v1/auth/register` | The username is taken |
 | `validation_failed` | 422 | `/v1/auth/register` | The input failed validation; `fields` says how |
 | `internal_server_error` | 500 | all | An unexpected failure |
@@ -162,7 +162,7 @@ serves several codes, which is the reason to branch on `code`.
 
 ## Deliberately vague errors
 
-Two endpoints say less than they know, on purpose.
+Three endpoints say less than they know, on purpose.
 
 **Login** answers `invalid_credentials` to a malformed username, an unknown
 user, a user with no password, and a wrong password alike. Saying which one
@@ -175,7 +175,12 @@ expired, one already used, and one whose session was revoked. Someone holding
 a stolen token learns nothing about its state, and in particular not whether
 reuse detection has already fired.
 
-In both cases the server logs which of the failures it was, under `reason`, on
+**Verify** answers `invalid_token` to a malformed token, a forged one and an
+expired one alike. Whoever holds a token can read its `exp` anyway, so this
+hides little: it is one answer because a service has one thing to do with any
+of them, which is to turn the request away.
+
+In each case the server logs which of the failures it was, under `reason`, on
 the line tagged with the request ID. What the client is not told is still
 there for whoever runs the service.
 
@@ -196,6 +201,7 @@ status.
 400  →  bug in your client: fix the request
 401  →  on /login: show "wrong username or password"
         on /refresh: discard the token and send the user to log in
+        on /verify: turn away the request that carried the token
 409  →  ask for another username
 413  →  bug in your client: the body is too large
 415  →  bug in your client: send Content-Type: application/json

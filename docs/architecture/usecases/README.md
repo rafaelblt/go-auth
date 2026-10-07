@@ -11,6 +11,7 @@ in `internal/port`.
 | [Register](register.md) | `/v1/auth/register`: validate, check the username, hash, insert |
 | [Login](login.md) | `/v1/auth/login`: verify the credentials, open a session, issue both tokens |
 | [Refresh](refresh.md) | `/v1/auth/refresh`: rotation, reuse detection, client obligations |
+| [Verify](verify.md) | `/v1/auth/verify`: check an access token for a service that does not verify it itself |
 
 The tokens these flows hand out are described in [Tokens](../tokens.md).
 
@@ -28,13 +29,10 @@ on, so that nothing in `usecase` or `domain` names a concrete adapter:
 | Rate limiting | `RateLimiter` |
 | Time | `Clock` |
 
-Four of them are not used by a use case. `PublicKeyProvider` is consumed
+Three of them are not used by a use case. `PublicKeyProvider` is consumed
 directly by the [JWKS handler](../http.md#jwks-is-a-plain-handler), which has
 no use case behind it. `RateLimiter` is consumed by the use case adapter,
-before any use case runs ([HTTP](../http.md#rate-limiting)). `AccessTokenValidator` is used by nothing yet: it
-describes verifying an access token inside the service, for an endpoint that
-is not part of v1. `infra/jwt.AccessTokenService` already implements it
-([Verifying access tokens](../../api/token-verification.md#what-to-verify)).
+before any use case runs ([HTTP](../http.md#rate-limiting)).
 `SigningKeyStore` is consumed by the keyring in `internal/infra/jwt/ed25519`,
 so the PostgreSQL repository implements a port like every other, and no
 adapter imports another.
@@ -73,9 +71,9 @@ classifies the failure (`conflict`, `unauthorized`), and the HTTP layer maps
 it to a status code, so `internal/usecase` never refers to HTTP. The kinds
 line up closely with HTTP status classes, admittedly, but the mapping lives on
 the HTTP side. The `reason` is an internal detail: the HTTP layer logs it and
-never sends it to the client. This is what lets login and refresh give every
-caller the same `invalid_credentials` or `invalid_token` while telling their
-failures apart in the logs.
+never sends it to the client. This is what lets login, refresh and verify
+give every caller the same `invalid_credentials` or `invalid_token` while
+telling their failures apart in the logs.
 
 How the HTTP layer turns one into a response:
 [Error translation](../http.md#error-translation).

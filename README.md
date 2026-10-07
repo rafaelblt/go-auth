@@ -7,12 +7,14 @@ Your application talks to it over JSON, so it can be written in any language.
 It issues short-lived JWT access tokens signed with Ed25519, and long-lived
 refresh tokens that rotate on every use and can be revoked. It publishes its
 public keys as a JWKS document, so your services verify access tokens
-themselves, without calling `go-auth` on every request.
+themselves, without calling `go-auth` on every request, or, if they would
+rather not, ask `go-auth` to check each one.
 
 ```
 POST /v1/auth/register       create a user
 POST /v1/auth/login          exchange credentials for tokens
 POST /v1/auth/refresh        exchange a refresh token for a new token pair
+POST /v1/auth/verify         check an access token on your service's behalf
 GET  /.well-known/jwks.json  public keys for verifying access tokens
 ```
 
@@ -26,10 +28,12 @@ GET  /.well-known/jwks.json  public keys for verifying access tokens
   as a SHA-256 hash.
 - Reuse detection: presenting a refresh token that was already used revokes
   its whole session.
+- Access token checks on request, for services that would rather not verify
+  tokens themselves.
 - Login answers every failure the same way: one error for every cause, and a
   bcrypt comparison even when the account does not exist.
-- Optional rate limiting of the three `POST` endpoints per client address, at
-  three levels.
+- Optional rate limiting of register, login and refresh per client address,
+  at three levels.
 - Structured logs, with an ID for each request.
 - Migrations embedded in the binary, and a startup check that the database
   schema matches the binary.
@@ -74,7 +78,7 @@ Full walkthrough: [Getting started](docs/getting-started.md).
 | [API reference](docs/api/reference.md) | Endpoints, request and response bodies |
 | [Error model](docs/api/errors.md) | Status codes and error codes |
 | [OpenAPI spec](docs/api/openapi.yaml) | The API contract in OpenAPI 3.1 |
-| [Verifying access tokens](docs/api/token-verification.md) | Validating a JWT in your own service, with the JWKS |
+| [Verifying access tokens](docs/api/token-verification.md) | Validating a JWT in your own service with the JWKS, or letting `go-auth` do it |
 | [Architecture](docs/architecture/overview.md) | Layers, packages, dependency rules |
 | [Code conventions](docs/architecture/conventions.md) | The patterns used throughout the code, and why |
 | [Testing](docs/development/testing.md) | The test layers, how to run them, the helpers |

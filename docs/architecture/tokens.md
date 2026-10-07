@@ -13,7 +13,7 @@ be checked here. No single token has both properties.
 |---|---|---|
 | Format | JWT, EdDSA (Ed25519) | 32 random bytes, base64url |
 | State | stateless | stored in the database |
-| Verified by | any service, locally, with the JWKS | this service only |
+| Verified by | any service, locally, with the JWKS, or this service on request | this service only |
 | Lifetime | short (default 30m) | long (default 7d) |
 | Revocable | no | yes |
 | Stored as | not stored | SHA-256 hash |

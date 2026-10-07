@@ -59,10 +59,13 @@ type FakeSigner struct {
 
 func NewFakeSigner() *FakeSigner {
 	s := FakeSigner{
-		defaultToken:  "default fake signed token",
-		defaultClaims: jwt.RegisteredClaims{Subject: user.NewID().String()},
-		signedClaims:  make([]jwt.RegisteredClaims, 0),
-		parsedTokens:  make([]string, 0),
+		defaultToken: "default fake signed token",
+		defaultClaims: jwt.RegisteredClaims{
+			Subject:   user.NewID().String(),
+			ExpiresAt: jwt.NewNumericDate(time.Date(2031, 3, 14, 15, 9, 26, 0, time.UTC)),
+		},
+		signedClaims: make([]jwt.RegisteredClaims, 0),
+		parsedTokens: make([]string, 0),
 	}
 	return &s
 }
@@ -105,6 +108,10 @@ func (fs *FakeSigner) SetSignError(err error) {
 
 func (fs *FakeSigner) SetParseError(err error) {
 	fs.parseErr = err
+}
+
+func (fs *FakeSigner) SetParsedClaims(claims jwt.RegisteredClaims) {
+	fs.defaultClaims = claims
 }
 
 // TESTS
@@ -229,6 +236,33 @@ func TestAccessTokenService_Validate_ReturnsClaims(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, claims)
 	assert.Equal(t, expected.Subject, claims.UserID.String())
+	assert.Equal(t, expected.ExpiresAt.Time, claims.ExpiresAt)
+}
+
+func TestAccessTokenService_Validate_ReturnsExpiresAtInUTC(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	expiresAt := time.Date(2031, 3, 14, 12, 9, 26, 0, time.FixedZone("UTC-3", -3*60*60))
+	parsed := helper.FakeSigner.DefaultParsedClaims()
+	parsed.ExpiresAt = jwt.NewNumericDate(expiresAt)
+	helper.FakeSigner.SetParsedClaims(parsed)
+
+	claims, err := helper.Service().Validate("token")
+
+	require.NoError(t, err)
+	assert.Equal(t, time.UTC, claims.ExpiresAt.Location())
+	assert.True(t, expiresAt.Equal(claims.ExpiresAt))
+}
+
+func TestAccessTokenService_Validate_ReturnsError_WhenExpiresAtIsMissing(t *testing.T) {
+	helper := NewServiceTestHelper(t)
+	parsed := helper.FakeSigner.DefaultParsedClaims()
+	parsed.ExpiresAt = nil
+	helper.FakeSigner.SetParsedClaims(parsed)
+
+	claims, err := helper.Service().Validate("token")
+
+	assert.Zero(t, claims)
+	assert.Error(t, err)
 }
 
 func TestAccessTokenService_Validate_ReturnsErrTokenInvalid(t *testing.T) {

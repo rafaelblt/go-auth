@@ -98,11 +98,18 @@ The shapes these responses take, and every code they can carry, are in the
 
 Rate limiting is off unless [`RATE_LIMIT`](../configuration.md#rate_limit)
 sets a level. It is checked in the use case adapter, right after the `415`, so
-only the three `POST` endpoints are limited: JWKS, a `404` and a `405` never
-are ([why](../development/decisions/0052-rate-limit-is-decided-before-the-body-is-read.md)).
+only `POST` endpoints can be limited: JWKS, a `404` and a `405` never are
+([why](../development/decisions/0052-rate-limit-is-decided-before-the-body-is-read.md)).
 An endpoint is limited only when `NewRouter` passes it a limit, so a new one
 needs its limit there and a row in each level's table in
 `internal/bootstrap/rate_limit.go`.
+
+Register, login and refresh have one; verify does not, on purpose. A limit
+there would protect nothing: verify reads no database, and no number of tries
+finds a signature that passes. And it would cost the services that delegate
+verification, which call it on every request they serve, usually from one
+address, and would soon use up an allowance meant for one person's logins and
+refreshes.
 
 Every `application/json` request counts against the allowance, whatever its
 answer. A request answered `415` is never counted: those are the requests a

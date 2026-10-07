@@ -180,6 +180,18 @@ curl -s http://localhost:8080/.well-known/jwks.json
 Fetch this document, cache it, and validate tokens in your service. How to do
 it, with examples: [Verifying access tokens](api/token-verification.md).
 
+Or let `go-auth` check each token, at the cost of a call on every request:
+
+```bash
+curl -sX POST http://localhost:8080/v1/auth/verify \
+  -H 'Content-Type: application/json' \
+  -d '{"access_token":"eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..."}'
+```
+
+The answer names the user the token was issued to, as `user_id`, or is
+`401 invalid_token`
+([Letting go-auth verify](api/token-verification.md#letting-go-auth-verify)).
+
 ## Deploying
 
 Before deploying, read [Limitations](limitations.md). The two things most

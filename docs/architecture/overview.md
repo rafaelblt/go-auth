@@ -14,7 +14,9 @@ would serve only Go projects.
 The cost is a network round trip on every call to it. That is why access
 tokens can be verified without calling it: the round trip happens on login and
 refresh, which are rare, and not on the requests an application serves (see
-[Token model](tokens.md#token-model)).
+[Token model](tokens.md#token-model)). A service that would rather pay that
+round trip than verify tokens itself can have `go-auth` check them
+([Letting go-auth verify](../api/token-verification.md#letting-go-auth-verify)).
 
 Everything is under `internal/`, so no other module can import it. The public
 interface is HTTP.
@@ -32,7 +34,7 @@ internal/api      internal/infra        adapters (inbound / outbound)
    │                   │
    └─────────┬─────────┘
              │
-    internal/usecase                    application logic: register, login, refresh
+    internal/usecase                    application logic: register, login, refresh, verify
              │
      internal/port                      interfaces the use cases depend on
              │
@@ -118,7 +120,7 @@ On error, `translateError` takes the encoder's place; see
 ## Where to look next
 
 - [Domain](domain/README.md): what the entities guarantee.
-- [Use cases](usecases/README.md): the three flows in detail.
+- [Use cases](usecases/README.md): the four flows in detail.
 - [Tokens](tokens.md): the two token types and the security properties.
 - [Persistence](persistence/README.md): schema, repositories, transactions.
 - [Code conventions](conventions.md): the patterns repeated throughout.

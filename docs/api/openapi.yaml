@@ -7,14 +7,15 @@ info:
     name: MIT
     identifier: MIT
   description: |
-    A self-hosted authentication service. Four endpoints; every request and
+    A self-hosted authentication service. Five endpoints; every request and
     response body is JSON. No endpoint takes a credential in a header.
 
-    The three `POST` endpoints require `Content-Type: application/json`
+    The `POST` endpoints require `Content-Type: application/json`
     (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
     decoded only up to its first 64 KiB, else `413`. When the operator turns
-    rate limiting on, each `POST` endpoint answers `429` with `Retry-After` once
-    a client address has used up its allowance.
+    rate limiting on, register, login and refresh answer `429` with
+    `Retry-After` once a client address has used up its allowance; verify is
+    never limited.
 
     A path no endpoint has is answered `404` with code `route_not_found`, in the
     usual error shape. A path not in canonical form (`//v1/auth/login`, or one
@@ -248,6 +249,66 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /v1/auth/verify:
+    post:
+      operationId: verify
+      summary: Check an access token
+      description: |
+        Checks an access token and returns the user it was issued to, for a
+        service that would rather not verify access tokens itself. It makes the
+        checks a correct local verifier makes, with the keys the JWKS
+        publishes, and nothing else: the tokens of a revoked session still pass
+        until they expire. It is never rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+            examples:
+              verify:
+                value:
+                  access_token: eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: The token is valid; here is the user it was issued to.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+              examples:
+                verified:
+                  value:
+                    user_id: 0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37
+                    expires_at: '2026-09-08T12:30:00Z'
+                    expires_in: 1342
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '401':
+          description: |
+            The token cannot be used. Every failure gets this one response: a
+            missing or malformed token, one signed with another algorithm or by
+            a key the JWKS does not publish, one altered after it was signed,
+            and an expired one.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_token:
+                  value:
+                    error:
+                      code: invalid_token
+                      message: Not authorized.
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /.well-known/jwks.json:
     get:
       operationId: getJwks
@@ -325,6 +386,16 @@ components:
             The `refresh_token.value` from the last login or refresh. A missing
             field is read as `""`.
 
+    VerifyRequest:
+      type: object
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+          description: |
+            The `access_token.value` from a login or refresh. A missing field
+            is read as `""`.
+
     User:
       type: object
       required: [id, username]
@@ -377,6 +448,27 @@ components:
             Its value is 32 random bytes in base64url without padding: not a
             JWT, and opaque outside this service. Keep it secret, and never put
             it in a URL.
+
+    VerifyResponse:
+      type: object
+      required: [user_id, expires_at, expires_in]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The user the token was issued to, from its `sub`.
+        expires_at:
+          type: string
+          format: date-time
+          description: |
+            When the token expires, from its `exp`: RFC 3339, in UTC, to the
+            whole second. Nothing makes the token invalid sooner.
+        expires_in:
+          type: integer
+          format: int64
+          description: |
+            Whole seconds from the moment the service checked the token to its
+            expiry, rounded down.
 
     Jwk:
       type: object
