@@ -79,7 +79,7 @@ gofmt -l . && go vet ./...
 ## Commits
 
 Format, types and scopes: [`development/commits.md`](docs/development/commits.md).
-**Only commit when asked, and never push.**
+**Only commit or push when asked.**
 
 ## Decision records
 
