@@ -34,7 +34,8 @@ internal/api      internal/infra        adapters (inbound / outbound)
    │                   │
    └─────────┬─────────┘
              │
-    internal/usecase                    application logic: register, login, refresh, verify
+    internal/usecase                    application logic: register, login, change password,
+                                        refresh, verify
              │
      internal/port                      interfaces the use cases depend on
              │
@@ -120,7 +121,7 @@ On error, `translateError` takes the encoder's place; see
 ## Where to look next
 
 - [Domain](domain/README.md): what the entities guarantee.
-- [Use cases](usecases/README.md): the four flows in detail.
+- [Use cases](usecases/README.md): the five flows in detail.
 - [Tokens](tokens.md): the two token types and the security properties.
 - [Persistence](persistence/README.md): schema, repositories, transactions.
 - [Code conventions](conventions.md): the patterns repeated throughout.

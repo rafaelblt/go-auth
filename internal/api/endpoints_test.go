@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -332,6 +334,47 @@ func decodeJWKSBody(t *testing.T, body []byte) jwksBody {
 	require.NoError(t, json.Unmarshal(body, &b))
 
 	return b
+}
+
+func TestChangePasswordDecoder_ReturnsInput(t *testing.T) {
+	body := `{"username":"username","current_password":"current","new_password":"new"}`
+	req := httptest.NewRequest("POST", "localhost:8080", strings.NewReader(body))
+
+	in, err := changePasswordDecoder(req)
+
+	require.NoError(t, err)
+	assert.Equal(t, changepassword.Input{
+		Username:        "username",
+		CurrentPassword: "current",
+		NewPassword:     "new",
+	}, in)
+}
+
+func TestChangePasswordDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
+	req := httptest.NewRequest("POST", "localhost:8080", nil)
+
+	in, err := changePasswordDecoder(req)
+
+	assert.Error(t, err)
+	assert.Zero(t, in)
+}
+
+func TestChangePasswordEncoder_ReturnsOnlyUserIDAndUsername(t *testing.T) {
+	output := changepassword.Output{User: apitest.NewUserDTO(t, nil)}
+
+	resp := changePasswordEncoder(output)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	actualJSON, err := json.Marshal(resp.Body)
+	require.NoError(t, err)
+	expectedJSON, err := json.Marshal(map[string]map[string]string{
+		"user": {
+			"id":       output.User.ID(),
+			"username": output.User.Username(),
+		},
+	})
+	require.NoError(t, err)
+	assert.JSONEq(t, string(expectedJSON), string(actualJSON))
 }
 
 func TestJWKS(t *testing.T) {

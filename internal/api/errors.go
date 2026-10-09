@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/validation"
 )
@@ -89,8 +90,9 @@ func methodNotAllowedError() response {
 }
 
 var errorFieldCatalog = map[string]string{
-	register.FieldUsername: "username",
-	register.FieldPassword: "password",
+	register.FieldUsername:          "username",
+	register.FieldPassword:          "password",
+	changepassword.FieldNewPassword: "new_password",
 }
 
 var kindStatusCatalog = map[usecase.ErrorKind]int{

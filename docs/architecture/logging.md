@@ -150,6 +150,7 @@ or one of the [defect](#defects) lines. A JWKS request produces neither.
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `success verify` | `INFO` | `user_id` | `200` |
+| `success change password` | `INFO` | `user_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415 unsupported_media_type` |
 | `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `429 too_many_requests` |
 | `request body too large error` | `INFO` | — | `413 request_body_too_large` |
@@ -171,7 +172,9 @@ as `2.5s` in `text`.
 
 `reason` is the field to read, and the reason these lines exist. The API
 answers several distinct failures with one deliberately generic code, so that
-a client cannot tell them apart; the log is where they are told apart:
+a client cannot tell them apart; the log is where they are told apart. The
+`invalid_credentials` reasons are written by login and by change password
+alike, and the line's `path` says which:
 
 | Response code | `reason` | What actually failed |
 |---|---|---|
@@ -180,6 +183,7 @@ a client cannot tell them apart; the log is where they are told apart:
 | `invalid_credentials` | `user not found` | No account with that username |
 | `invalid_credentials` | `password not found` | The account has no password row |
 | `invalid_credentials` | `password mismatch` | Wrong password |
+| `invalid_credentials` | `password changed` | On `/v1/auth/change-password`: another change replaced the password between the check and the write |
 | `invalid_token` | `invalid token` | Refresh token unknown or malformed |
 | `invalid_token` | `token expired` | Refresh token past its expiry |
 | `invalid_token` | `token already used` | [Reuse detected](usecases/refresh.md#reuse-detection); the session was just revoked |
@@ -217,8 +221,8 @@ field. None of the three fails in silence.
 Severity follows what the client gets. A missing status mapping turns a real
 answer into a `500`, so it is an `ERROR`. A missing message or field name still
 answers correctly, with worse text, so both are `WARN`. Nothing reaches the field
-path today: the only validated fields are register's two, and both are in the
-catalog.
+path today: the only validated fields are register's two and change password's
+`NewPassword`, and all three are in the catalog.
 
 ### Startup and shutdown
 
@@ -298,10 +302,10 @@ offset or a size, never the value.
 
 Identifiers are the exception, and deliberately so: every success line carries
 a UUID that names the account without describing it. `user_id` ties register,
-login, refresh and verify to one account, and `session_id` ties a login to the
-refreshes that follow it. Failures carry neither, because the account behind a
-rejected attempt is not always known and, when it is, saying so would put the
-existence of an account in the log line.
+login, change password, refresh and verify to one account, and `session_id`
+ties a login to the refreshes that follow it. Failures carry neither, because
+the account behind a rejected attempt is not always known and, when it is,
+saying so would put the existence of an account in the log line.
 
 ## Reading the logs
 

@@ -15,7 +15,7 @@ const requestBodyMaxBytes = 64 << 10
 
 func TestPostEndpoints_ReturnRequestBodyTooLarge_WhenBodyExceedsLimit(t *testing.T) {
 	body := `{"username":"` + strings.Repeat("a", requestBodyMaxBytes) + `"}`
-	for _, path := range []string{RegisterPath, LoginPath, RefreshPath, VerifyPath} {
+	for _, path := range []string{RegisterPath, LoginPath, RefreshPath, VerifyPath, ChangePasswordPath} {
 		t.Run(path, func(t *testing.T) {
 			env := testApp.NewEnv(t)
 

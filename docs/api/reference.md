@@ -1,6 +1,6 @@
 # API reference
 
-Five endpoints. All request and response bodies are JSON. The same contract,
+Six endpoints. All request and response bodies are JSON. The same contract,
 in machine-readable form, is [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a
 change to the contract updates both.
 
@@ -8,6 +8,7 @@ change to the contract updates both.
 |---|---|---|
 | `POST` | `/v1/auth/register` | Create a user |
 | `POST` | `/v1/auth/login` | Exchange credentials for a token pair |
+| `POST` | `/v1/auth/change-password` | Replace a password, given the current one, and revoke every session |
 | `POST` | `/v1/auth/refresh` | Exchange a refresh token for a new pair |
 | `POST` | `/v1/auth/verify` | Check an access token, for a service that does not verify it itself |
 | `GET` | `/.well-known/jwks.json` | Public keys for verifying access tokens |
@@ -38,13 +39,13 @@ one with `..` segments) gets a `307` redirect to its cleaned form from Go's
 method an empty one.
 
 **Rate limiting.** When the operator turns it on
-([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login and refresh
-each allow each client address a number of requests, then answer
-`429 too_many_requests` with a `Retry-After` header giving the seconds to wait.
-The limit is decided after the `Content-Type` check, so a `415` is never
-counted, and before the body is read, so nothing ran: send the same request
-again after the delay, and on `/v1/auth/refresh` the same token, which was not
-spent. Verify and the JWKS endpoint are never limited.
+([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login, change
+password and refresh each allow each client address a number of requests, then
+answer `429 too_many_requests` with a `Retry-After` header giving the seconds
+to wait. The limit is decided after the `Content-Type` check, so a `415` is
+never counted, and before the body is read, so nothing ran: send the same
+request again after the delay, and on `/v1/auth/refresh` the same token, which
+was not spent. Verify and the JWKS endpoint are never limited.
 
 **Timestamps.** RFC 3339, in UTC, to the whole second: `2026-09-08T12:00:00Z`.
 A fraction of a second is dropped, never rounded up, so an `expires_at` is
@@ -81,8 +82,8 @@ A missing field is read as `""`.
 The decoder also tolerates the following. Send one well-formed object in valid
 UTF-8, with each field once and in lower case, and do not depend on these:
 
-- A body of `null` reads as `{}`: registration answers `422`, login, refresh
-  and verify `401`.
+- A body of `null` reads as `{}`: registration answers `422`, login, change
+  password, refresh and verify `401`.
 - A field set to `null` is read as `""`, like a missing one.
 - Anything after the first JSON value is ignored, and does not count toward
   the 64 KiB limit.
@@ -230,6 +231,85 @@ username, a user without a password, and a wrong password. Login never returns
 `422`. Nothing in the response, or in how long it takes, tells an unknown
 username from a wrong password; see
 [Deliberately vague errors](errors.md#deliberately-vague-errors).
+
+---
+
+## POST /v1/auth/change-password
+
+Replaces a user's password, given the current one, and signs the user out of
+every session. It returns no tokens: call `/v1/auth/login` next, with the new
+password.
+
+### Request
+
+```json
+{
+  "username": "alice",
+  "current_password": "correct-horse",
+  "new_password": "battery-staple"
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `username` | string | as at login |
+| `current_password` | string | as at login |
+| `new_password` | string | at least 8 code points, at most 72 bytes |
+
+The new password follows the rules of a registration's, and is stored exactly
+as sent, with the one change described in [Request bodies](#request-bodies). It
+may be the same as the current one.
+
+### Response: `200 OK`
+
+```json
+{
+  "user": {
+    "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+    "username": "alice"
+  }
+}
+```
+
+The old password stops working at once, and **every session of the user is
+revoked**: every refresh token issued before the change, on any device, is
+answered `401 invalid_token` from then on, and the user logs in again
+everywhere. Access tokens already issued stay valid until they expire
+([why](token-verification.md#revocation-is-not-immediate)).
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
+| `401` | `invalid_credentials` | The username or the current password was rejected, for any reason |
+| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
+| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
+| `422` | `validation_failed` | The new password is invalid |
+| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
+
+The `401` is login's: a malformed username, an unknown username, a user without
+a password and a wrong current password get the same response, in the same
+time; see [Deliberately vague errors](errors.md#deliberately-vague-errors). A
+`422` names only `new_password`, and comes before the account is looked up, so
+it says nothing about the account:
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "The input failed validation.",
+    "fields": [
+      { "field": "new_password", "code": "too_short", "details": { "min": 8, "unit": "code_point" } }
+    ]
+  }
+}
+```
+
+Of any number of changes sent at the same moment with the same current
+password, exactly one applies. The others get `401 invalid_credentials`, as
+they would one after the other, since by then the password they sent is no
+longer the user's.
 
 ---
 

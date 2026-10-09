@@ -10,9 +10,10 @@ waiting for a fix.
 provide:
 
 - email, OAuth or passwordless login;
-- password reset or password change;
+- password reset;
 - logout: a session ends only when its refresh token expires, or when
-  [reuse detection](architecture/usecases/refresh.md#reuse-detection) revokes it;
+  [reuse detection](architecture/usecases/refresh.md#reuse-detection) or a
+  [password change](architecture/usecases/change-password.md) revokes it;
 - account or session management, such as listing sessions or suspending an
   account;
 - authorisation: there are no roles or scopes, and an access token carries
@@ -55,10 +56,10 @@ off unless [`RATE_LIMIT`](configuration.md#rate_limit) turns it on. Put it
 behind a reverse proxy that:
 
 - terminates TLS;
-- rate limits register, login and refresh when `RATE_LIMIT` is `off`. Nothing
-  else limits password guessing then, apart from the cost of a bcrypt
-  comparison;
-- exposes only the five endpoints.
+- rate limits register, login, change password and refresh when
+  `RATE_LIMIT` is `off`. Nothing else limits password guessing then, apart
+  from the cost of a bcrypt comparison;
+- exposes only the six endpoints.
 
 With the service's own rate limiting on, set
 [`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
@@ -116,7 +117,8 @@ delete. Deleting the session deletes its tokens with it.
 
 Revoking a session stops its refresh token at once, but access tokens already
 issued stay valid until they expire. `ACCESS_TOKEN_TTL` is how long a revoked
-session keeps working. [`POST /v1/auth/verify`](api/reference.md#post-v1authverify)
+session keeps working, after reuse detection and after a password change
+alike. [`POST /v1/auth/verify`](api/reference.md#post-v1authverify)
 does not change that: it makes the checks a local verifier makes. See
 [Revocation is not immediate](api/token-verification.md#revocation-is-not-immediate).
 
@@ -125,6 +127,17 @@ finish and return new tokens. It checks the session once, at the start. The
 result is the same as if the refresh had finished just before the revocation,
 which is a valid order for two concurrent requests. The refresh token it
 returns is useless, because its session is revoked.
+
+### A login running during a password change outlives it
+
+[Changing the password](api/reference.md#post-v1authchange-password) revokes
+the sessions of the user that exist when the change commits. A login that read
+the old password before that, and opens its session after, is not reached: its
+session works, although it was opened with a password that no longer does.
+The window is about as long as a bcrypt comparison, and only someone who
+already holds the old password can use it, at the moment the user changes it.
+Closing it would take a guarded write in login: saving the session only while
+the stored password is still the one it checked.
 
 ### Sessions have no maximum age
 
@@ -152,17 +165,19 @@ Either way the user has to sign in again. Clients avoid it by following the
 
 ## Login timing after a `BCRYPT_COST` change
 
-When the account does not exist, login compares the password against a dummy
-hash, so a missing account takes as long as a wrong password. The dummy hash
-is created at startup with the current `BCRYPT_COST`. A stored hash keeps the
-cost it was created with, and nothing rehashes it.
+When the account does not exist, login and change password compare the
+password against a dummy hash, so a missing account takes as long as a wrong
+password. The dummy hash is created at startup with the current
+`BCRYPT_COST`. A stored hash keeps the cost it was created with until the user
+changes the password: nothing rehashes it.
 
 Once `BCRYPT_COST` changes, accounts created before the change no longer take
 as long as a missing account. Raising the cost from 12 to 14 makes a missing
 account about four times slower than an old one, and lowering it makes the
 old accounts slower. Either way, response time shows which of those usernames
-exist. Accounts created after the change are not affected. Raising the cost
-also leaves the old hashes as easy to crack offline as before.
+exist. Accounts created after the change, or whose password was changed after
+it, are not affected. Raising the cost also leaves the old hashes as easy to
+crack offline as before.
 
 This matters little in practice: registration already answers
 `409 username_already_exists` for a taken username, so whether an account

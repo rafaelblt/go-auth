@@ -13,7 +13,8 @@ How `go-auth` is built, from the outside in. Start with the
 - **[Domain](domain/README.md)**: entities, value objects, and the rules each
   one enforces.
 - **[Use cases](usecases/README.md)**: the ports they depend on, the shape
-  they share, and register, login, refresh and verify step by step.
+  they share, and register, login, change password, refresh and verify step by
+  step.
 - **[HTTP](http.md)**: routing, JSON bodies, middleware, and how errors become
   responses.
 - **[Persistence](persistence/README.md)**: schema, migrations, repositories,

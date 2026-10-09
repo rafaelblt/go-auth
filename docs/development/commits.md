@@ -58,7 +58,7 @@ leave it out when it spans several packages or the repository as a whole.
 |---|---|
 | `user`, `password`, `session` | `internal/domain/*` |
 | `validation`, `shared`, `port` | `internal/validation`, `internal/shared`, `internal/port` |
-| `usecase`, `usecase/register`, `usecase/login`, `usecase/refresh` | `internal/usecase/...` |
+| `usecase`, `usecase/register`, `usecase/login`, `usecase/refresh`, `usecase/changepassword` | `internal/usecase/...` |
 | `api` | `internal/api` |
 | `infra/postgres`, `infra/bcrypt`, `infra/jwt`, `infra/migrate`, `infra/ratelimit` | `internal/infra/*` |
 | `bootstrap`, `config`, `cmd` | `internal/bootstrap`, `internal/config`, `cmd` |

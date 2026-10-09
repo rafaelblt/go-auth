@@ -10,7 +10,8 @@ and revokes its session in one operation.
 
 `internal/domain/session/session.go`
 
-A login. Created by `/v1/auth/login`, revoked by reuse detection.
+A login. Created by `/v1/auth/login`, revoked by reuse detection or by a
+password change.
 
 | Field                     | Type         | Notes              |
 | ------------------------- | ------------ | ------------------ |

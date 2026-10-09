@@ -49,8 +49,10 @@ domain does not. Deleting a user deletes its password.
 
 `hash` holds the whole bcrypt string, with its algorithm, cost and salt, so
 each password records its own cost, and changing `BCRYPT_COST` does not break
-existing logins. Nothing rehashes a stored password, so old passwords keep the
-old cost.
+existing logins. Nothing rehashes a stored password, so a password keeps the
+cost it was hashed with until the user changes it. A change replaces `hash` in
+place, with `WHERE hash = @previous_hash`, so of two concurrent changes only
+one applies ([guarded writes](repositories.md#guarded-writes)).
 
 ## `sessions`
 

@@ -201,7 +201,7 @@ This is the trade-off of tokens that can be checked without asking `go-auth`.
 
 An access token holds everything needed to check it and nothing more, not even
 its session, so nothing can invalidate one before its `exp`: not reuse
-detection, not a revoked session. When a session is revoked, its refresh token
+detection, not a password change, not a revoked session. When a session is revoked, its refresh token
 stops working at once, but access tokens already issued stay valid for the
 rest of their lifetime, whether you verify them yourself or with
 [`POST /v1/auth/verify`](#letting-go-auth-verify).

@@ -133,15 +133,16 @@ Every line the service can write, and how to read them, is in
 
 ### `RATE_LIMIT`
 
-How strictly register, login and refresh are rate limited, per client
-address: `off`, the default, `relaxed`, `normal` or `strict`. The value is
-case-insensitive. `POST /v1/auth/verify`, `GET /.well-known/jwks.json`,
+How strictly register, login, change password and refresh are rate limited,
+per client address: `off`, the default, `relaxed`, `normal` or `strict`. The
+value is case-insensitive. `POST /v1/auth/verify`, `GET /.well-known/jwks.json`,
 unknown paths and wrong methods are never limited.
 
 | Endpoint | `relaxed` | `normal` | `strict` |
 |---|---|---|---|
 | `POST /v1/auth/register` | 30 per hour | 10 per hour | 3 per hour |
 | `POST /v1/auth/login` | 30 per minute | 10 per minute | 3 per minute |
+| `POST /v1/auth/change-password` | 30 per hour | 10 per hour | 3 per hour |
 | `POST /v1/auth/refresh` | 300 per minute | 100 per minute | 30 per minute |
 
 "10 per minute" means up to 10 requests at once, then one more every 6
@@ -159,9 +160,12 @@ Why these numbers: every login past the format checks pays a bcrypt
 comparison (see [`BCRYPT_COST`](#bcrypt_cost)), so `normal` holds one address
 to about 10 guesses a minute, while a user who mistypes a few times never
 notices. Registration happens once per user, but several users can share an
-address and each one costs a bcrypt hash, so it is counted per hour. Refresh
-costs no bcrypt, and a client refreshes about once per `ACCESS_TOKEN_TTL` per
-session, so `normal` still covers about 3000 sessions behind one address.
+address and each one costs a bcrypt hash, so it is counted per hour. A
+password change pays a bcrypt comparison as a login does, so it could serve to
+guess passwords too, but a user changes a password rarely: counted per hour, it
+adds a few guesses to the hundreds an hour login allows. Refresh costs no
+bcrypt, and a client refreshes about once per `ACCESS_TOKEN_TTL` per session,
+so `normal` still covers about 3000 sessions behind one address.
 Verify has no limit: it has nothing to guess, and a service that delegates
 verification calls it on every request it serves
 ([why](architecture/http.md#rate-limiting)).

@@ -7,6 +7,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/port"
 
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -14,10 +15,11 @@ import (
 )
 
 type usecases struct {
-	Register *register.Register
-	Login    *login.Login
-	Refresh  *refresh.Refresh
-	Verify   *verify.Verify
+	Register       *register.Register
+	Login          *login.Login
+	Refresh        *refresh.Refresh
+	Verify         *verify.Verify
+	ChangePassword *changepassword.ChangePassword
 }
 
 func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
@@ -26,7 +28,12 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
-	logn, err := buildLogin(cfg, deps)
+	dummyHash, err := newDummyPasswordHash(deps.PasswordHasher)
+	if err != nil {
+		return usecases{}, err
+	}
+
+	logn, err := buildLogin(cfg, deps, dummyHash)
 	if err != nil {
 		return usecases{}, err
 	}
@@ -41,11 +48,17 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
+	chpw, err := buildChangePassword(deps, dummyHash)
+	if err != nil {
+		return usecases{}, err
+	}
+
 	uc := usecases{
-		Register: &regst,
-		Login:    &logn,
-		Refresh:  refr,
-		Verify:   verf,
+		Register:       &regst,
+		Login:          &logn,
+		Refresh:        refr,
+		Verify:         verf,
+		ChangePassword: &chpw,
 	}
 	return uc, nil
 }
@@ -63,12 +76,7 @@ func buildRegister(deps infraDeps) (register.Register, error) {
 	return uc, nil
 }
 
-func buildLogin(cfg config.Config, deps infraDeps) (login.Login, error) {
-	dummyHash, err := newDummyPasswordHash(deps.PasswordHasher)
-	if err != nil {
-		return login.Login{}, err
-	}
-
+func buildLogin(cfg config.Config, deps infraDeps, dummyHash password.Hashed) (login.Login, error) {
 	uc, err := login.New(login.Config{
 		UserReader:        deps.Users,
 		PasswordReader:    deps.Passwords,
@@ -122,6 +130,22 @@ func buildVerify(deps infraDeps) (*verify.Verify, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("verify creation failed: %w", err)
+	}
+	return uc, nil
+}
+
+func buildChangePassword(deps infraDeps, dummyHash password.Hashed) (changepassword.ChangePassword, error) {
+	uc, err := changepassword.New(changepassword.Config{
+		UserReader:        deps.Users,
+		PasswordReader:    deps.Passwords,
+		PasswordChecker:   deps.PasswordHasher,
+		PasswordHasher:    deps.PasswordHasher,
+		UnitOfWork:        deps.UnitOfWork,
+		Clock:             deps.Clock,
+		DummyPasswordHash: dummyHash,
+	})
+	if err != nil {
+		return changepassword.ChangePassword{}, fmt.Errorf("change password creation failed: %w", err)
 	}
 	return uc, nil
 }
