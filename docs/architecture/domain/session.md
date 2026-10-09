@@ -26,6 +26,12 @@ guarded, so two concurrent requests that each read an active session and
 revoke it both write, and the later write wins; see
 [decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md#consequences).
 
+`SessionWriter.RevokeAllByUserID` revokes every active session of a user in
+one statement, without reading them into entities, so it reaches sessions the
+caller never loaded. It sets `revoked_at` only where it is still `NULL`, which
+is the rule of `Revoke` stated in SQL: a session revoked earlier keeps its
+time.
+
 ## RefreshToken
 
 `internal/domain/session/refresh_token.go`

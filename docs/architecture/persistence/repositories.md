@@ -49,12 +49,17 @@ entity and a `nil` error when the row does not exist, so callers write
 problem is the caller's decision.
 
 **Updates check that they changed a row.** An update that matches no row is
-an error: updating a row that vanished is a bug, not a no-op.
+an error: updating a row that vanished is a bug, not a no-op. The exception is
+`SessionRepo.RevokeAllByUserID`, which updates every active session of a user
+in one statement, so it matches as many rows as the user has active sessions,
+none included. It sets `revoked_at` only where it is `NULL`, so a session
+revoked earlier keeps its time, as `Session.Revoke` does in memory.
 
-**Guarded writes are decided by the rows they change.** `UserRepo.Add` and
-`RefreshTokenRepo.MarkUsed` apply only while a condition holds, and report
-the domain error (`user.ErrUsernameAlreadyExists`,
-`session.ErrTokenAlreadyUsed`) when nothing changed, instead of inspecting the
+**Guarded writes are decided by the rows they change.** `UserRepo.Add`,
+`RefreshTokenRepo.MarkUsed` and `PasswordRepo.UpdateHash` apply only while a
+condition holds, and report the domain error
+(`user.ErrUsernameAlreadyExists`, `session.ErrTokenAlreadyUsed`,
+`password.ErrHashChanged`) when nothing changed, instead of inspecting the
 driver's error. The pattern has its own section, below.
 `SigningKeyRepo.Add` applies only while the generation is free
 (`ON CONFLICT (generation) DO NOTHING`) and reports nothing when it is taken,
@@ -87,6 +92,9 @@ made atomic across requests. Only the database sees both.
    WHERE id = @id AND used_at IS NULL
 
    INSERT INTO users (...) VALUES (...) ON CONFLICT (username) DO NOTHING
+
+   UPDATE passwords SET hash = @hash, updated_at = @updated_at
+   WHERE id = @id AND hash = @previous_hash
    ```
 
 **The outcome is read from `RowsAffected`, never from the driver's error.** No row
@@ -97,7 +105,8 @@ conflicts the repository did not mean to absorb. Targeting the column instead
 absorbs exactly one conflict and leaves a primary key collision an error.
 
 **The sentinel lives in the domain package**, not in `internal/port`:
-`user.ErrUsernameAlreadyExists`, `session.ErrTokenAlreadyUsed`. The repository
+`user.ErrUsernameAlreadyExists`, `session.ErrTokenAlreadyUsed`,
+`password.ErrHashChanged`. The repository
 reports a fact about stored state; what to do about that fact stays in the use
 case. `port` holds the abstractions, not the vocabulary, and it documents the
 error on the method that can return it.
@@ -111,7 +120,16 @@ stored it
 
 **A named method, not a guarded `Update`.** `MarkUsed` says what it does and when
 it fails. A generic `Update` that silently refused when `used_at` was set would
-surprise its next caller.
+surprise its next caller. `UpdateHash` takes the hash it replaces as an
+argument for the same reason: the condition is in the signature, not hidden in
+the statement.
+
+**A guarded update that matches nothing checks why.** No row changed means
+either the rule no longer holds or the row does not exist, and only the first
+is the domain error. `MarkUsed` and `UpdateHash` look the row up by ID after
+the update, and report a missing one as an unexpected error, so a bug is not
+answered as a lost race. The lookup runs only on that path, and under
+`READ COMMITTED` it already sees the commit that won.
 
 Where each of these was decided, with the alternatives weighed:
 [decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)
