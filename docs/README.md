@@ -37,7 +37,7 @@ You are reading or changing the source. Each layer has its own document; the
 - **[Domain](architecture/domain/README.md)**: entities, value objects, and
   the rules each one enforces.
 - **[Use cases](architecture/usecases/README.md)**: the ports they depend on,
-  and register, login, refresh and verify step by step.
+  and register, login, change password, refresh and verify step by step.
 - **[Tokens](architecture/tokens.md)**: the two token types, the signing keys,
   and the security properties.
 - **[HTTP](architecture/http.md)**: routing, JSON, middleware, error

@@ -83,3 +83,12 @@ func (p *Password) CreatedAt() time.Time { return p.createdAt }
 func (p *Password) UpdatedAt() time.Time { return p.updatedAt }
 
 func (p *Password) IsZero() bool { return p.id.IsZero() }
+
+func (p *Password) ChangeHash(hash Hashed, changedAt time.Time) error {
+	if hash.IsZero() {
+		return errors.New("hash cannot be zero")
+	}
+	p.hash = hash
+	p.updatedAt = changedAt
+	return nil
+}

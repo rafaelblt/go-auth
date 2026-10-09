@@ -8,6 +8,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -182,6 +183,38 @@ func verifyEncoder(out verify.Output) response {
 
 func verifySuccessLog(ctx context.Context, out verify.Output) {
 	loggerFrom(ctx).Info("success verify", "user_id", out.UserID)
+}
+
+type changePasswordRequestBody struct {
+	Username        string `json:"username"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+type changePasswordResponseBody struct {
+	User user `json:"user"`
+}
+
+func changePasswordDecoder(r *http.Request) (changepassword.Input, error) {
+	var body changePasswordRequestBody
+	if err := decodeJSONBody(r, &body); err != nil {
+		return changepassword.Input{}, err
+	}
+	in := changepassword.Input{
+		Username:        body.Username,
+		CurrentPassword: body.CurrentPassword,
+		NewPassword:     body.NewPassword,
+	}
+	return in, nil
+}
+
+func changePasswordEncoder(out changepassword.Output) response {
+	body := changePasswordResponseBody{User: mapUserDTO(out.User)}
+	return response{StatusCode: http.StatusOK, Body: body}
+}
+
+func changePasswordSuccessLog(ctx context.Context, out changepassword.Output) {
+	loggerFrom(ctx).Info("success change password", "user_id", out.User.ID())
 }
 
 type jwksBody struct {

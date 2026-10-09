@@ -167,3 +167,43 @@ func TestRestorePassword(t *testing.T) {
 		})
 	}
 }
+
+func TestPassword_ChangeHash(t *testing.T) {
+	oldHash, err := NewHashed("old hash")
+	require.NoError(t, err)
+	newHash, err := NewHashed("new hash")
+	require.NoError(t, err)
+	createdAt := time.Now().UTC()
+	pwd, err := NewPassword(CreationParams{
+		UserID:    user.NewID(),
+		Hash:      oldHash,
+		CreatedAt: createdAt,
+	})
+	require.NoError(t, err)
+	changedAt := createdAt.Add(time.Hour)
+
+	err = pwd.ChangeHash(newHash, changedAt)
+
+	require.NoError(t, err)
+	assert.Equal(t, newHash, pwd.Hash())
+	assert.Equal(t, createdAt, pwd.CreatedAt())
+	assert.Equal(t, changedAt, pwd.UpdatedAt())
+}
+
+func TestPassword_ChangeHash_Fails_WhenHashIsZero(t *testing.T) {
+	hash, err := NewHashed("hash")
+	require.NoError(t, err)
+	createdAt := time.Now().UTC()
+	pwd, err := NewPassword(CreationParams{
+		UserID:    user.NewID(),
+		Hash:      hash,
+		CreatedAt: createdAt,
+	})
+	require.NoError(t, err)
+
+	err = pwd.ChangeHash(Hashed{}, createdAt.Add(time.Hour))
+
+	assert.Error(t, err)
+	assert.Equal(t, hash, pwd.Hash())
+	assert.Equal(t, createdAt, pwd.UpdatedAt())
+}

@@ -23,6 +23,13 @@ dropped: its fields could only describe credentials that did not exist yet.
 Nothing in the domain enforces one password per user. The `UNIQUE` constraint
 on `passwords.user_id` does.
 
+`ChangeHash(hash, at)` replaces the hash and sets `updatedAt`, and refuses a
+zero hash. The ID and `createdAt` stay: a new password is the same row with
+another hash, so the user still has one. `PasswordWriter.UpdateHash` persists
+the change only while the stored hash is still the one it replaced, and
+returns `ErrHashChanged` otherwise, so of two concurrent changes only one
+applies ([guarded writes](../persistence/repositories.md#guarded-writes)).
+
 ## Plain
 
 `internal/domain/password/plain.go`

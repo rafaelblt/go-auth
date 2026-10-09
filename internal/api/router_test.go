@@ -13,6 +13,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -44,6 +45,7 @@ func newRouterTestDependencies(t *testing.T) (Dependencies, *bytes.Buffer) {
 		Login:             stubUseCase[login.Input, login.Output]{},
 		Refresh:           stubUseCase[refresh.Input, refresh.Output]{},
 		Verify:            stubUseCase[verify.Input, verify.Output]{},
+		ChangePassword:    stubUseCase[changepassword.Input, changepassword.Output]{},
 		PublicKeyProvider: NewFakePublicKeyProvider(),
 	}, buf
 }
@@ -60,6 +62,7 @@ func TestNewRouter_ReturnsError_WhenADependencyIsNil(t *testing.T) {
 		{desc: "login", nilOne: func(d *Dependencies) { d.Login = nil }, expected: "login nil"},
 		{desc: "refresh", nilOne: func(d *Dependencies) { d.Refresh = nil }, expected: "refresh nil"},
 		{desc: "verify", nilOne: func(d *Dependencies) { d.Verify = nil }, expected: "verify nil"},
+		{desc: "change password", nilOne: func(d *Dependencies) { d.ChangePassword = nil }, expected: "change password nil"},
 		{desc: "public key provider", nilOne: func(d *Dependencies) { d.PublicKeyProvider = nil }, expected: "public key provider nil"},
 	}
 	for _, tC := range testCases {
@@ -77,10 +80,11 @@ func TestNewRouter_ReturnsError_WhenADependencyIsNil(t *testing.T) {
 
 func newRouterTestRateLimiting(limiter port.RateLimiter) *RateLimiting {
 	return &RateLimiting{
-		Limiter:  limiter,
-		Register: port.RateLimit{Requests: 1, Period: time.Minute},
-		Login:    port.RateLimit{Requests: 2, Period: time.Minute},
-		Refresh:  port.RateLimit{Requests: 3, Period: time.Minute},
+		Limiter:        limiter,
+		Register:       port.RateLimit{Requests: 1, Period: time.Minute},
+		Login:          port.RateLimit{Requests: 2, Period: time.Minute},
+		Refresh:        port.RateLimit{Requests: 3, Period: time.Minute},
+		ChangePassword: port.RateLimit{Requests: 4, Period: time.Minute},
 	}
 }
 
@@ -106,6 +110,7 @@ func TestNewRouter_ReturnsError_WhenRateLimitingIsInvalid(t *testing.T) {
 		{desc: "register requests zero", mutate: func(rl *RateLimiting) { rl.Register.Requests = 0 }, expected: "register rate limit invalid"},
 		{desc: "login period zero", mutate: func(rl *RateLimiting) { rl.Login.Period = 0 }, expected: "login rate limit invalid"},
 		{desc: "refresh requests negative", mutate: func(rl *RateLimiting) { rl.Refresh.Requests = -1 }, expected: "refresh rate limit invalid"},
+		{desc: "change password period zero", mutate: func(rl *RateLimiting) { rl.ChangePassword.Period = 0 }, expected: "change password rate limit invalid"},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -128,7 +133,7 @@ func TestNewRouter_RateLimitsEachPostEndpoint_WithItsOwnLimit(t *testing.T) {
 	handler, err := NewRouter(Config{Dependencies: deps, RateLimiting: rateLimiting})
 	require.NoError(t, err)
 
-	for _, path := range []string{"/v1/auth/register", "/v1/auth/login", "/v1/auth/refresh"} {
+	for _, path := range []string{"/v1/auth/register", "/v1/auth/login", "/v1/auth/refresh", "/v1/auth/change-password"} {
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, newJSONPost(path))
 		assert.Equal(t, http.StatusTooManyRequests, recorder.Code, path)
@@ -138,6 +143,7 @@ func TestNewRouter_RateLimitsEachPostEndpoint_WithItsOwnLimit(t *testing.T) {
 		{Key: "register 192.0.2.1", Limit: rateLimiting.Register},
 		{Key: "login 192.0.2.1", Limit: rateLimiting.Login},
 		{Key: "refresh 192.0.2.1", Limit: rateLimiting.Refresh},
+		{Key: "change-password 192.0.2.1", Limit: rateLimiting.ChangePassword},
 	}, limiter.Calls())
 }
 

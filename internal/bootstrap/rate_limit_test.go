@@ -74,6 +74,7 @@ func TestNewRateLimiting_ReturnsTheLevelsLimits(t *testing.T) {
 	assert.Equal(t, port.RateLimit{Requests: 10, Period: time.Hour}, rateLimiting.Register)
 	assert.Equal(t, port.RateLimit{Requests: 10, Period: time.Minute}, rateLimiting.Login)
 	assert.Equal(t, port.RateLimit{Requests: 100, Period: time.Minute}, rateLimiting.Refresh)
+	assert.Equal(t, port.RateLimit{Requests: 10, Period: time.Hour}, rateLimiting.ChangePassword)
 }
 
 // The numbers are documented per level in docs/configuration.md; a change here
@@ -81,19 +82,22 @@ func TestNewRateLimiting_ReturnsTheLevelsLimits(t *testing.T) {
 func TestRateLimitsByLevel_MatchesTheDocumentedTable(t *testing.T) {
 	expected := map[config.RateLimitLevel]rateLimits{
 		config.RateLimitRelaxed: {
-			register: port.RateLimit{Requests: 30, Period: time.Hour},
-			login:    port.RateLimit{Requests: 30, Period: time.Minute},
-			refresh:  port.RateLimit{Requests: 300, Period: time.Minute},
+			register:       port.RateLimit{Requests: 30, Period: time.Hour},
+			login:          port.RateLimit{Requests: 30, Period: time.Minute},
+			refresh:        port.RateLimit{Requests: 300, Period: time.Minute},
+			changePassword: port.RateLimit{Requests: 30, Period: time.Hour},
 		},
 		config.RateLimitNormal: {
-			register: port.RateLimit{Requests: 10, Period: time.Hour},
-			login:    port.RateLimit{Requests: 10, Period: time.Minute},
-			refresh:  port.RateLimit{Requests: 100, Period: time.Minute},
+			register:       port.RateLimit{Requests: 10, Period: time.Hour},
+			login:          port.RateLimit{Requests: 10, Period: time.Minute},
+			refresh:        port.RateLimit{Requests: 100, Period: time.Minute},
+			changePassword: port.RateLimit{Requests: 10, Period: time.Hour},
 		},
 		config.RateLimitStrict: {
-			register: port.RateLimit{Requests: 3, Period: time.Hour},
-			login:    port.RateLimit{Requests: 3, Period: time.Minute},
-			refresh:  port.RateLimit{Requests: 30, Period: time.Minute},
+			register:       port.RateLimit{Requests: 3, Period: time.Hour},
+			login:          port.RateLimit{Requests: 3, Period: time.Minute},
+			refresh:        port.RateLimit{Requests: 30, Period: time.Minute},
+			changePassword: port.RateLimit{Requests: 3, Period: time.Hour},
 		},
 	}
 

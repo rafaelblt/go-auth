@@ -7,6 +7,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
@@ -53,6 +54,10 @@ type PasswordReader interface {
 
 type PasswordWriter interface {
 	Add(context.Context, *password.Password) error
+	// UpdateHash persists a hash already changed in memory. It applies only
+	// while the stored hash is still previous, and returns
+	// password.ErrHashChanged when another change got there first.
+	UpdateHash(ctx context.Context, pwd *password.Password, previous password.Hashed) error
 }
 
 // Session
@@ -64,6 +69,10 @@ type SessionReader interface {
 type SessionWriter interface {
 	Add(context.Context, *session.Session) error
 	Update(context.Context, *session.Session) error
+	// RevokeAllByUserID revokes, at revokedAt, every session of the user that
+	// is not revoked yet. A session already revoked keeps its time, and a user
+	// with no session to revoke is not an error.
+	RevokeAllByUserID(ctx context.Context, userID user.ID, revokedAt time.Time) error
 }
 
 // RefreshToken

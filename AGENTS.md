@@ -2,7 +2,8 @@
 
 `go-auth` is a self-hosted authentication service: a standalone HTTP/JSON API
 over its own PostgreSQL database, issuing Ed25519 JWT access tokens and rotating,
-revocable refresh tokens. It is at v1: register, login, refresh and verify.
+revocable refresh tokens. It is at v1: register, login, change password,
+refresh and verify.
 
 **This repository documents its reasoning in `docs/`.** Almost every *why* is
 written down there rather than in code comments, so check `docs/` before

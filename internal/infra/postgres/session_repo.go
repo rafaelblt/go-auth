@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
+	"github.com/rafaelblt/go-auth/internal/domain/user"
 )
 
 type SessionRepo struct {
@@ -56,6 +58,29 @@ func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) erro
 	}
 	if tag.RowsAffected() == 0 {
 		return errors.New("no rows affected in session update")
+	}
+
+	return nil
+}
+
+// RevokeAllByUserID revokes in SQL rather than through Session.Revoke, so the
+// sessions the caller never read are revoked too. revoked_at IS NULL keeps the
+// time of an earlier revocation, as Session.Revoke does in memory.
+func (repo *SessionRepo) RevokeAllByUserID(
+	ctx context.Context, userID user.ID, revokedAt time.Time,
+) error {
+	if userID.IsZero() {
+		return errors.New("user id zero")
+	}
+
+	sql := `UPDATE sessions
+			SET revoked_at = $2,
+				updated_at = $2
+			WHERE user_id = $1 AND revoked_at IS NULL`
+	_, err := repo.db.Exec(ctx, sql, userID.Value(), revokedAt)
+
+	if err != nil {
+		return fmt.Errorf("sessions revoke by user id failed: %w", err)
 	}
 
 	return nil

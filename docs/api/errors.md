@@ -112,10 +112,10 @@ The values of `error.code`.
 | `request_body_too_large` | 413 | every `POST` | The body's JSON value runs past 64 KiB ([Request bodies](reference.md#request-bodies)) |
 | `unsupported_media_type` | 415 | every `POST` | The request's `Content-Type` is not `application/json` |
 | `too_many_requests` | 429 | every `POST` but `/v1/auth/verify` | Rate limiting is on and the address made too many requests to the endpoint; `Retry-After` gives the seconds to wait |
-| `invalid_credentials` | 401 | `/v1/auth/login` | Login failed, for any reason |
+| `invalid_credentials` | 401 | `/v1/auth/login`, `/v1/auth/change-password` | The username or the password was rejected, for any reason |
 | `invalid_token` | 401 | `/v1/auth/refresh`, `/v1/auth/verify` | The token sent cannot be used, for any reason |
 | `username_already_exists` | 409 | `/v1/auth/register` | The username is taken |
-| `validation_failed` | 422 | `/v1/auth/register` | The input failed validation; `fields` says how |
+| `validation_failed` | 422 | `/v1/auth/register`, `/v1/auth/change-password` | The input failed validation; `fields` says how |
 | `internal_server_error` | 500 | all | An unexpected failure |
 
 ### Field codes
@@ -162,13 +162,19 @@ serves several codes, which is the reason to branch on `code`.
 
 ## Deliberately vague errors
 
-Three endpoints say less than they know, on purpose.
+Four endpoints say less than they know, on purpose.
 
 **Login** answers `invalid_credentials` to a malformed username, an unknown
 user, a user with no password, and a wrong password alike. Saying which one
 failed would let anyone check whether an account exists. For the same reason,
 login answers a malformed username with `401`, not `422`, and takes as long
 for an unknown user as for a wrong password.
+
+**Change password** checks the username and the current password as login
+does, and answers the same way, in the same time. It also answers
+`invalid_credentials` when another change replaced the password first. Only the
+new password gets a `422`, which depends on nothing but the new password
+itself.
 
 **Refresh** answers `invalid_token` to a token that never existed, one that
 expired, one already used, and one whose session was revoked. Someone holding
@@ -200,6 +206,7 @@ status.
 ```
 400  →  bug in your client: fix the request
 401  →  on /login: show "wrong username or password"
+        on /change-password: show "wrong username or current password"
         on /refresh: discard the token and send the user to log in
         on /verify: turn away the request that carried the token
 409  →  ask for another username

@@ -11,16 +11,18 @@ themselves, without calling `go-auth` on every request, or, if they would
 rather not, ask `go-auth` to check each one.
 
 ```
-POST /v1/auth/register       create a user
-POST /v1/auth/login          exchange credentials for tokens
-POST /v1/auth/refresh        exchange a refresh token for a new token pair
-POST /v1/auth/verify         check an access token on your service's behalf
-GET  /.well-known/jwks.json  public keys for verifying access tokens
+POST /v1/auth/register         create a user
+POST /v1/auth/login            exchange credentials for tokens
+POST /v1/auth/change-password  replace a password and revoke every session
+POST /v1/auth/refresh          exchange a refresh token for a new token pair
+POST /v1/auth/verify           check an access token on your service's behalf
+GET  /.well-known/jwks.json    public keys for verifying access tokens
 ```
 
 ## What it does
 
-- Registration and login with a username and password.
+- Registration and login with a username and password, and password changes
+  that sign the user out of every session.
 - Passwords stored as bcrypt hashes.
 - Stateless access tokens: JWTs signed with EdDSA (Ed25519), valid for a short
   time.
@@ -32,8 +34,8 @@ GET  /.well-known/jwks.json  public keys for verifying access tokens
   tokens themselves.
 - Login answers every failure the same way: one error for every cause, and a
   bcrypt comparison even when the account does not exist.
-- Optional rate limiting of register, login and refresh per client address,
-  at three levels.
+- Optional rate limiting of register, login, change password and refresh per
+  client address, at three levels.
 - Structured logs, with an ID for each request.
 - Migrations embedded in the binary, and a startup check that the database
   schema matches the binary.

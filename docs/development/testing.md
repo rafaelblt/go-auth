@@ -237,6 +237,6 @@ it reads the signing keys. It starts one more, with
 `SIGNING_KEY_ENCRYPTION_KEY` set, over another empty database, to check that
 the seeds are stored sealed and that an app without the key does not start.
 
-It covers register, login, refresh, verify, JWKS, unknown paths, rate limiting
-and signing keys shared between instances, and in `mix_test.go`, sequences across endpoints, including rotation and reuse
+It covers register, login, change password, refresh, verify, JWKS, unknown
+paths, rate limiting and signing keys shared between instances, and in `mix_test.go`, sequences across endpoints, including rotation and reuse
 detection, the flow most worth testing end to end.

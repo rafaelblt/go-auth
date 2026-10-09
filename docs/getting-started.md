@@ -192,6 +192,19 @@ The answer names the user the token was issued to, as `user_id`, or is
 `401 invalid_token`
 ([Letting go-auth verify](api/token-verification.md#letting-go-auth-verify)).
 
+### 5. Change the password
+
+```bash
+curl -sX POST http://localhost:8080/v1/auth/change-password \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","current_password":"correct-horse","new_password":"battery-staple"}'
+```
+
+The answer is the user, as at registration. The old password stops working,
+and so does every refresh token issued before the change: log in again with
+the new password. See
+[POST /v1/auth/change-password](api/reference.md#post-v1authchange-password).
+
 ## Deploying
 
 Before deploying, read [Limitations](limitations.md). The two things most

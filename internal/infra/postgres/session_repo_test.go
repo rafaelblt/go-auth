@@ -7,6 +7,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/infra/postgres"
+	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil/postgrestest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
@@ -44,9 +45,11 @@ func (helper *SessionRepoTestHelper) PersistentUser() *user.User {
 
 func (helper *SessionRepoTestHelper) PersistentSession() *session.Session {
 	helper.t.Helper()
+	return helper.PersistentSessionOf(helper.PersistentUser())
+}
 
-	usr := usertest.NewUser(helper.t, nil)
-	postgrestest.InsertUser(helper.t, helper.db, usr)
+func (helper *SessionRepoTestHelper) PersistentSessionOf(usr *user.User) *session.Session {
+	helper.t.Helper()
 
 	sess := sessiontest.NewSession(helper.t, func(p *session.SessionRestoreParams) {
 		p.UserID = usr.ID()
@@ -134,4 +137,55 @@ func TestSessionRepo_FindByID_ReturnsSession_WhenIDExists(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, found)
 	assert.Equal(t, sess.ID(), found.ID())
+}
+
+func TestSessionRepo_RevokeAllByUserID_RevokesEveryActiveSessionOfTheUser(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	usr := helper.PersistentUser()
+	first := helper.PersistentSessionOf(usr)
+	second := helper.PersistentSessionOf(usr)
+	revokedAt := time.Now().UTC()
+
+	repo := helper.Repo()
+	err := repo.RevokeAllByUserID(t.Context(), usr.ID(), revokedAt)
+
+	require.NoError(t, err)
+	for _, sess := range []*session.Session{first, second} {
+		sess.Revoke(revokedAt)
+		assert.True(t, helper.CheckSessionExists(sess), "session not revoked at revokedAt")
+	}
+}
+
+func TestSessionRepo_RevokeAllByUserID_KeepsTheTimeOfARevokedSession(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	usr := helper.PersistentUser()
+	revokedAt := time.Now().UTC()
+	revoked := sessiontest.NewSession(t, func(p *session.SessionRestoreParams) {
+		p.UserID = usr.ID()
+		p.RevokedAt = shared.Ptr(revokedAt.Add(-time.Hour))
+		p.UpdatedAt = revokedAt.Add(-time.Hour)
+	})
+	postgrestest.InsertSession(t, helper.db, revoked)
+
+	repo := helper.Repo()
+	err := repo.RevokeAllByUserID(t.Context(), usr.ID(), revokedAt)
+
+	require.NoError(t, err)
+	assert.True(t, helper.CheckSessionExists(revoked), "earlier revocation was overwritten")
+}
+
+func TestSessionRepo_RevokeAllByUserID_LeavesOtherUsersSessionsActive(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	usr := helper.PersistentUser()
+	otherUser := usertest.NewUser(t, func(p *user.RestoreParams) {
+		p.Username = usertest.MustUsername(t, "other_user")
+	})
+	postgrestest.InsertUser(t, helper.db, otherUser)
+	other := helper.PersistentSessionOf(otherUser)
+
+	repo := helper.Repo()
+	err := repo.RevokeAllByUserID(t.Context(), usr.ID(), time.Now().UTC())
+
+	require.NoError(t, err)
+	assert.True(t, helper.CheckSessionExists(other), "another user's session changed")
 }

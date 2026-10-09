@@ -10,7 +10,8 @@ and revokes its session in one operation.
 
 `internal/domain/session/session.go`
 
-A login. Created by `/v1/auth/login`, revoked by reuse detection.
+A login. Created by `/v1/auth/login`, revoked by reuse detection or by a
+password change.
 
 | Field                     | Type         | Notes              |
 | ------------------------- | ------------ | ------------------ |
@@ -25,6 +26,12 @@ first. The guarantee stops at the entity. `SessionWriter.Update` is not
 guarded, so two concurrent requests that each read an active session and
 revoke it both write, and the later write wins; see
 [decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md#consequences).
+
+`SessionWriter.RevokeAllByUserID` revokes every active session of a user in
+one statement, without reading them into entities, so it reaches sessions the
+caller never loaded. It sets `revoked_at` only where it is still `NULL`, which
+is the rule of `Revoke` stated in SQL: a session revoked earlier keeps its
+time.
 
 ## RefreshToken
 

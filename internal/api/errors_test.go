@@ -9,6 +9,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
@@ -281,6 +282,10 @@ func TestErrorFieldCatalog(t *testing.T) {
 		{
 			desc:  "register password field",
 			field: register.FieldPassword,
+		},
+		{
+			desc:  "change password new password field",
+			field: changepassword.FieldNewPassword,
 		},
 	}
 	for _, tC := range testCases {

@@ -7,15 +7,15 @@ info:
     name: MIT
     identifier: MIT
   description: |
-    A self-hosted authentication service. Five endpoints; every request and
+    A self-hosted authentication service. Six endpoints; every request and
     response body is JSON. No endpoint takes a credential in a header.
 
     The `POST` endpoints require `Content-Type: application/json`
     (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
     decoded only up to its first 64 KiB, else `413`. When the operator turns
-    rate limiting on, register, login and refresh answer `429` with
-    `Retry-After` once a client address has used up its allowance; verify is
-    never limited.
+    rate limiting on, register, login, change password and refresh answer `429`
+    with `Retry-After` once a client address has used up its allowance; verify
+    is never limited.
 
     A path no endpoint has is answered `404` with code `route_not_found`, in the
     usual error shape. A path not in canonical form (`//v1/auth/login`, or one
@@ -180,6 +180,89 @@ paths:
           $ref: '#/components/responses/RequestBodyTooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/auth/change-password:
+    post:
+      operationId: changePassword
+      summary: Replace a password, given the current one
+      description: |
+        Replaces a user's password, given the username and the current
+        password, and revokes every session of the user: the refresh tokens
+        issued before the change stop working, on every device. Access tokens
+        already issued stay valid until they expire. It returns no tokens:
+        log in again with the new password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            examples:
+              changePassword:
+                value:
+                  username: alice
+                  current_password: correct-horse
+                  new_password: battery-staple
+      responses:
+        '200':
+          description: The password was replaced and every session of the user revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+              examples:
+                changed:
+                  value:
+                    user:
+                      id: 0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37
+                      username: alice
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '401':
+          description: |
+            The username or the current password was rejected. Every such
+            failure gets this one response, as at login: a malformed username,
+            an unknown username, a user without a password, a wrong current
+            password, and a current password another change replaced first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_credentials:
+                  value:
+                    error:
+                      code: invalid_credentials
+                      message: Not authorized.
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: |
+            The new password is invalid. `fields` names only `new_password`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validation_failed:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The input failed validation.
+                      fields:
+                        - field: new_password
+                          code: too_short
+                          details:
+                            min: 8
+                            unit: code_point
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -376,6 +459,29 @@ components:
           type: string
           description: A missing field is read as `""`.
 
+    ChangePasswordRequest:
+      type: object
+      required: [username, current_password, new_password]
+      properties:
+        username:
+          type: string
+          description: |
+            As at login: no rule is reported here, and any failure is
+            `401 invalid_credentials`. A missing field is read as `""`.
+        current_password:
+          type: string
+          description: |
+            As at login: no rule is reported here, and any failure is
+            `401 invalid_credentials`. A missing field is read as `""`.
+        new_password:
+          type: string
+          minLength: 8
+          description: |
+            At least 8 code points, and at most 72 bytes in UTF-8, as at
+            registration. Stored exactly as sent. It may be the same as the
+            current password. A missing field is read as `""` and reported as
+            `too_short`.
+
     RefreshRequest:
       type: object
       required: [refresh_token]
@@ -408,6 +514,13 @@ components:
           description: As stored, in lower case.
 
     RegisterResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    ChangePasswordResponse:
       type: object
       required: [user]
       properties:
