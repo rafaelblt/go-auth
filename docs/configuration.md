@@ -73,14 +73,17 @@ app is built, after the configuration has loaded.
 | `NORMAL` | 12 |
 | `STRONG` | 14 |
 
-Cost 12 takes roughly 200–400 ms per hash on typical hardware, and every
-login pays it. So does startup, once, to create the dummy hash that login
-checks when an account does not exist. Lower the cost only for tests; the
-end-to-end tests use 6.
+Cost 12 takes roughly 200–400 ms per hash on typical hardware. Every login
+pays it once, and every password change twice: once to check the current
+password, once to hash the new one. So does startup, once, to create the
+dummy hash that login and change password check when an account does not
+exist. Lower the cost only for tests; the end-to-end tests use 6.
 
-Stored passwords keep the cost they were hashed with. Changing this value
-once there are users lets login timing reveal which accounts existed before
-the change; see
+Stored passwords keep the cost they were hashed with until the user changes
+them: a change hashes the new password at the current cost, and nothing else
+rehashes a stored one. Changing this value once there are users lets the
+timing of login and change password reveal which accounts existed before the
+change; see
 [Limitations](limitations.md#login-timing-after-a-bcrypt_cost-change).
 
 ### `ACCESS_TOKEN_TTL`

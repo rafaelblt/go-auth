@@ -94,7 +94,7 @@ and as it is otherwise
 | Reusing a refresh token revokes its session | yes |
 | Changing the password revokes every session of the user | yes |
 | Login and change password errors do not reveal whether an account exists | yes |
-| Login timing does not reveal whether an account exists | yes, unless `BCRYPT_COST` changed ([why](../limitations.md#login-timing-after-a-bcrypt_cost-change)) |
+| Login and change password timing does not reveal whether an account exists | yes, unless `BCRYPT_COST` changed ([why](../limitations.md#login-timing-after-a-bcrypt_cost-change)) |
 | Refresh errors do not reveal a token's state | yes |
 | Access tokens can be revoked | **no** ([why](../api/token-verification.md#revocation-is-not-immediate)) |
 | Signing key survives a restart | yes |
