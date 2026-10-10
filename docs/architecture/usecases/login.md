@@ -64,6 +64,7 @@ first locks the password, only while its hash is still the one step 5 checked
 that comes later waits for the transaction to commit, and its revocation
 reaches the session. A change that came first leaves the lock nothing to
 match, once it commits: the transaction rolls back, the access token from
-step 8 is never returned, and the login gets `401 invalid_credentials` with the reason
-`password changed`, as it would have a moment later. The lock is shared, so
-logins do not wait for each other.
+step 8 is never returned, and the login gets `401 invalid_credentials` with
+the reason `password changed`, as it would have a moment later. The lock is
+shared, so logins do not wait for each other; see
+[decision 0055](../../development/decisions/0055-login-locks-the-password-it-checked.md).

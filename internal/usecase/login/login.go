@@ -143,6 +143,8 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		// The session is saved only while the password is still the one
 		// checked above, and a change of it waits until it is saved, so the
 		// change's revocation reaches it.
+		//
+		// See docs/development/decisions/0055-login-locks-the-password-it-checked.md.
 		err := deps.PasswordWriter.LockHash(ctx, pwd)
 		if err != nil {
 			return fmt.Errorf("password writer lock hash failed: %w", err)

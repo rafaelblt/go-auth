@@ -142,7 +142,8 @@ and the existence check after, and it holds the row until the transaction
 ends, as an update would, without changing it. A change that comes later
 waits for login to commit, and its revocation then sees the session; one that
 came first leaves the lock nothing to match. `FOR SHARE` is the weakest lock
-that the change's `UPDATE` waits for, so logins do not wait for each other.
+that the change's `UPDATE` waits for, so logins do not wait for each other
+([decision 0055](../../development/decisions/0055-login-locks-the-password-it-checked.md)).
 
 **A guarded update that matches nothing checks why.** No row changed means
 either the rule no longer holds or the row does not exist, and only the first
@@ -152,8 +153,9 @@ a bug is not answered as a lost race. The lookup runs only on that path, and und
 `READ COMMITTED` it already sees the commit that won.
 
 Where each of these was decided, with the alternatives weighed:
-[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md)
-and [decision 0048](../../development/decisions/0048-duplicate-username-reported-by-the-writer.md).
+[decision 0050](../../development/decisions/0050-refresh-token-use-is-settled-at-write.md),
+[decision 0048](../../development/decisions/0048-duplicate-username-reported-by-the-writer.md)
+and, for the lock, [decision 0055](../../development/decisions/0055-login-locks-the-password-it-checked.md).
 A new rule of this shape should link here rather than argue the premise again.
 
 ## Unit of work

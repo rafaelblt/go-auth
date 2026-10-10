@@ -85,7 +85,7 @@ Format, types and scopes: [`development/commits.md`](docs/development/commits.md
 ## Decision records
 
 [`docs/development/decisions/`](docs/development/decisions/README.md) holds the
-nine decisions whose reasoning cannot be read from the code. Its README says when
+ten decisions whose reasoning cannot be read from the code. Its README says when
 a new one is warranted; most changes apply an existing decision instead. Each
 record's **Invariant** line is what a change must not break — the README table
-lists all nine in one place.
+lists all ten in one place.
