@@ -14,9 +14,9 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
-	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase"
+	"github.com/rafaelblt/go-auth/internal/usecase/credential"
 )
 
 type Input struct {
@@ -32,84 +32,22 @@ type Output struct {
 }
 
 type Login struct {
-	users        port.UserReader
-	passwords    port.PasswordReader
-	pwdChecker   port.PasswordChecker
+	credentials  credential.Checker
 	accessIssuer port.AccessTokenIssuer
 	uow          port.UnitOfWork
 	clock        port.Clock
 	refreshTTL   time.Duration
-	dummyHash    password.Hashed
 }
 
-var ErrUsernameMalformed = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"malformed username",
-)
-
-var ErrPasswordMalformed = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"malformed password",
-)
-
-var ErrUserNotFound = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"user not found",
-)
-
-var ErrPasswordNotFound = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"password not found",
-)
-
-var ErrPasswordMismatch = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"password mismatch",
-)
-
-var ErrPasswordChanged = usecase.NewErrorWithReason(
-	"invalid_credentials",
-	usecase.ErrorKindUnauthorized,
-	"password changed",
-)
-
 func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
-	username, issues := user.NewUsername(input.Username)
-	if !issues.IsEmpty() {
-		return Output{}, ErrUsernameMalformed
-	}
-	plain, issues := password.NewPlain(input.Password)
-	if !issues.IsEmpty() {
-		return Output{}, ErrPasswordMalformed
+	username, plain, err := credential.Parse(input.Username, input.Password)
+	if err != nil {
+		return Output{}, err
 	}
 
-	usr, err := uc.users.FindByUsername(ctx, username)
+	usr, pwd, err := uc.credentials.Check(ctx, username, plain)
 	if err != nil {
-		return Output{}, fmt.Errorf("find user by username failed: %w", err)
-	}
-	if usr == nil {
-		return Output{}, uc.rejectWithDummyVerify(plain, ErrUserNotFound)
-	}
-
-	pwd, err := uc.passwords.FindByUserID(ctx, usr.ID())
-	if err != nil {
-		return Output{}, fmt.Errorf("find password by user id failed: %w", err)
-	}
-	if pwd == nil {
-		return Output{}, uc.rejectWithDummyVerify(plain, ErrPasswordNotFound)
-	}
-
-	ok, err := uc.pwdChecker.Verify(plain, pwd.Hash())
-	if err != nil {
-		return Output{}, fmt.Errorf("password verification failed: %w", err)
-	}
-	if !ok {
-		return Output{}, ErrPasswordMismatch
+		return Output{}, err
 	}
 
 	now := uc.clock.Now()
@@ -163,7 +101,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		return nil
 	})
 	if errors.Is(err, password.ErrHashChanged) {
-		return Output{}, ErrPasswordChanged
+		return Output{}, credential.ErrPasswordChanged
 	}
 	if err != nil {
 		return Output{}, fmt.Errorf("session and refresh token saving failed: %w", err)
@@ -176,18 +114,4 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		RefreshToken: usecase.MapRefreshTokenToDTO(refreshToken, refreshSecret),
 	}
 	return output, nil
-}
-
-// rejectWithDummyVerify spends the time of a real password check before
-// returning rejection, so response time does not reveal whether the account
-// exists. The result of the check is deliberately discarded: the call is here
-// for the time it takes, and removing it reopens the timing difference.
-//
-// See docs/development/decisions/0045-login-dummy-hash.md.
-func (uc Login) rejectWithDummyVerify(plain password.Plain, rejection error) error {
-	_, err := uc.pwdChecker.Verify(plain, uc.dummyHash)
-	if err != nil {
-		return fmt.Errorf("dummy password verification failed: %w", err)
-	}
-	return rejection
 }

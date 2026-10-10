@@ -4,7 +4,9 @@
 
 The application logic: what the service does, expressed without HTTP and
 without SQL. One package per use case, each depending only on the interfaces
-in `internal/port`.
+in `internal/port`, and one that is not a use case:
+[`credential`](#the-shared-credential-check), the check of a username and a
+password that login and change password share.
 
 | Document | Covers |
 |---|---|
@@ -64,6 +66,31 @@ shape:
 the mappers that are the only way to build them
 ([decision 0034](../../development/decisions/0034-protected-dtos.md)), and
 `UseCaseError`.
+
+## The shared credential check
+
+`internal/usecase/credential`
+
+Login and change password both take a username and a password, and have to
+reject them the same way: one `401 invalid_credentials` for every failure,
+told apart only by its `reason` in the log, and a bcrypt comparison even when
+the account is missing
+([decision 0045](../../development/decisions/0045-login-dummy-hash.md)). If
+the two differed, in an answer or in the time it takes, one endpoint would
+reveal what the other hides. So both run the same code:
+
+- `Parse` reads the username and the password, and answers a value that
+  breaks a format rule with a rejection, never with a `422`;
+- `Checker.Check` finds the account and verifies the password, and on a miss
+  verifies the dummy hash first, in `rejectWithDummyVerify`;
+- the rejections are this package's errors, `ErrPasswordChanged` included,
+  which both use cases return when the password changes between the check and
+  their write.
+
+It is not a use case: it has no `Execute`, no `Input` and no `Output`. Each
+use case builds its `Checker` in `New`, from fields of its own `Config`: the
+dummy hash login verifies comes from `login.Config.DummyPasswordHash`, as
+decision 0045 records.
 
 ## UseCaseError
 

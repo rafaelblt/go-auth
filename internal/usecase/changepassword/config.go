@@ -5,6 +5,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain/password"
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/usecase/credential"
 )
 
 type Config struct {
@@ -21,14 +22,14 @@ type Config struct {
 }
 
 func New(cfg Config) (ChangePassword, error) {
-	if cfg.UserReader == nil {
-		return ChangePassword{}, errors.New("user reader cannot be nil")
-	}
-	if cfg.PasswordReader == nil {
-		return ChangePassword{}, errors.New("password reader cannot be nil")
-	}
-	if cfg.PasswordChecker == nil {
-		return ChangePassword{}, errors.New("password checker cannot be nil")
+	credentials, err := credential.NewChecker(credential.Config{
+		UserReader:        cfg.UserReader,
+		PasswordReader:    cfg.PasswordReader,
+		PasswordChecker:   cfg.PasswordChecker,
+		DummyPasswordHash: cfg.DummyPasswordHash,
+	})
+	if err != nil {
+		return ChangePassword{}, err
 	}
 	if cfg.PasswordHasher == nil {
 		return ChangePassword{}, errors.New("password hasher cannot be nil")
@@ -39,17 +40,11 @@ func New(cfg Config) (ChangePassword, error) {
 	if cfg.Clock == nil {
 		return ChangePassword{}, errors.New("clock cannot be nil")
 	}
-	if cfg.DummyPasswordHash.IsZero() {
-		return ChangePassword{}, errors.New("dummy password hash cannot be zero")
-	}
 	uc := ChangePassword{
-		users:      cfg.UserReader,
-		passwords:  cfg.PasswordReader,
-		pwdChecker: cfg.PasswordChecker,
-		hasher:     cfg.PasswordHasher,
-		uow:        cfg.UnitOfWork,
-		clock:      cfg.Clock,
-		dummyHash:  cfg.DummyPasswordHash,
+		credentials: credentials,
+		hasher:      cfg.PasswordHasher,
+		uow:         cfg.UnitOfWork,
+		clock:       cfg.Clock,
 	}
 	return uc, nil
 }

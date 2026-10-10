@@ -27,8 +27,9 @@ Input{Username, CurrentPassword, NewPassword}
 ```
 
 **The credentials are checked as login checks them.** Steps 1, 2 and 4 to 6
-are [login's](login.md), and end in the same `401 invalid_credentials`, with
-the same `reason`s in the log. A missing account costs a bcrypt comparison
+are the [shared credential check](README.md#the-shared-credential-check) that
+[login](login.md) runs too, and end in the same `401 invalid_credentials`,
+with the same `reason`s in the log. A missing account costs a bcrypt comparison
 against the dummy hash here too: otherwise this endpoint would tell an unknown
 username from a wrong password by its response time, which login takes care
 not to do

@@ -71,7 +71,7 @@ Each layer has its own document:
 | `internal/bootstrap` | Composition root: wires every dependency, runs the server and the background tasks |
 | `internal/config` | Loads and validates the environment variables |
 | `internal/api` | HTTP: routing, JSON bodies, middleware, error translation |
-| `internal/usecase` | Application logic, one package per use case |
+| `internal/usecase` | Application logic, one package per use case, and `credential`, the credential check login and change password share |
 | `internal/port` | Interfaces the use cases depend on |
 | `internal/domain/user` | `User` entity, `ID`, `Username`, `Status` |
 | `internal/domain/password` | `Password` entity, `ID`, `Plain`, `Hashed` |

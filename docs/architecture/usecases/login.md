@@ -28,6 +28,9 @@ Input{Username, Password}
                  └─ Output{UserID, SessionID, AccessToken, RefreshToken}
 ```
 
+**Steps 1 to 5 are the [shared credential check](README.md#the-shared-credential-check)**,
+which change password runs too, so the two reject credentials alike.
+
 **Every failure is the same response.** Steps 1 to 5 and 10 all end in
 `401 invalid_credentials`, so nothing tells a malformed username from an
 unknown user or a wrong password. Login therefore never answers `422`, even

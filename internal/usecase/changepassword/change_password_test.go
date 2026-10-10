@@ -13,6 +13,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/testutil/usertest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
+	"github.com/rafaelblt/go-auth/internal/usecase/credential"
 	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +72,7 @@ func TestChangePassword_ReturnsMalformedError_WhenCredentialsAreInvalid(t *testi
 				CurrentPassword: "12345678",
 				NewPassword:     "87654321",
 			},
-			expectedErr: changepassword.ErrUsernameMalformed,
+			expectedErr: credential.ErrUsernameMalformed,
 		},
 		{
 			desc: "current password too short",
@@ -80,7 +81,7 @@ func TestChangePassword_ReturnsMalformedError_WhenCredentialsAreInvalid(t *testi
 				CurrentPassword: strings.Repeat("a", password.PlainMinCodePoints-1),
 				NewPassword:     "87654321",
 			},
-			expectedErr: changepassword.ErrPasswordMalformed,
+			expectedErr: credential.ErrPasswordMalformed,
 		},
 		{
 			desc: "current password too long",
@@ -89,7 +90,7 @@ func TestChangePassword_ReturnsMalformedError_WhenCredentialsAreInvalid(t *testi
 				CurrentPassword: strings.Repeat("a", password.PlainMaxBytes+1),
 				NewPassword:     "87654321",
 			},
-			expectedErr: changepassword.ErrPasswordMalformed,
+			expectedErr: credential.ErrPasswordMalformed,
 		},
 		{
 			desc: "current password and new password too short",
@@ -98,7 +99,7 @@ func TestChangePassword_ReturnsMalformedError_WhenCredentialsAreInvalid(t *testi
 				CurrentPassword: strings.Repeat("a", password.PlainMinCodePoints-1),
 				NewPassword:     strings.Repeat("a", password.PlainMinCodePoints-1),
 			},
-			expectedErr: changepassword.ErrPasswordMalformed,
+			expectedErr: credential.ErrPasswordMalformed,
 		},
 	}
 	for _, tC := range testCases {
@@ -149,29 +150,6 @@ func TestChangePassword_ReturnsValidationError_WhenNewPasswordIsInvalid(t *testi
 	}
 }
 
-// Every rejection of the credentials answers the client with one code, the
-// one login uses, so nothing tells an unknown user from a wrong password. Only
-// the reason, which stays on the server, tells them apart.
-func TestChangePassword_RejectionsShareOneCodeAndDifferInReason(t *testing.T) {
-	rejections := []usecase.UseCaseError{
-		changepassword.ErrUsernameMalformed,
-		changepassword.ErrPasswordMalformed,
-		changepassword.ErrUserNotFound,
-		changepassword.ErrPasswordNotFound,
-		changepassword.ErrPasswordMismatch,
-		changepassword.ErrPasswordChanged,
-	}
-
-	reasons := map[string]bool{}
-	for _, rejection := range rejections {
-		assert.Equal(t, "invalid_credentials", rejection.Code())
-		assert.Equal(t, usecase.ErrorKindUnauthorized, rejection.Kind())
-		assert.NotEmpty(t, rejection.Reason())
-		reasons[rejection.Reason()] = true
-	}
-	assert.Len(t, reasons, len(rejections))
-}
-
 func TestChangePassword_ReturnsUserNotFoundError_AfterVerifyingDummyHash(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := changepassword.Input{
@@ -183,7 +161,7 @@ func TestChangePassword_ReturnsUserNotFoundError_AfterVerifyingDummyHash(t *test
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
 	assert.Zero(t, output)
-	assert.ErrorIs(t, err, changepassword.ErrUserNotFound)
+	assert.ErrorIs(t, err, credential.ErrUserNotFound)
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.Equal(t, input.CurrentPassword, call.Plain.Value())
 	assert.Equal(t, helper.DummyPasswordHash, call.Hash)
@@ -202,7 +180,7 @@ func TestChangePassword_ReturnsPasswordNotFoundError_AfterVerifyingDummyHash(t *
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
 	assert.Zero(t, output)
-	assert.ErrorIs(t, err, changepassword.ErrPasswordNotFound)
+	assert.ErrorIs(t, err, credential.ErrPasswordNotFound)
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.Equal(t, input.CurrentPassword, call.Plain.Value())
 	assert.Equal(t, helper.DummyPasswordHash, call.Hash)
@@ -221,7 +199,7 @@ func TestChangePassword_ReturnsError_WhenDummyVerificationFails(t *testing.T) {
 
 	assert.Zero(t, output)
 	assert.ErrorIs(t, err, expectedErr)
-	assert.NotErrorIs(t, err, changepassword.ErrUserNotFound)
+	assert.NotErrorIs(t, err, credential.ErrUserNotFound)
 }
 
 func TestChangePassword_ReturnsPasswordMismatchError_AndSavesNothing_WhenCurrentPasswordIsIncorrect(t *testing.T) {
@@ -232,7 +210,7 @@ func TestChangePassword_ReturnsPasswordMismatchError_AndSavesNothing_WhenCurrent
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
 	assert.Zero(t, output)
-	assert.ErrorIs(t, err, changepassword.ErrPasswordMismatch)
+	assert.ErrorIs(t, err, credential.ErrPasswordMismatch)
 	call := testutil.Only(t, helper.FakePasswordChecker.Calls())
 	assert.NotEqual(t, helper.DummyPasswordHash, call.Hash)
 	assert.Empty(t, helper.FakeUnitOfWork.FakePasswordWriter.HashUpdates())
@@ -247,7 +225,7 @@ func TestChangePassword_ReturnsPasswordChangedError_WhenAnotherChangeGotThereFir
 	output, err := helper.UseCase().Execute(context.Background(), input)
 
 	assert.Zero(t, output)
-	assert.ErrorIs(t, err, changepassword.ErrPasswordChanged)
+	assert.ErrorIs(t, err, credential.ErrPasswordChanged)
 	assert.Empty(t, helper.FakeUnitOfWork.FakeSessionWriter.Revocations())
 }
 

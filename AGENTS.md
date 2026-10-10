@@ -62,9 +62,10 @@ values, params structs past two arguments, protected structs.
   sites, not a filter.
 - **Some code exists for its timing or its atomicity, not its result.** Two
   examples that look removable and are not:
-  `Login.rejectWithDummyVerify` discards a bcrypt result on purpose, and
-  `RefreshTokenRepo.MarkUsed` is guarded in SQL rather than in Go. Both carry a
-  `See docs/development/decisions/...` comment; read it before touching them.
+  `credential.Checker.rejectWithDummyVerify` discards a bcrypt result on
+  purpose, and `RefreshTokenRepo.MarkUsed` is guarded in SQL rather than in
+  Go. Both carry a `See docs/development/decisions/...` comment; read it before
+  touching them.
 
 ## Commands
 
