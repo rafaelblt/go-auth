@@ -58,6 +58,10 @@ expire, as after any revocation
 **Step 9 is atomic**, so the password never changes without the sessions being
 revoked.
 
+**The current password is all it takes.** Whoever knows it can change it, and
+lock the owner out, with no reset to recover from; see
+[Limitations](../../limitations.md#whoever-knows-the-password-can-lock-the-owner-out).
+
 **Concurrent changes.** Two requests with the same current password can both
 pass step 6. The write settles it: `UpdateHash` replaces the hash only while it
 is still the one step 6 checked, so exactly one applies

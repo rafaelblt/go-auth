@@ -152,6 +152,22 @@ also sends a token twice sometimes:
 Either way the user has to sign in again. Clients avoid it by following the
 [client obligations](architecture/usecases/refresh.md#client-obligations).
 
+## Whoever knows the password can lock the owner out
+
+[Changing the password](api/reference.md#post-v1authchange-password) asks for
+the username and the current password, and nothing else: no second factor, no
+confirmation sent elsewhere, no notice to the owner. Whoever knows the password
+can change it, and the change revokes every session of the user, the owner's
+included. The owner can no longer log in, and the service offers no way back:
+there is no password reset, and no account management
+([Out of scope](#out-of-scope)). Getting the account back is up to whatever the
+deployment builds around the service.
+
+It works the other way too: an owner who changes the password first signs out
+whoever else held it. When [`RATE_LIMIT`](configuration.md#rate_limit) is on,
+guessing the current password through this endpoint is limited as it is at
+login.
+
 ## Login timing after a `BCRYPT_COST` change
 
 When the account does not exist, login and change password compare the
