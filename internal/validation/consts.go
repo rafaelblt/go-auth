@@ -8,6 +8,7 @@ const (
 	CodeRequired          = "required"
 	CodeNotPositive       = "not_positive"
 	CodeNotAllowed        = "not_allowed"
+	CodeSameAsCurrent     = "same_as_current"
 )
 
 // Issue Detail Keys

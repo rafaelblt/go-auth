@@ -127,10 +127,11 @@ The values of `error.fields[].code`.
 | `too_short` | `{ "min": int, "unit": string }` | Shorter than the minimum length |
 | `too_long` | `{ "max": int, "unit": string }` | Longer than the maximum length |
 | `invalid_characters` | `{}` | Contains a character outside the allowed set |
+| `same_as_current` | `{}` | On `/v1/auth/change-password`: `new_password` is the same as `current_password` |
 
 `invalid_characters` does not say *which* character failed.
 
-These three are the complete set a response can carry. `internal/validation`
+These four are the complete set a response can carry. `internal/validation`
 defines others — `required`, `not_positive`, `not_allowed` — but they belong to
 the configuration check and appear only in the startup error, never in a
 response; see [Validation](../architecture/domain/validation.md#validators).
@@ -175,8 +176,8 @@ running, since by then the password it was given is no longer the user's.
 **Change password** checks the username and the current password as login
 does, and answers the same way, in the same time. It also answers
 `invalid_credentials` when another change replaced the password first. Only the
-new password gets a `422`, which depends on nothing but the new password
-itself.
+new password gets a `422`, which depends on nothing but the two passwords
+sent.
 
 **Refresh** answers `invalid_token` to a token that never existed, one that
 expired, one already used, and one whose session was revoked. Someone holding

@@ -45,7 +45,7 @@ func (uc ChangePassword) Execute(ctx context.Context, input Input) (Output, erro
 	}
 
 	acc := validation.NewAccumulator()
-	next, nextIssues := password.NewPlain(input.NewPassword)
+	next, nextIssues := password.NewPlainReplacing(input.NewPassword, current)
 	acc.Add(FieldNewPassword, nextIssues)
 	err = acc.Err()
 	if err != nil {

@@ -150,6 +150,26 @@ func TestChangePassword_ReturnsValidationError_WhenNewPasswordIsInvalid(t *testi
 	}
 }
 
+// The comparison needs no account: it is between two fields of the request,
+// so it is answered before the lookup, and says nothing about the account.
+func TestChangePassword_ReturnsValidationError_WhenNewPasswordIsTheCurrentOne(t *testing.T) {
+	helper := NewTestHelper(t)
+	input, _ := helper.ValidInput()
+	input.NewPassword = input.CurrentPassword
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	var verr validation.ValidationError
+	require.ErrorAs(t, err, &verr)
+	expected := []validation.FieldError{
+		validation.NewFieldError(changepassword.FieldNewPassword, validation.IssueSameAsCurrent()),
+	}
+	assert.ElementsMatch(t, expected, verr.Errors())
+	assert.Empty(t, helper.FakePasswordChecker.Calls())
+	assert.Empty(t, helper.FakeUnitOfWork.FakePasswordWriter.HashUpdates())
+}
+
 func TestChangePassword_ReturnsUserNotFoundError_AfterVerifyingDummyHash(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := changepassword.Input{

@@ -254,11 +254,13 @@ password.
 |---|---|---|
 | `username` | string | as at login |
 | `current_password` | string | as at login |
-| `new_password` | string | at least 8 code points, at most 72 bytes |
+| `new_password` | string | at least 8 code points, at most 72 bytes, not the same as `current_password` |
 
 The new password follows the rules of a registration's, and is stored exactly
 as sent, with the one change described in [Request bodies](#request-bodies). It
-may be the same as the current one.
+cannot be the same as `current_password`, compared byte for byte, which is
+answered `422` with the field code `same_as_current`. Only the current password
+is compared: a password used before it is accepted again.
 
 ### Response: `200 OK`
 
@@ -285,14 +287,15 @@ everywhere. Access tokens already issued stay valid until they expire
 | `401` | `invalid_credentials` | The username or the current password was rejected, for any reason |
 | `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
 | `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-| `422` | `validation_failed` | The new password is invalid |
+| `422` | `validation_failed` | The new password is invalid, or the same as the current one |
 | `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
 
 The `401` is login's: a malformed username, an unknown username, a user without
 a password and a wrong current password get the same response, in the same
 time; see [Deliberately vague errors](errors.md#deliberately-vague-errors). A
-`422` names only `new_password`, and comes before the account is looked up, so
-it says nothing about the account:
+`422` names only `new_password`, and comes before the account is looked up:
+its rules depend only on the two passwords sent, so it says nothing about the
+account:
 
 ```json
 {

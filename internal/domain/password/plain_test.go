@@ -60,6 +60,53 @@ func TestNewPlain(t *testing.T) {
 	}
 }
 
+func TestNewPlainReplacing(t *testing.T) {
+	current := Plain{"X8j5-30mWkPh"}
+	testCases := []struct {
+		desc           string
+		input          string
+		expectedIssues validation.Issues
+	}{
+		{
+			desc:           "the current password",
+			input:          "X8j5-30mWkPh",
+			expectedIssues: validation.Issues{validation.IssueSameAsCurrent()},
+		},
+		{
+			desc:           "too short",
+			input:          strings.Repeat("a", PlainMinCodePoints-1),
+			expectedIssues: validation.Issues{validation.IssueTooShort(PlainMinCodePoints, validation.UnitCodePoint)},
+		},
+		{
+			desc:  "another password",
+			input: "   mR&927Sa8.5f",
+		},
+		{
+			desc:  "the current password in another case",
+			input: "x8J5-30MwKpH",
+		},
+		{
+			desc:  "the current password with white space",
+			input: "X8j5-30mWkPh ",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			password, issues := NewPlainReplacing(tC.input, current)
+
+			if len(tC.expectedIssues) == 0 {
+				require.Truef(t, issues.IsEmpty(), "unexpected issues: %s", issues)
+				assert.Equal(t, tC.input, password.Value())
+				return
+			}
+
+			require.Falsef(t, issues.IsEmpty(), "expected issues: %s", tC.expectedIssues)
+			assert.True(t, password.IsZero())
+			assert.ElementsMatch(t, tC.expectedIssues, issues)
+		})
+	}
+}
+
 func TestPlain_IsZero(t *testing.T) {
 	testCases := []struct {
 		desc     string

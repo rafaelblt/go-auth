@@ -246,7 +246,8 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           description: |
-            The new password is invalid. `fields` names only `new_password`.
+            The new password is invalid, or the same as the current one.
+            `fields` names only `new_password`.
           content:
             application/json:
               schema:
@@ -263,6 +264,15 @@ paths:
                           details:
                             min: 8
                             unit: code_point
+                same_as_current:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The input failed validation.
+                      fields:
+                        - field: new_password
+                          code: same_as_current
+                          details: {}
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -478,9 +488,10 @@ components:
           minLength: 8
           description: |
             At least 8 code points, and at most 72 bytes in UTF-8, as at
-            registration. Stored exactly as sent. It may be the same as the
-            current password. A missing field is read as `""` and reported as
-            `too_short`.
+            registration, and not the same as `current_password`, which is
+            reported as `same_as_current`. A password used before the current
+            one is accepted. Stored exactly as sent. A missing field is read as
+            `""` and reported as `too_short`.
 
     RefreshRequest:
       type: object
@@ -659,14 +670,14 @@ components:
         code:
           type: string
           description: |
-            The rule that was broken: `too_short`, `too_long` or
-            `invalid_characters` today.
+            The rule that was broken: `too_short`, `too_long`,
+            `invalid_characters` or `same_as_current` today.
         details:
           type: object
           description: |
             The rule's parameters, shaped by its code: `{min, unit}` for
             `too_short`, `{max, unit}` for `too_long`, `{}` for
-            `invalid_characters`.
+            `invalid_characters` and `same_as_current`.
           properties:
             min:
               type: integer

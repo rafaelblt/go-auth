@@ -26,6 +26,8 @@ type ChangePasswordResponseBody struct {
 
 const ChangePasswordPath = "/v1/auth/change-password"
 
+const SameAsCurrentCode = "same_as_current"
+
 const newPassword = "0k-nEw_pàsswörd"
 
 func requireLoginStatus(t *testing.T, env TestEnv, username, password string, status int) {
@@ -126,6 +128,43 @@ func TestChangePassword_ReturnsValidationErrorResponse_WhenNewPasswordIsInvalid(
 	require.Len(t, respBody.Error.Fields, 1)
 	assert.Equal(t, "new_password", respBody.Error.Fields[0].Field)
 	assert.Equal(t, TooShortCode, respBody.Error.Fields[0].Code)
+	requireLoginStatus(t, env, usr.Username().String(), pwd.Value(), http.StatusOK)
+}
+
+func TestChangePassword_ReturnsValidationErrorResponse_WhenNewPasswordIsTheCurrentOne(t *testing.T) {
+	env := testApp.NewEnv(t)
+	usr, pwd := env.Fixtures.CreateUserAndPassword(t)
+
+	resp := env.Client.Post(t, ChangePasswordPath, ChangePasswordRequestBody{
+		Username:        usr.Username().String(),
+		CurrentPassword: pwd.Value(),
+		NewPassword:     pwd.Value(),
+	})
+
+	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
+	respBody := DecodeBody[ErrorResponseBody](t, resp)
+	assert.Equal(t, ValidationFailedCode, respBody.Error.Code)
+	require.Len(t, respBody.Error.Fields, 1)
+	assert.Equal(t, "new_password", respBody.Error.Fields[0].Field)
+	assert.Equal(t, SameAsCurrentCode, respBody.Error.Fields[0].Code)
+	assert.Empty(t, respBody.Error.Fields[0].Details)
+	requireLoginStatus(t, env, usr.Username().String(), pwd.Value(), http.StatusOK)
+}
+
+// Only the current password is refused: one used before it can come back.
+func TestChangePassword_AcceptsAPasswordUsedBefore(t *testing.T) {
+	env := testApp.NewEnv(t)
+	usr, pwd := env.Fixtures.CreateUserAndPassword(t)
+
+	for _, change := range []ChangePasswordRequestBody{
+		{Username: usr.Username().String(), CurrentPassword: pwd.Value(), NewPassword: newPassword},
+		{Username: usr.Username().String(), CurrentPassword: newPassword, NewPassword: pwd.Value()},
+	} {
+		resp := env.Client.Post(t, ChangePasswordPath, change)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+	}
+
+	requireLoginStatus(t, env, usr.Username().String(), newPassword, http.StatusUnauthorized)
 	requireLoginStatus(t, env, usr.Username().String(), pwd.Value(), http.StatusOK)
 }
 

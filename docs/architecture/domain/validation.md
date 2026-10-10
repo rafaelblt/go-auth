@@ -47,7 +47,8 @@ on each of them, and a `bool` would leave unclear which value means valid.
 | `Required[T]()`      | `required`           | —                    | config  |
 | `Positive[T]()`      | `not_positive`       | —                    | config  |
 
-The first three are the ones whose failures a client sees; they are the whole
+The first three are the ones whose failures a client sees. With
+`same_as_current`, below, they are the whole
 [field code catalog](../../api/errors.md#field-codes) of the API. The
 last two exist for `internal/config`: `Required` catches a missing
 `DATABASE_URL` or `ADDRESS`, and `Positive` catches a cost or a TTL that is zero
@@ -59,6 +60,11 @@ and returns `IssueNotAllowed`, whose code is `not_allowed` and whose `details`
 carry `allowed`. A validator is just a `func(T) *Issue`, so a package can write
 one without this one knowing about it — which is why the table above lists what
 this package exports, not every validator in the codebase.
+
+`same_as_current` has no validator: it compares two values, a new password
+and the one it replaces, which a `Validator[T]` taking one value cannot do.
+[`password.NewPlainReplacing`](password.md#plain) returns
+`IssueSameAsCurrent` itself, with empty `details`.
 
 `Validate(value, validators...)` runs every validator and collects every
 failure, so one call reports everything wrong with a value.

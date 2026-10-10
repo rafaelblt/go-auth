@@ -57,3 +57,11 @@ func IssueNotAllowed(allowed ...string) Issue {
 	}
 	return iss
 }
+
+func IssueSameAsCurrent() Issue {
+	iss := Issue{
+		code:    CodeSameAsCurrent,
+		details: map[string]any{},
+	}
+	return iss
+}

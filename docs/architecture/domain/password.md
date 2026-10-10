@@ -78,6 +78,14 @@ This is a minimum, not a strength policy: there are no composition rules
 (a digit, a symbol), and a minimum length is the rule that remains when those
 are dropped.
 
+**A replacement is not the current password.**
+`NewPlainReplacing(value, current)` applies the rules above and then refuses
+`current` itself, with `same_as_current`: [changing the password](../usecases/change-password.md) to
+the same one would change nothing but sign the user out everywhere. It
+compares the two as typed, byte for byte, like everything else here. Only the
+current password is compared: no history is kept, so a password used before
+can come back.
+
 `Plain` exposes `Value()`, not `String()`, so it cannot end up in a log line
 by accident.
 

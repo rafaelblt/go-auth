@@ -104,6 +104,14 @@ func TestIssueInvalidChars(t *testing.T) {
 	assert.NotNil(t, iss.Details())
 }
 
+func TestIssueSameAsCurrent(t *testing.T) {
+	iss := IssueSameAsCurrent()
+
+	assert.Equal(t, CodeSameAsCurrent, iss.Code())
+	assert.Equal(t, map[string]any{}, iss.Details())
+	assert.NotNil(t, iss.Details())
+}
+
 func TestIssuers_AreEqualForSameArgs(t *testing.T) {
 	assert.Equal(t, IssueTooLong(32, UnitCodePoint), IssueTooLong(32, UnitCodePoint))
 	assert.Equal(t, IssueTooShort(3, UnitCodePoint), IssueTooShort(3, UnitCodePoint))

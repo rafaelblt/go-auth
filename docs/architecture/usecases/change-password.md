@@ -11,7 +11,7 @@ Input{Username, CurrentPassword, NewPassword}
   │
   ├─ 1. Parse the username          → invalid?   → ErrUsernameMalformed
   ├─ 2. Parse the current password  → invalid?   → ErrPasswordMalformed
-  ├─ 3. Validate the new password   → invalid?   → ValidationError → 422
+  ├─ 3. Validate the new password   → invalid or the current one? → ValidationError → 422
   ├─ 4. FindByUsername              → not found? → verify against the dummy hash → ErrUserNotFound
   ├─ 5. FindByUserID (password)     → not found? → verify against the dummy hash → ErrPasswordNotFound
   ├─ 6. Verify(current, hash)       → mismatch?  → ErrPasswordMismatch
@@ -36,12 +36,15 @@ not to do
 ([decision 0045](../../development/decisions/0045-login-dummy-hash.md)).
 `internal/bootstrap` creates one dummy hash at startup and gives it to both.
 
-**The new password follows the [registration rules](../domain/password.md#plain)**,
-and a failure is a `422` naming `new_password`. It is checked before the
-account is looked up: its answer depends only on the input and on rules that
-are public, so it says nothing about the account, and a request that cannot
-succeed costs no bcrypt comparison. Nothing compares it with the current
-password, so the two may be the same.
+**The new password follows the [registration rules](../domain/password.md#plain),
+and is not the current one**, and a failure is a `422` naming `new_password`.
+A change to the same password would change nothing but still sign the user out
+everywhere, so it is refused with `same_as_current`. Only the current password
+is compared: the service keeps no history, and a password used before it can
+come back. It is all checked before the account is looked up, against
+`current_password` as sent: the answer depends only on the input and on rules
+that are public, so it says nothing about the account, and a request that
+cannot succeed costs no bcrypt comparison.
 
 **Every session of the user is revoked.** A password is most often changed
 because someone else may know it, and sessions have

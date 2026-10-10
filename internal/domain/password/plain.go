@@ -28,5 +28,19 @@ func NewPlain(value string) (Plain, validation.Issues) {
 	return Plain{value: value}, nil
 }
 
+// NewPlainReplacing reads a password meant to replace current: it follows the
+// rules of NewPlain, and it is not current. Only current is compared, so a
+// password used before it can be chosen again.
+func NewPlainReplacing(value string, current Plain) (Plain, validation.Issues) {
+	plain, issues := NewPlain(value)
+	if !issues.IsEmpty() {
+		return Plain{}, issues
+	}
+	if plain == current {
+		return Plain{}, validation.Issues{validation.IssueSameAsCurrent()}
+	}
+	return plain, nil
+}
+
 func (p Plain) Value() string { return p.value }
 func (p Plain) IsZero() bool  { return p.value == "" }
