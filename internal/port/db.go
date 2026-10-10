@@ -58,6 +58,10 @@ type PasswordWriter interface {
 	// while the stored hash is still previous, and returns
 	// password.ErrHashChanged when another change got there first.
 	UpdateHash(ctx context.Context, pwd *password.Password, previous password.Hashed) error
+	// LockHash keeps the stored hash from changing until the transaction ends.
+	// It applies only while the stored hash is still pwd's, and returns
+	// password.ErrHashChanged when a change got there first.
+	LockHash(ctx context.Context, pwd *password.Password) error
 }
 
 // Session

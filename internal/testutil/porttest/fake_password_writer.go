@@ -10,6 +10,7 @@ import (
 type FakePasswordWriter struct {
 	data        []*password.Password
 	hashUpdates []FakePasswordHashUpdate
+	locks       []*password.Password
 	err         error
 }
 
@@ -22,6 +23,7 @@ func NewFakePasswordWriter() *FakePasswordWriter {
 	return &FakePasswordWriter{
 		data:        []*password.Password{},
 		hashUpdates: []FakePasswordHashUpdate{},
+		locks:       []*password.Password{},
 	}
 }
 
@@ -57,6 +59,22 @@ func (w *FakePasswordWriter) UpdateHash(
 	return nil
 }
 
+func (w *FakePasswordWriter) LockHash(
+	ctx context.Context, pwd *password.Password,
+) error {
+	if w.err != nil {
+		return w.err
+	}
+	if pwd == nil {
+		return errors.New("password nil")
+	}
+	if pwd.IsZero() {
+		return errors.New("password zero")
+	}
+	w.locks = append(w.locks, pwd)
+	return nil
+}
+
 func (w *FakePasswordWriter) SavedPasswords() []*password.Password {
 	return w.data
 }
@@ -72,6 +90,10 @@ func (w *FakePasswordWriter) CheckHashIsSaved(h password.Hashed) bool {
 
 func (w *FakePasswordWriter) HashUpdates() []FakePasswordHashUpdate {
 	return w.hashUpdates
+}
+
+func (w *FakePasswordWriter) Locks() []*password.Password {
+	return w.locks
 }
 
 func (w *FakePasswordWriter) SetError(err error) { w.err = err }

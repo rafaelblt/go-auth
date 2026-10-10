@@ -86,6 +86,46 @@ func (repo *PasswordRepo) UpdateHash(
 	return password.ErrHashChanged
 }
 
+// LockHash takes a shared lock on the password, only while its stored hash is
+// still pwd's. A change of the hash waits for the lock until the transaction
+// ends, and a lock requested during a change waits for the change, then
+// matches nothing. Shared locks do not wait for each other. When nothing is
+// locked, it checks whether the password exists, so a missing password is not
+// reported as a changed hash.
+//
+// See docs/architecture/persistence/repositories.md#guarded-writes.
+func (repo *PasswordRepo) LockHash(ctx context.Context, pwd *password.Password) error {
+	model, err := mapPasswordToModel(pwd)
+	if err != nil {
+		return fmt.Errorf("map password to model failed: %w", err)
+	}
+
+	sql := `SELECT 1 FROM passwords
+			WHERE id = @id AND hash = @hash
+			FOR SHARE`
+	tag, err := repo.db.Exec(ctx, sql, pgx.NamedArgs{
+		"id":   model.ID,
+		"hash": model.Hash,
+	})
+
+	if err != nil {
+		return fmt.Errorf("password hash lock failed: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		return nil
+	}
+
+	exists, err := repo.existsByID(ctx, model.ID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("password not found")
+	}
+
+	return password.ErrHashChanged
+}
+
 func (repo *PasswordRepo) existsByID(ctx context.Context, id string) (bool, error) {
 	sql := "SELECT EXISTS(SELECT 1 FROM passwords WHERE id = $1)"
 

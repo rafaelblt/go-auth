@@ -247,3 +247,85 @@ func TestPasswordRepo_UpdateHash_Fails_WhenPasswordNotExists(t *testing.T) {
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, password.ErrHashChanged)
 }
+
+func TestPasswordRepo_LockHash(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := helper.PersistentPassword()
+
+	err := helper.Repo().LockHash(t.Context(), pwd)
+
+	assert.NoError(t, err)
+}
+
+func TestPasswordRepo_LockHash_ReturnsHashChanged_WhenStoredHashIsNotPwds(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := helper.PersistentPassword()
+	changed := helper.ChangedCopy(pwd, "new hash", time.Now().UTC())
+	require.NoError(t, helper.Repo().UpdateHash(t.Context(), changed, pwd.Hash()))
+
+	err := helper.Repo().LockHash(t.Context(), pwd)
+
+	assert.ErrorIs(t, err, password.ErrHashChanged)
+}
+
+// A lock requested while a change is uncommitted waits for it, and then finds
+// the new hash.
+func TestPasswordRepo_LockHash_WaitsForAConcurrentChange_ThenReturnsHashChanged(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := helper.PersistentPassword()
+	changed := helper.ChangedCopy(pwd, "new hash", time.Now().UTC())
+	changeTx, changeRepo := helper.TxRepo()
+	lockTx, lockRepo := helper.TxRepo()
+
+	require.NoError(t, changeRepo.UpdateHash(t.Context(), changed, pwd.Hash()))
+	result := make(chan error, 1)
+	go func() { result <- lockRepo.LockHash(t.Context(), pwd) }()
+	requireWaitingOnLock(t, helper.db, lockTx)
+	require.NoError(t, changeTx.Commit(t.Context()))
+
+	assert.ErrorIs(t, <-result, password.ErrHashChanged)
+}
+
+// A change requested while the lock is held waits for its transaction to end,
+// so whatever that transaction wrote is committed before the change applies.
+func TestPasswordRepo_LockHash_MakesAConcurrentChangeWait(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := helper.PersistentPassword()
+	changed := helper.ChangedCopy(pwd, "new hash", time.Now().UTC())
+	lockTx, lockRepo := helper.TxRepo()
+	changeTx, changeRepo := helper.TxRepo()
+
+	require.NoError(t, lockRepo.LockHash(t.Context(), pwd))
+	result := make(chan error, 1)
+	go func() { result <- changeRepo.UpdateHash(t.Context(), changed, pwd.Hash()) }()
+	requireWaitingOnLock(t, helper.db, changeTx)
+	require.NoError(t, lockTx.Commit(t.Context()))
+
+	assert.NoError(t, <-result)
+	require.NoError(t, changeTx.Commit(t.Context()))
+	assert.True(t, helper.CheckPasswordIsSaved(changed))
+}
+
+func TestPasswordRepo_LockHash_DoesNotWaitForAnotherLock(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := helper.PersistentPassword()
+	_, firstRepo := helper.TxRepo()
+	_, secondRepo := helper.TxRepo()
+	require.NoError(t, firstRepo.LockHash(t.Context(), pwd))
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	err := secondRepo.LockHash(ctx, pwd)
+
+	assert.NoError(t, err)
+}
+
+func TestPasswordRepo_LockHash_Fails_WhenPasswordNotExists(t *testing.T) {
+	helper := NewPasswordRepoTestHelper(t)
+	pwd := passwordtest.NewPassword(t, nil)
+
+	err := helper.Repo().LockHash(t.Context(), pwd)
+
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, password.ErrHashChanged)
+}
