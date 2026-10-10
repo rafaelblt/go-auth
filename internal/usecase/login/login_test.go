@@ -108,6 +108,7 @@ func TestLogin_RejectionsShareOneCodeAndDifferInReason(t *testing.T) {
 		login.ErrUserNotFound,
 		login.ErrPasswordNotFound,
 		login.ErrPasswordMismatch,
+		login.ErrPasswordChanged,
 	}
 
 	reasons := map[string]bool{}
@@ -310,6 +311,19 @@ func TestLogin_ReturnsError_WhenUnitOfWorkFails(t *testing.T) {
 	assert.ErrorIs(t, err, expectedErr)
 }
 
+func TestLogin_ReturnsError_WhenPasswordWriterFails(t *testing.T) {
+	helper := NewTestHelper(t)
+	input := helper.ValidInput()
+
+	expectedErr := errors.New("internal error")
+	helper.FakeUnitOfWork.FakePasswordWriter.SetError(expectedErr)
+
+	output, err := helper.UseCase().Execute(context.Background(), input)
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
 func TestLogin_ReturnsError_WhenSessionWriterFails(t *testing.T) {
 	helper := NewTestHelper(t)
 	input := helper.ValidInput()
@@ -334,4 +348,27 @@ func TestLogin_ReturnsError_WhenRefreshTokenWriterFails(t *testing.T) {
 
 	assert.Zero(t, output)
 	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestLogin_LocksTheCheckedPassword_BeforeSavingTheSession(t *testing.T) {
+	helper := NewTestHelper(t)
+
+	_, err := helper.UseCase().Execute(context.Background(), helper.ValidInput())
+	require.NoError(t, err)
+
+	locked := testutil.Only(t, helper.FakeUnitOfWork.FakePasswordWriter.Locks())
+	checked := testutil.Only(t, helper.FakePasswordChecker.Calls())
+	assert.Equal(t, checked.Hash, locked.Hash())
+}
+
+func TestLogin_ReturnsPasswordChangedError_AndSavesNothing_WhenThePasswordChangedMeanwhile(t *testing.T) {
+	helper := NewTestHelper(t)
+	helper.FakeUnitOfWork.FakePasswordWriter.SetError(password.ErrHashChanged)
+
+	output, err := helper.UseCase().Execute(context.Background(), helper.ValidInput())
+
+	assert.Zero(t, output)
+	assert.ErrorIs(t, err, login.ErrPasswordChanged)
+	assert.Empty(t, helper.FakeUnitOfWork.FakeSessionWriter.Adds())
+	assert.Empty(t, helper.FakeUnitOfWork.FakeRefreshTokenWriter.Adds())
 }

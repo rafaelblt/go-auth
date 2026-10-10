@@ -64,7 +64,10 @@ longer the user's, and it is answered as it would have been a moment later.
 Without the guard both would succeed, the later write would win, and one caller
 would hold a password that does not work.
 
-**What the revocation does not reach.** It revokes the sessions that exist when
-the transaction commits. A login that checked the old password just before,
-and is still running, opens its session after that, and the session works. See
-[Limitations](../../limitations.md#a-login-running-during-a-password-change-outlives-it).
+**Logins running alongside.** The revocation reaches the sessions that exist
+when the transaction commits, and a login that checked the old password just
+before may not have saved its session yet. [Login](login.md) saves it only
+while it holds a lock on the password, taken while the hash is still the one it
+checked. Either step 9 waits for that login to commit, and the revocation
+reaches its session, or the login finds the new hash and is rejected. No
+session opened with the old password outlives the change.

@@ -311,6 +311,11 @@ password, exactly one applies. The others get `401 invalid_credentials`, as
 they would one after the other, since by then the password they sent is no
 longer the user's.
 
+A login with the old password that is still running when the change applies
+either finishes first, and its session is revoked with the others, or gets
+`401 invalid_credentials`. No session opened with the old password outlives
+the change.
+
 ---
 
 ## POST /v1/auth/refresh

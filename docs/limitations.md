@@ -128,17 +128,6 @@ result is the same as if the refresh had finished just before the revocation,
 which is a valid order for two concurrent requests. The refresh token it
 returns is useless, because its session is revoked.
 
-### A login running during a password change outlives it
-
-[Changing the password](api/reference.md#post-v1authchange-password) revokes
-the sessions of the user that exist when the change commits. A login that read
-the old password before that, and opens its session after, is not reached: its
-session works, although it was opened with a password that no longer does.
-The window is about as long as a bcrypt comparison, and only someone who
-already holds the old password can use it, at the moment the user changes it.
-Closing it would take a guarded write in login: saving the session only while
-the stored password is still the one it checked.
-
 ### Sessions have no maximum age
 
 Each refresh issues a token with a fresh `REFRESH_TOKEN_TTL`, so a client that

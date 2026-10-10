@@ -8,6 +8,7 @@ package login
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -69,6 +70,12 @@ var ErrPasswordMismatch = usecase.NewErrorWithReason(
 	"invalid_credentials",
 	usecase.ErrorKindUnauthorized,
 	"password mismatch",
+)
+
+var ErrPasswordChanged = usecase.NewErrorWithReason(
+	"invalid_credentials",
+	usecase.ErrorKindUnauthorized,
+	"password changed",
 )
 
 func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
@@ -133,7 +140,15 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 	}
 
 	err = uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		err := deps.SessionWriter.Add(ctx, sess)
+		// The session is saved only while the password is still the one
+		// checked above, and a change of it waits until it is saved, so the
+		// change's revocation reaches it.
+		err := deps.PasswordWriter.LockHash(ctx, pwd)
+		if err != nil {
+			return fmt.Errorf("password writer lock hash failed: %w", err)
+		}
+
+		err = deps.SessionWriter.Add(ctx, sess)
 		if err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
 		}
@@ -145,6 +160,9 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 
 		return nil
 	})
+	if errors.Is(err, password.ErrHashChanged) {
+		return Output{}, ErrPasswordChanged
+	}
 	if err != nil {
 		return Output{}, fmt.Errorf("session and refresh token saving failed: %w", err)
 	}

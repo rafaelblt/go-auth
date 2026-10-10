@@ -60,7 +60,8 @@ revoked earlier keeps its time, as `Session.Revoke` does in memory.
 condition holds, and report the domain error
 (`user.ErrUsernameAlreadyExists`, `session.ErrTokenAlreadyUsed`,
 `password.ErrHashChanged`) when nothing changed, instead of inspecting the
-driver's error. The pattern has its own section, below.
+driver's error. `PasswordRepo.LockHash` does the same with a lock instead of
+a write. The pattern has its own section, below.
 `SigningKeyRepo.Add` applies only while the generation is free
 (`ON CONFLICT (generation) DO NOTHING`) and reports nothing when it is taken,
 because its caller reads the keys again either way.
@@ -124,11 +125,30 @@ surprise its next caller. `UpdateHash` takes the hash it replaces as an
 argument for the same reason: the condition is in the signature, not hidden in
 the statement.
 
+**A guarded lock, when the rule spans two tables.** A session opened with a
+password must not outlive a change of that password, but login writes to
+`sessions` and the change to `passwords`, so neither write can carry the
+other's condition: the change's revocation does not see a session that is not
+committed yet. They meet on the row both depend on. Login runs
+`PasswordRepo.LockHash` before saving the session:
+
+```sql
+SELECT 1 FROM passwords WHERE id = @id AND hash = @hash FOR SHARE
+```
+
+It has the shape of a guarded write, the condition in the `WHERE`, the
+outcome from `RowsAffected`, `password.ErrHashChanged` when nothing matched
+and the existence check after, and it holds the row until the transaction
+ends, as an update would, without changing it. A change that comes later
+waits for login to commit, and its revocation then sees the session; one that
+came first leaves the lock nothing to match. `FOR SHARE` is the weakest lock
+that the change's `UPDATE` waits for, so logins do not wait for each other.
+
 **A guarded update that matches nothing checks why.** No row changed means
 either the rule no longer holds or the row does not exist, and only the first
-is the domain error. `MarkUsed` and `UpdateHash` look the row up by ID after
-the update, and report a missing one as an unexpected error, so a bug is not
-answered as a lost race. The lookup runs only on that path, and under
+is the domain error. `MarkUsed`, `UpdateHash` and `LockHash` look the row up
+by ID after the statement, and report a missing one as an unexpected error, so
+a bug is not answered as a lost race. The lookup runs only on that path, and under
 `READ COMMITTED` it already sees the commit that won.
 
 Where each of these was decided, with the alternatives weighed:
@@ -162,4 +182,6 @@ outside the transaction, and cannot read inside it either. Reads happen
 before the transaction opens, which keeps transactions short. When a write
 depends on what was read, the write checks again itself, as the guarded writes
 above do: under `READ COMMITTED`, a read inside the transaction would not see
-a concurrent transaction's uncommitted row anyway.
+a concurrent transaction's uncommitted row anyway. `PasswordWriter.LockHash`
+reads inside the transaction only to lock: like a guarded write, it returns
+nothing but whether the row was still as the use case read it.

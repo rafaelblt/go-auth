@@ -168,7 +168,9 @@ Four endpoints say less than they know, on purpose.
 user, a user with no password, and a wrong password alike. Saying which one
 failed would let anyone check whether an account exists. For the same reason,
 login answers a malformed username with `401`, not `422`, and takes as long
-for an unknown user as for a wrong password.
+for an unknown user as for a wrong password. It also answers
+`invalid_credentials` when the password is changed while the login is
+running, since by then the password it was given is no longer the user's.
 
 **Change password** checks the username and the current password as login
 does, and answers the same way, in the same time. It also answers

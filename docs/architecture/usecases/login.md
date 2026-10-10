@@ -20,17 +20,22 @@ Input{Username, Password}
   ├─ 9. Create the RefreshToken (no parent, expires at now + REFRESH_TOKEN_TTL)
   │       └─ generates the secret; the token keeps its SHA-256
   │
-  └─ 10. One transaction: insert the session, insert the refresh token
-           └─ Output{UserID, SessionID, AccessToken, RefreshToken}
+  └─ 10. One transaction:
+           ├─ LockHash, only while the stored hash is still the one step 5 checked
+           │     └─ changed meanwhile → roll back → ErrPasswordChanged
+           ├─ insert the session
+           └─ insert the refresh token
+                 └─ Output{UserID, SessionID, AccessToken, RefreshToken}
 ```
 
-**Every failure is the same response.** Steps 1 to 5 all end in
+**Every failure is the same response.** Steps 1 to 5 and 10 all end in
 `401 invalid_credentials`, so nothing tells a malformed username from an
 unknown user or a wrong password. Login therefore never answers `422`, even
-for input that registration would reject with one. The five errors are
+for input that registration would reject with one. The six errors are
 distinct values carrying a different `reason` (`malformed username`,
 `malformed password`, `user not found`, `password not found`, `password
-mismatch`), which the HTTP layer logs and never sends to the client.
+mismatch`, `password changed`), which the HTTP layer logs and never sends to
+the client.
 
 **A missing account costs a bcrypt comparison too.** Bcrypt takes hundreds of
 milliseconds, so failing fast in steps 3 and 4 would let response time reveal
@@ -47,3 +52,18 @@ difference for older accounts; see
 rotation chain. Every later one is created by [refresh](refresh.md).
 
 **Step 10 is atomic**, so a refresh token never exists without its session.
+
+**A password change reaches the session.** [Changing the
+password](change-password.md) revokes the sessions of the user that exist
+when the change commits. Steps 3 to 5 run before the transaction, and bcrypt
+makes them last hundreds of milliseconds: a change that committed in between
+would miss the session step 10 is about to save, which would then stay
+refreshable for good, opened with a password that no longer works. So step 10
+first locks the password, only while its hash is still the one step 5 checked
+([guarded writes](../persistence/repositories.md#guarded-writes)). A change
+that comes later waits for the transaction to commit, and its revocation
+reaches the session. A change that came first leaves the lock nothing to
+match, once it commits: the transaction rolls back, the access token from
+step 8 is never returned, and the login gets `401 invalid_credentials` with the reason
+`password changed`, as it would have a moment later. The lock is shared, so
+logins do not wait for each other.

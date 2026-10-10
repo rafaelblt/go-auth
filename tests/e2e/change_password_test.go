@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -167,6 +169,73 @@ func TestChangePassword_AppliesOneOfTwoConcurrentChanges(t *testing.T) {
 		winner = newPasswords[1]
 	}
 	requireLoginStatus(t, env, usr.Username().String(), winner, http.StatusOK)
+}
+
+// A login with the old password that is still running when the change applies
+// either saves its session first, and the change revokes it, or finds the
+// password changed and is rejected. No session it opens outlives the change.
+func TestChangePassword_RevokesTheSessionsOfLoginsRunningAlongside(t *testing.T) {
+	env := testApp.NewEnv(t)
+	usr, pwd := env.Fixtures.CreateUserAndPassword(t)
+	body, err := json.Marshal(LoginRequestBody{Username: usr.Username().String(), Password: pwd.Value()})
+	require.NoError(t, err)
+	url := "http://" + testApp.cfg.Address() + LoginPath
+
+	// Logins run back to back until the change has answered, so one is in
+	// flight when it applies. They are sent with net/http directly: env.Client
+	// stops the test on failure, which only the test goroutine may do.
+	var stop atomic.Bool
+	var refreshTokens []string
+	var loginErr error
+	firstLogin := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for !stop.Load() {
+			resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+			if err != nil {
+				loginErr = err
+				return
+			}
+			switch resp.StatusCode {
+			case http.StatusOK:
+				var respBody LoginResponseBody
+				err = json.NewDecoder(resp.Body).Decode(&respBody)
+				refreshTokens = append(refreshTokens, respBody.RefreshToken.Value)
+				if len(refreshTokens) == 1 {
+					close(firstLogin)
+				}
+			case http.StatusUnauthorized:
+			default:
+				err = fmt.Errorf("login answered %d", resp.StatusCode)
+			}
+			resp.Body.Close()
+			if err != nil {
+				loginErr = err
+				return
+			}
+		}
+	}()
+	select {
+	case <-firstLogin:
+	case <-done:
+	}
+
+	resp := env.Client.Post(t, ChangePasswordPath, ChangePasswordRequestBody{
+		Username:        usr.Username().String(),
+		CurrentPassword: pwd.Value(),
+		NewPassword:     newPassword,
+	})
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	stop.Store(true)
+	<-done
+
+	require.NoError(t, loginErr)
+	require.NotEmpty(t, refreshTokens)
+	for _, token := range refreshTokens {
+		resp := env.Client.Post(t, RefreshPath, RefreshRequestBody{RefreshToken: token})
+		require.Equal(t, http.StatusUnauthorized, resp.StatusCode, "a session opened with the old password outlived the change")
+	}
 }
 
 func TestChangePassword_ReturnsMethodNotAllowed(t *testing.T) {

@@ -183,7 +183,7 @@ alike, and the line's `path` says which:
 | `invalid_credentials` | `user not found` | No account with that username |
 | `invalid_credentials` | `password not found` | The account has no password row |
 | `invalid_credentials` | `password mismatch` | Wrong password |
-| `invalid_credentials` | `password changed` | On `/v1/auth/change-password`: another change replaced the password between the check and the write |
+| `invalid_credentials` | `password changed` | The password was replaced after it was checked: on `/v1/auth/login`, by a change that committed before the session was saved; on `/v1/auth/change-password`, by another change |
 | `invalid_token` | `invalid token` | Refresh token unknown or malformed |
 | `invalid_token` | `token expired` | Refresh token past its expiry |
 | `invalid_token` | `token already used` | [Reuse detected](usecases/refresh.md#reuse-detection); the session was just revoked |
