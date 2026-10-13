@@ -199,7 +199,7 @@ matching password row, which registration is written to make impossible.
 
 ### Defects
 
-Every line here means something is wrong with the service. All but the first
+Every line here means something is wrong with the service. The `ERROR` lines
 answer `500`.
 
 | Message | Level | Extra fields | Means | What to do |

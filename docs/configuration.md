@@ -379,9 +379,9 @@ cfg, err := config.NewConfig(config.ConfigParams{
 Optional fields are pointers. For a number or a duration, zero is an invalid
 setting, so a plain field could not tell "not given, use the default" from
 "set to zero", which must be an error rather than quietly replaced by the
-default. A `nil` pointer means not given. `AutoMigrate` is a plain `bool`,
-because `false` is a valid setting. `RateLimit` is a pointer like the other
-optional fields, and `TrustedProxies` takes parsed `netip.Prefix` values,
-`nil` meaning none. `SigningKeyEncryptionKey` takes the raw 32 bytes, `nil`
-meaning none, and any other length fails when the app is built
+default. A `nil` pointer means not given. `AutoMigrate` and `RateLimit` are
+pointers too, a `nil` `AutoMigrate` meaning the default, `false`.
+`TrustedProxies` takes parsed `netip.Prefix` values, `nil` meaning none.
+`SigningKeyEncryptionKey` takes the raw 32 bytes, `nil` meaning none, and any
+other length fails when the app is built
 (`new ed25519 keyring failed: encryption key size 16, not 32`).
