@@ -198,21 +198,7 @@ refresh tokens with them, for the
 [session cleanup](usecases.md#session-cleanup). Given a cutoff and a limit, it
 deletes up to that many sessions created before the cutoff that were revoked
 before it, or that have no refresh token expiring at or after it, and returns
-how many it deleted:
-
-```sql
-DELETE FROM sessions
-WHERE id IN (
-    SELECT s.id FROM sessions s
-    WHERE s.created_at < @cutoff
-        AND (s.revoked_at < @cutoff OR NOT EXISTS (
-            SELECT 1 FROM refresh_tokens t
-            WHERE t.session_id = s.id AND t.expires_at >= @cutoff
-        ))
-    LIMIT @limit
-    FOR UPDATE SKIP LOCKED
-)
-```
+how many it deleted.
 
 - **Whole sessions, never a token on its own.** `ON DELETE CASCADE` takes a
   session's tokens with it. A spent token of a live session is what
@@ -234,6 +220,7 @@ WHERE id IN (
   instances deleting at the same time share the work rather than wait on each
   other.
 
-The `NOT EXISTS` and the cascade both look tokens up by session, which is what
+The search for a token expiring at or after the cutoff and the cascade both
+look tokens up by session, which is what
 `idx_refresh_tokens_session_id_expires_at` is for: without it, the cascade reads
 the whole `refresh_tokens` table once for every session it deletes.
