@@ -49,9 +49,9 @@ The SQL is in [`migrations/`](../../migrations). What the constraints are for:
   starts signing, and **`created_at`** when it was added and published. The key
   ID is derived from the key, so it is not stored.
 
-Nothing deletes users, sessions or refresh tokens
-([Limitations](../limitations.md#session-and-refresh-token-rows-are-never-deleted));
-the keyring deletes retired signing keys.
+Nothing deletes users. The [session cleanup](usecases.md#session-cleanup)
+deletes dead sessions, with their refresh tokens
+([how](#deleting-dead-sessions)), and the keyring deletes retired signing keys.
 
 ## Migrations
 
@@ -194,9 +194,11 @@ a write that depends on what was read checks again itself, as a guarded write.
 ## Deleting dead sessions
 
 `SessionRepo.DeleteDeadBefore` is the one statement that deletes sessions, and
-refresh tokens with them. Given a cutoff and a limit, it deletes up to that many
-sessions created before the cutoff that were revoked before it, or that have no
-refresh token expiring at or after it, and returns how many it deleted:
+refresh tokens with them, for the
+[session cleanup](usecases.md#session-cleanup). Given a cutoff and a limit, it
+deletes up to that many sessions created before the cutoff that were revoked
+before it, or that have no refresh token expiring at or after it, and returns
+how many it deleted:
 
 ```sql
 DELETE FROM sessions

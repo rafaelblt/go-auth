@@ -74,16 +74,20 @@ result:
   old one is dropped. The windows absorb up to an hour of skew, so keep the
   clocks synchronised.
 
-### Session and refresh token rows are never deleted
+### A session in use keeps every refresh token
 
 Every login inserts a session and a refresh token, and every refresh a refresh
-token, and nothing deletes them, so both tables grow for as long as the
-deployment runs.
+token. The [session cleanup](architecture/usecases.md#session-cleanup) deletes a
+session, with all its tokens, once it has been dead for
+[`SESSION_RETENTION`](configuration.md#session_retention), and never a token on
+its own ([why](architecture/persistence.md#deleting-dead-sessions)). A session
+that stays in use therefore keeps every token it was issued, and, with
+[no maximum age](#sessions-have-no-maximum-age), keeps adding them: a client
+that refreshes every 30 minutes adds 48 rows a day for as long as it stays
+signed in.
 
-A spent token is what reuse detection looks for: once it is deleted, replaying
-it gets "not found" instead of revoking its session. Only the tokens of a
-session that is revoked, or whose latest token has expired, are safe to delete,
-and deleting a session deletes its tokens.
+With `SESSION_RETENTION` set to `off`, nothing is deleted, and both tables grow
+for as long as the deployment runs.
 
 ## Accounts
 

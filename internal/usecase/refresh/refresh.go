@@ -122,7 +122,11 @@ func (uc *Refresh) getSessionOfToken(ctx context.Context, token *session.Refresh
 		return nil, fmt.Errorf("find session by id failed: %w", err)
 	}
 	if sess == nil {
-		return nil, errors.New("session of refresh token not found")
+		// The session cleanup deleted the session, and the token with it,
+		// after the token was read: the token is unknown from now on.
+		//
+		// See docs/architecture/usecases.md#refresh.
+		return nil, ErrTokenInvalid
 	}
 	return sess, nil
 }

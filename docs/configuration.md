@@ -18,6 +18,7 @@ service exits rather than start half-configured
 | `RATE_LIMIT` | no | `off` | `off` / `relaxed` / `normal` / `strict` |
 | `TRUSTED_PROXIES` | no | none | comma-separated IP addresses and CIDR prefixes |
 | `SIGNING_KEY_ENCRYPTION_KEY` | no | none | base64 of 32 bytes |
+| `SESSION_RETENTION` | no | `720h` (30 days) | `off`, or a duration of at least `1h` |
 
 ### `DATABASE_URL`
 
@@ -200,6 +201,35 @@ An empty value means not set. **Leaving it unset is deprecated.** It is the v1
 default, so upgrading changes nothing; v2 requires it. Until then, startup logs
 a `WARN`.
 
+### `SESSION_RETENTION`
+
+How long a session stays stored once it is dead, revoked or with its latest
+refresh token expired, before the
+[session cleanup](architecture/usecases.md#session-cleanup) deletes it, with its
+refresh tokens. It counts from when the session died: it is not how long a
+session can last, and has nothing to do with `REFRESH_TOKEN_TTL`.
+
+`off`, in any case, keeps every session, and the cleanup never runs. Anything
+else is a [duration](#durations-and-presets) of at least `1h`:
+
+- **At least an hour**, because a refresh checks its session only at its start,
+  and fails its writes, with a `500`, if the session is deleted before it ends.
+  A session can be deleted under a refresh only if that refresh started more
+  than the retention ago, which an hour rules out.
+- **`0` does not mean `off`.** It is a duration under the minimum, and stops
+  the service from starting like any other, so that no value can be read both
+  as "keep nothing" and as "delete nothing".
+
+```
+invalid environment configuration: 'SESSION_RETENTION': too_small(min=1h0m0s)
+```
+
+**The cleanup is on by default.** Before it existed, nothing was deleted: the
+first runs after upgrading delete every session dead for more than 30 days, and
+their refresh tokens, a little at a time
+([Session cleanup](architecture/usecases.md#session-cleanup)). Set it to `off`
+before upgrading to keep them.
+
 ## Replacing the signing keys
 
 To change or remove `SIGNING_KEY_ENCRYPTION_KEY`, or to withdraw a signing key
@@ -235,8 +265,9 @@ The configuration is resolved in two stages, reported together:
    one that fails to parse is.
 2. **Values** (`NewConfig`): an optional variable that was not given takes its
    default, and the result is validated. Required values must not be empty,
-   numbers and durations must be positive, and `LOG_FORMAT` and `RATE_LIMIT`
-   must be one of their values.
+   numbers and durations must be positive, `SESSION_RETENTION` at least `1h`
+   unless it is `off`, and `LOG_FORMAT` and `RATE_LIMIT` must be one of their
+   values.
 
 The errors of both stages are merged into one, each named by the variable that
 carried the value, and a variable that failed to parse is reported once, by the
@@ -261,6 +292,7 @@ They are logged as `app build failed` ([Logging](logging.md#startup-and-shutdown
 | Schema version check | 5s | `internal/bootstrap/schema.go` |
 | Request body limit | 64 KiB | [Request bodies](api/reference.md#request-bodies) |
 | Signing key windows, sync interval and timeout | | [Signing keys](architecture/tokens.md#signing-keys) |
+| Session cleanup interval, timeout and batches | | [Background tasks](architecture/startup.md#background-tasks) |
 | Rate limits of each level | | [`RATE_LIMIT`](#rate_limit) |
 | Username and password rules | | [Register](api/reference.md#post-v1authregister) |
 
@@ -283,3 +315,5 @@ replaced by the default. `TrustedProxies` takes parsed `netip.Prefix` values,
 and `SigningKeyEncryptionKey` the raw 32 bytes, `nil` meaning none for both. A
 key of another length fails when the app is built
 (`new ed25519 keyring failed: encryption key size 16, not 32`).
+`SessionRetention` takes `config.SessionRetentionOff()` or
+`config.SessionRetentionOf(d)`.

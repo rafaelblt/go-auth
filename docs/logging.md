@@ -118,10 +118,14 @@ which:
 | `invalid_credentials` | `password not found` | The account has no password row, which registration should make impossible |
 | `invalid_credentials` | `password mismatch` | Wrong password |
 | `invalid_credentials` | `password changed` | The password was replaced after it was checked: on login, by a change that committed first; on change password, by another change |
-| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed. Verify: the access token is malformed, not EdDSA, or not signed by a published key |
+| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](architecture/usecases.md#session-cleanup) deleted its session. Verify: the access token is malformed, not EdDSA, or not signed by a published key |
 | `invalid_token` | `token expired` | The token is past its expiry |
 | `invalid_token` | `token already used` | Refresh: [reuse detected](architecture/usecases.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | Refresh: the session was already revoked |
+
+Once the session cleanup has deleted a session, its tokens are unknown: a token
+that logged `token expired`, `token already used` or `session revoked` before
+logs `invalid token` from then on.
 
 A code that already says everything, such as `username_already_exists`, has
 no reason, and the field is left out.
@@ -165,10 +169,12 @@ readiness signal there is, and a port already in use shows up as
 
 ### Background tasks
 
-All carry `task`. The one task, `jwt_keyring_rotation`, syncs the
-[signing keys](architecture/tokens.md#signing-keys) every 10 minutes, with a
-3-second timeout per run, so `background task done` appears every 10 minutes on
-each instance.
+All carry `task`: `jwt_keyring_rotation`, which syncs the
+[signing keys](architecture/tokens.md#signing-keys), and `session_cleanup`,
+which deletes [dead sessions](architecture/usecases.md#session-cleanup) unless
+`SESSION_RETENTION` is `off`. Each instance writes `background task done` for
+each task once per interval: every 10 minutes and every hour
+([Background tasks](architecture/startup.md#background-tasks)).
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
@@ -177,9 +183,11 @@ each instance.
 | `background task failed` | `ERROR` | `error`, `elapsed` | One run failed or timed out; the next tick tries again |
 | `background task stopped` | `INFO` | — | The app's context was cancelled |
 
-An `elapsed` at or just over 3s means the run timed out; a shorter one, that
-it returned an error. What a failing sync leaves behind:
-[Signing keys](architecture/tokens.md#signing-keys).
+An `elapsed` at or just over the task's timeout, 3s or 5m, means the run timed
+out; a shorter one, that it returned an error. What a failing sync leaves
+behind: [Signing keys](architecture/tokens.md#signing-keys). A failing cleanup
+leaves the sessions it did not reach to the next run: each batch it deleted
+before the failure stays deleted.
 
 ## What is never logged
 

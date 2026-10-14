@@ -128,17 +128,8 @@ func (app *App) Run(ctx context.Context) error {
 func (app *App) startBackground(ctx context.Context) (stop func()) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	tasks := []periodicTask{
-		{
-			name:     "jwt_keyring_rotation",
-			interval: 10 * time.Minute,
-			timeout:  3 * time.Second,
-			run:      app.deps.Infra.Ed25519Keyring.Sync,
-		},
-	}
-
 	var wg sync.WaitGroup
-	for _, t := range tasks {
+	for _, t := range app.backgroundTasks() {
 		wg.Go(func() {
 			runPeriodic(ctx, app.deps.Logger, t)
 		})
@@ -148,6 +139,28 @@ func (app *App) startBackground(ctx context.Context) (stop func()) {
 		cancel()
 		wg.Wait()
 	}
+}
+
+func (app *App) backgroundTasks() []periodicTask {
+	tasks := []periodicTask{
+		{
+			name:     "jwt_keyring_rotation",
+			interval: 10 * time.Minute,
+			timeout:  3 * time.Second,
+			run:      app.deps.Infra.Ed25519Keyring.Sync,
+		},
+	}
+
+	if cleanup := app.deps.UseCases.SessionCleanup; cleanup != nil {
+		tasks = append(tasks, periodicTask{
+			name:     "session_cleanup",
+			interval: time.Hour,
+			timeout:  5 * time.Minute,
+			run:      cleanup.Execute,
+		})
+	}
+
+	return tasks
 }
 
 func (app *App) Close() error {

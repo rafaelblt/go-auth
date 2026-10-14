@@ -28,6 +28,10 @@ Each use case is a package under `internal/usecase` with:
 - `Input` and `Output`: plain data, with no HTTP or SQL types;
 - one `Execute(ctx, Input) (Output, error)`.
 
+The [session cleanup](#session-cleanup) runs on a timer rather than for a
+request, and has nothing to take or give back, so its `Execute` takes only the
+context and returns only an error.
+
 `internal/usecase` itself holds what they share: the [DTOs](#dtos) outputs
 carry, with their mappers, and `UseCaseError`.
 
@@ -217,7 +221,9 @@ carries reuse detection.
 
 1. Parse the token, hash it, `FindByHash`. Malformed or unknown:
    `invalid token`.
-2. Load its session. A token without one is a bug: `500`.
+2. Load its session. Gone: `invalid token`. The foreign key keeps a token from
+   outliving its session, so it is the [session cleanup](#session-cleanup)
+   deleting both between the two reads, and the token is unknown from then on.
 3. Session revoked: `session revoked`.
 4. `token.Use(now)`. Expired: `token expired`. Already used: reuse detection.
    Otherwise, rotate.
@@ -293,3 +299,28 @@ token passes here exactly when it would pass a correct verifier elsewhere, and a
 service can switch between the two. An access token names a user, not a
 session, so the tokens of a revoked session pass until their `exp`. It is never
 rate limited ([why](http.md#rate-limiting)).
+
+## Session cleanup
+
+`internal/usecase/sessioncleanup` deletes the sessions that have been dead for
+longer than [`SESSION_RETENTION`](../configuration.md#session_retention), with
+their refresh tokens, so that `sessions` and `refresh_tokens` stop growing for
+as long as the deployment runs. A session is dead once it is revoked, or once
+its latest refresh token has expired: nothing can refresh it again. It runs
+every hour as a [background task](startup.md#background-tasks), and not at all
+while the retention is `off`.
+
+Each run reads the clock once, and deletes the sessions that died before that
+time minus the retention ([which ones](persistence.md#deleting-dead-sessions)),
+in batches of 1000, until a batch comes back short or 10 have run. A run
+therefore deletes at most 10,000 sessions, and a backlog, such as the one a
+deployment that ran without the cleanup has, takes as many runs as it needs
+rather than one long one. Every instance runs it, so a deployment deletes up to
+10,000 sessions an hour per instance: one that opens more than that accumulates
+dead sessions faster than they go.
+
+A refresh that presents a token of a session at the moment the cleanup deletes
+it, a token dead for longer than the retention and refused either way, gets
+`invalid token`, as it would a moment later ([Refresh](#refresh), step 2). The
+exception is a spent token whose session is deleted after the refresh read it:
+reuse detection then finds no session to revoke, and the refresh answers `500`.

@@ -32,6 +32,7 @@ const (
 	fieldTrustedProxies  = "trusted_proxies"
 
 	fieldSigningKeyEncryptionKey = "signing_key_encryption_key"
+	fieldSessionRetention        = "session_retention"
 )
 
 type Config struct {
@@ -46,6 +47,7 @@ type Config struct {
 	trustedProxies  []netip.Prefix
 
 	signingKeyEncryptionKey []byte
+	sessionRetention        SessionRetention
 }
 
 type ConfigParams struct {
@@ -61,6 +63,7 @@ type ConfigParams struct {
 	// SigningKeyEncryptionKey is the raw 32-byte key. Nil or empty means not
 	// set.
 	SigningKeyEncryptionKey []byte
+	SessionRetention        *SessionRetention
 }
 
 // Fallbacks for the params NewConfig accepts as optional.
@@ -71,6 +74,8 @@ const (
 	defaultRefreshTokenTTL = 7 * 24 * time.Hour
 	defaultLogFormat       = LogFormatJSON
 	defaultRateLimit       = RateLimitOff
+
+	defaultSessionRetention = 30 * 24 * time.Hour
 )
 
 var (
@@ -92,6 +97,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 	refreshTokenTTL := shared.DerefOr(params.RefreshTokenTTL, defaultRefreshTokenTTL)
 	logFormat := shared.DerefOr(params.LogFormat, defaultLogFormat)
 	rateLimit := shared.DerefOr(params.RateLimit, defaultRateLimit)
+	sessionRetention := shared.DerefOr(params.SessionRetention, SessionRetentionOf(defaultSessionRetention))
 
 	acc := validation.NewAccumulator()
 	acc.Add(fieldAddress, validation.Validate(params.Address, requiredStringValidators...))
@@ -101,6 +107,9 @@ func NewConfig(params ConfigParams) (Config, error) {
 	acc.Add(fieldRefreshTokenTTL, validation.Validate(refreshTokenTTL, ttlValidators...))
 	acc.Add(fieldLogFormat, validation.Validate(logFormat, logFormatValidators...))
 	acc.Add(fieldRateLimit, validation.Validate(rateLimit, rateLimitLevelValidators...))
+	if retention, on := sessionRetention.Duration(); on {
+		acc.Add(fieldSessionRetention, validation.Validate(retention, sessionRetentionValidators...))
+	}
 
 	if err := acc.Err(); err != nil {
 		return Config{}, err
@@ -123,6 +132,7 @@ func NewConfig(params ConfigParams) (Config, error) {
 		trustedProxies:  slices.Clone(params.TrustedProxies),
 
 		signingKeyEncryptionKey: signingKeyEncryptionKey,
+		sessionRetention:        sessionRetention,
 	}
 	return cfg, nil
 }
@@ -140,6 +150,7 @@ func LoadConfig() (Config, error) {
 	rateLimit := resolveEnv(load, envRateLimit, fieldRateLimit)
 	trustedProxies := resolveEnv(load, envTrustedProxies, fieldTrustedProxies)
 	signingKeyEncryptionKey := resolveEnv(load, envSigningKeyEncryptionKey, fieldSigningKeyEncryptionKey)
+	sessionRetention := resolveEnv(load, envSessionRetention, fieldSessionRetention)
 
 	cfg, err := NewConfig(ConfigParams{
 		Address:         shared.Deref(address),
@@ -153,6 +164,7 @@ func LoadConfig() (Config, error) {
 		TrustedProxies:  shared.Deref(trustedProxies),
 
 		SigningKeyEncryptionKey: shared.Deref(signingKeyEncryptionKey),
+		SessionRetention:        sessionRetention,
 	})
 
 	errs := load.merge(err)
@@ -206,4 +218,8 @@ func (c Config) TrustedProxies() []netip.Prefix {
 
 func (c Config) SigningKeyEncryptionKey() []byte {
 	return slices.Clone(c.signingKeyEncryptionKey)
+}
+
+func (c Config) SessionRetention() SessionRetention {
+	return c.sessionRetention
 }
