@@ -255,3 +255,22 @@ func TestPositive(t *testing.T) {
 		assert.Nil(t, Positive[time.Duration]()(time.Minute))
 	})
 }
+
+func TestMin(t *testing.T) {
+	t.Run("returns issue when value is below min", func(t *testing.T) {
+		iss := Min(time.Hour)(59 * time.Minute)
+
+		assert.Equal(t, shared.Ptr(IssueTooSmall(time.Hour)), iss)
+	})
+
+	t.Run("returns issue when value is zero or negative", func(t *testing.T) {
+		assert.Equal(t, shared.Ptr(IssueTooSmall(3)), Min(3)(0))
+		assert.Equal(t, shared.Ptr(IssueTooSmall(3)), Min(3)(-3))
+	})
+
+	t.Run("returns nil when value is at or above min", func(t *testing.T) {
+		assert.Nil(t, Min(time.Hour)(time.Hour))
+		assert.Nil(t, Min(time.Hour)(2*time.Hour))
+		assert.Nil(t, Min(3)(4))
+	})
+}
