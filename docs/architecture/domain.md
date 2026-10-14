@@ -162,6 +162,7 @@ A **`Validator[T]`** is `func(T) *Issue`, where `nil` means the value passed.
 | `AllowedChars(set)` | `invalid_characters` | — | domain |
 | `Required[T]()` | `required` | — | config |
 | `Positive[T]()` | `not_positive` | — | config |
+| `Min(n)` | `too_small` | `min` | config |
 
 `internal/config` also writes its own validators, `allowedLogFormat` and
 `allowedRateLimitLevel`, which return `not_allowed` with the accepted values in

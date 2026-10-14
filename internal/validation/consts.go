@@ -7,6 +7,7 @@ const (
 	CodeInvalidCharacters = "invalid_characters"
 	CodeRequired          = "required"
 	CodeNotPositive       = "not_positive"
+	CodeTooSmall          = "too_small"
 	CodeNotAllowed        = "not_allowed"
 	CodeSameAsCurrent     = "same_as_current"
 )
@@ -16,6 +17,7 @@ const (
 	KeyMaxLength  = "max"
 	KeyMinLength  = "min"
 	KeyUnitLength = "unit"
+	KeyMinValue   = "min"
 	KeyAllowed    = "allowed"
 )
 

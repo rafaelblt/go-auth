@@ -2,6 +2,7 @@ package validation
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -138,6 +139,14 @@ func TestIssueNotPositive(t *testing.T) {
 
 	assert.Equal(t, CodeNotPositive, iss.Code())
 	assert.Empty(t, iss.Details())
+}
+
+func TestIssueTooSmall(t *testing.T) {
+	iss := IssueTooSmall(time.Hour)
+
+	assert.Equal(t, CodeTooSmall, iss.Code())
+	assert.Equal(t, map[string]any{KeyMinValue: time.Hour}, iss.Details())
+	assert.Equal(t, "too_small(min=1h0m0s)", iss.String())
 }
 
 func TestIssueNotAllowed(t *testing.T) {

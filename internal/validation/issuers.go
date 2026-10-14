@@ -48,6 +48,16 @@ func IssueNotPositive() Issue {
 	return iss
 }
 
+func IssueTooSmall[T Number](min T) Issue {
+	iss := Issue{
+		code: CodeTooSmall,
+		details: map[string]any{
+			KeyMinValue: min,
+		},
+	}
+	return iss
+}
+
 func IssueNotAllowed(allowed ...string) Issue {
 	iss := Issue{
 		code: CodeNotAllowed,

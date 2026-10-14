@@ -91,3 +91,12 @@ func Positive[T Number]() Validator[T] {
 		return nil
 	}
 }
+
+func Min[T Number](min T) Validator[T] {
+	return func(value T) *Issue {
+		if value < min {
+			return shared.Ptr(IssueTooSmall(min))
+		}
+		return nil
+	}
+}
