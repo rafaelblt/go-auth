@@ -54,5 +54,5 @@ after startup, and a failed run is logged and retried at the next tick
 
 The keyring's first sync finds the keys startup already loaded. The session
 cleanup is not registered at all while `SESSION_RETENTION` is `off`, which
-builds no use case for it, and the size and number of its batches are constants
-in `internal/bootstrap/usecases.go`.
+builds no use case for it. Each of its runs deletes at most 10 batches of 1000
+sessions, constants in `internal/bootstrap/usecases.go`.

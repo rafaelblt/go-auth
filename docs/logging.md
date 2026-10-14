@@ -173,7 +173,7 @@ All carry `task`: `jwt_keyring_rotation`, which syncs the
 [signing keys](architecture/tokens.md#signing-keys), and `session_cleanup`,
 which deletes [dead sessions](architecture/usecases.md#session-cleanup) unless
 `SESSION_RETENTION` is `off`. Each instance writes `background task done` for
-each task once per interval: every 10 minutes and every hour
+each task once per interval
 ([Background tasks](architecture/startup.md#background-tasks)).
 
 | Message | Level | Extra fields | Means |
@@ -183,8 +183,8 @@ each task once per interval: every 10 minutes and every hour
 | `background task failed` | `ERROR` | `error`, `elapsed` | One run failed or timed out; the next tick tries again |
 | `background task stopped` | `INFO` | — | The app's context was cancelled |
 
-An `elapsed` at or just over the task's timeout, 3s or 5m, means the run timed
-out; a shorter one, that it returned an error. What a failing sync leaves
+An `elapsed` at or just over the task's timeout means the run timed out; a
+shorter one, that it returned an error. What a failing sync leaves
 behind: [Signing keys](architecture/tokens.md#signing-keys). A failing cleanup
 leaves the sessions it did not reach to the next run: each batch it deleted
 before the failure stays deleted.
