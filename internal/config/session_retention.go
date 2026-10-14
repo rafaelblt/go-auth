@@ -31,7 +31,8 @@ func (r SessionRetention) Duration() (time.Duration, bool) {
 }
 
 // minSessionRetention is far longer than any refresh runs, so the cleanup
-// never deletes a session a refresh is still using.
+// never deletes a session under a rotation. It does not cover reuse
+// detection, which also runs for a session that is already dead.
 //
 // See docs/configuration.md#session_retention.
 const minSessionRetention = time.Hour
