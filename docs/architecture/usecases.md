@@ -316,8 +316,8 @@ a batch at a time, until a batch comes back short or the run has made its
 maximum number of batches ([sizes](startup.md#background-tasks)). A run
 therefore deletes a bounded number of sessions, and a backlog, such as the one
 a deployment that ran without the cleanup has, takes as many runs as it needs
-rather than one long one. A deployment that opens sessions faster than its
-instances delete them accumulates dead sessions faster than they go.
+rather than one long one, though a deployment can fall behind
+([Limitations](../limitations.md#the-session-cleanup-can-fall-behind)).
 
 A refresh that presents a token of a session at the moment the cleanup deletes
 it, a token dead for longer than the retention and refused either way, gets
