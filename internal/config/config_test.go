@@ -441,3 +441,69 @@ func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
 	assert.Contains(t, msg, validation.CodeNotPositive)
 	assert.Contains(t, msg, validation.CodeNotAllowed)
 }
+
+func TestLoadConfig_SessionRetention(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    *string
+		expected SessionRetention
+	}{
+		{desc: "not set", value: nil, expected: SessionRetentionOf(defaultSessionRetention)},
+		{desc: "off", value: shared.Ptr("off"), expected: SessionRetentionOff()},
+		{desc: "OFF", value: shared.Ptr("OFF"), expected: SessionRetentionOff()},
+		{desc: "an hour", value: shared.Ptr("1h"), expected: SessionRetentionOf(time.Hour)},
+		{desc: "two days", value: shared.Ptr("48h"), expected: SessionRetentionOf(48 * time.Hour)},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			setRequiredEnvs(t)
+			if tC.value != nil {
+				t.Setenv(envSessionRetention.Key, *tC.value)
+			}
+
+			cfg, err := LoadConfig()
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, cfg.SessionRetention())
+		})
+	}
+}
+
+func TestLoadConfig_RejectsASessionRetentionThatIsNotOffOrAtLeastAnHour(t *testing.T) {
+	for _, value := range []string{"59m", "0", "0s", "-1h", "30d", "never"} {
+		t.Run(value, func(t *testing.T) {
+			setRequiredEnvs(t)
+			t.Setenv(envSessionRetention.Key, value)
+
+			cfg, err := LoadConfig()
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), envSessionRetention.Key)
+			assert.Zero(t, cfg)
+		})
+	}
+}
+
+func TestLoadConfig_ReportsTheSessionRetentionMinimum(t *testing.T) {
+	setRequiredEnvs(t)
+	t.Setenv(envSessionRetention.Key, "30m")
+
+	_, err := LoadConfig()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "'SESSION_RETENTION': too_small(min=1h0m0s)")
+}
+
+func TestNewConfig_RejectsASessionRetentionUnderAnHour(t *testing.T) {
+	for _, retention := range []SessionRetention{{}, SessionRetentionOf(0), SessionRetentionOf(59 * time.Minute)} {
+		cfg, err := NewConfig(ConfigParams{
+			Address:          "add ress vlaue",
+			DatabaseURL:      "db url vlaue",
+			SessionRetention: &retention,
+		})
+
+		assert.Error(t, err)
+		assert.True(t, cfg.IsZero())
+	}
+}

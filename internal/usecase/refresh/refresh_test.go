@@ -244,14 +244,16 @@ func TestRefresh_ReturnsError_WhenSessionReaderFails(t *testing.T) {
 	helper.AssertNoWrites()
 }
 
-func TestRefresh_ReturnsError_WhenSessionOfTokenIsNotFound(t *testing.T) {
+// The session cleanup can delete the session between the reads of the token
+// and of its session.
+func TestRefresh_ReturnsTokenInvalidError_WhenSessionOfTokenIsGone(t *testing.T) {
 	helper := NewTestHelper(t)
 	fixture := helper.SeedTokenWithoutSession()
 
 	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
 
+	assert.ErrorIs(t, err, refresh.ErrTokenInvalid)
 	assert.Zero(t, out)
-	AssertUnexpectedError(t, err)
 	helper.AssertNoAccessTokenIssued()
 	helper.AssertNoWrites()
 }

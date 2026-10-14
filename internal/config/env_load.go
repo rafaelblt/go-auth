@@ -19,6 +19,7 @@ var envKeyByField = map[string]string{
 	fieldTrustedProxies:  envTrustedProxies.Key,
 
 	fieldSigningKeyEncryptionKey: envSigningKeyEncryptionKey.Key,
+	fieldSessionRetention:        envSessionRetention.Key,
 }
 
 // envLoad collects the failures of the conversion stage and remembers which

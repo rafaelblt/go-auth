@@ -69,3 +69,8 @@ var envSigningKeyEncryptionKey = env[[]byte]{
 	Key:    "SIGNING_KEY_ENCRYPTION_KEY",
 	Parser: encryptionKeyEnvParser,
 }
+
+var envSessionRetention = env[SessionRetention]{
+	Key:    "SESSION_RETENTION",
+	Parser: sessionRetentionEnvParser,
+}

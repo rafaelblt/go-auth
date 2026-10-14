@@ -425,3 +425,37 @@ func TestEncryptionKeyEnvParser_ReturnsError(t *testing.T) {
 		})
 	}
 }
+
+func TestSessionRetentionEnvParser(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		value    string
+		expected SessionRetention
+	}{
+		{desc: "lowercase off", value: "off", expected: SessionRetentionOff()},
+		{desc: "uppercase off", value: "OFF", expected: SessionRetentionOff()},
+		{desc: "mixed case off", value: "Off", expected: SessionRetentionOff()},
+		{desc: "hours", value: "720h", expected: SessionRetentionOf(720 * time.Hour)},
+		{desc: "zero, left to NewConfig to reject", value: "0", expected: SessionRetentionOf(0)},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value, err := sessionRetentionEnvParser(tC.value)
+
+			require.NoError(t, err)
+			assert.Equal(t, tC.expected, value)
+		})
+	}
+}
+
+func TestSessionRetentionEnvParser_ReturnsError(t *testing.T) {
+	for _, value := range []string{"", "30d", "forever"} {
+		t.Run(value, func(t *testing.T) {
+			retention, err := sessionRetentionEnvParser(value)
+
+			assert.Error(t, err)
+			assert.Zero(t, retention)
+		})
+	}
+}

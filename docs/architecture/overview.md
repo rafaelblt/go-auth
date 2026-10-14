@@ -43,7 +43,7 @@ Each package's doc comment names its document too.
 
 | Package | Role | Document |
 |---|---|---|
-| `cmd`, `internal/bootstrap` | Entry point, and the composition root: wires everything, runs the server and the background task | [Startup](startup.md) |
+| `cmd`, `internal/bootstrap` | Entry point, and the composition root: wires everything, runs the server and the background tasks | [Startup](startup.md) |
 | `internal/config` | Loads and validates the environment variables | [Configuration](../configuration.md) |
 | `internal/api` | HTTP: routing, JSON bodies, middleware, rate limiting, error translation | [HTTP](http.md) |
 | `internal/usecase/...` | One package per use case, `credential`, the check login and change password share, and the DTOs | [Use cases](usecases.md) |

@@ -43,8 +43,16 @@ requests finish, for up to 10 seconds.
 ## Background tasks
 
 `periodic.go` runs a function on a ticker, with a timeout for each run, until
-the app's context is cancelled. There is one task, `jwt_keyring_rotation`, which
-runs [`Keyring.Sync`](tokens.md#signing-keys) every 10 minutes with a 3-second
-timeout. The first run comes 10 minutes after startup, which has already loaded
-the keys. A failed run is logged and retried at the next tick
+the app's context is cancelled. The first run of each task comes one interval
+after startup, and a failed run is logged and retried at the next tick
 ([Background tasks](../logging.md#background-tasks)).
+
+| Task | Runs | Every | Timeout |
+|---|---|---|---|
+| `jwt_keyring_rotation` | [`Keyring.Sync`](tokens.md#signing-keys) | 10 minutes | 3 seconds |
+| `session_cleanup` | the [session cleanup](usecases.md#session-cleanup) | hour | 5 minutes |
+
+The keyring's first sync finds the keys startup already loaded. The session
+cleanup is not registered at all while `SESSION_RETENTION` is `off`, which
+builds no use case for it, and the size and number of its batches are constants
+in `internal/bootstrap/usecases.go`.

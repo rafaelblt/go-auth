@@ -74,6 +74,21 @@ func trustedProxiesEnvParser(val string) ([]netip.Prefix, error) {
 	return prefixes, nil
 }
 
+// sessionRetentionEnvParser reads off in any case, as RATE_LIMIT does, and
+// anything else as a duration. Whether the duration is long enough is decided
+// by NewConfig.
+func sessionRetentionEnvParser(val string) (SessionRetention, error) {
+	if strings.EqualFold(val, "off") {
+		return SessionRetentionOff(), nil
+	}
+
+	d, err := durationEnvParser(val)
+	if err != nil {
+		return SessionRetention{}, err
+	}
+	return SessionRetentionOf(d), nil
+}
+
 // encryptionKeyEnvParser never puts the value in its errors: it is a secret.
 func encryptionKeyEnvParser(val string) ([]byte, error) {
 	val = strings.TrimSpace(val)

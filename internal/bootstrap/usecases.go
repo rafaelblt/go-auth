@@ -11,6 +11,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
+	"github.com/rafaelblt/go-auth/internal/usecase/sessioncleanup"
 	"github.com/rafaelblt/go-auth/internal/usecase/verify"
 )
 
@@ -20,6 +21,8 @@ type usecases struct {
 	Refresh        *refresh.Refresh
 	Verify         *verify.Verify
 	ChangePassword *changepassword.ChangePassword
+	// SessionCleanup is nil while SESSION_RETENTION is off.
+	SessionCleanup *sessioncleanup.SessionCleanup
 }
 
 func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
@@ -53,12 +56,18 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
+	clean, err := buildSessionCleanup(cfg, deps)
+	if err != nil {
+		return usecases{}, err
+	}
+
 	uc := usecases{
 		Register:       &regst,
 		Login:          &logn,
 		Refresh:        refr,
 		Verify:         verf,
 		ChangePassword: &chpw,
+		SessionCleanup: clean,
 	}
 	return uc, nil
 }
@@ -146,6 +155,33 @@ func buildChangePassword(deps infraDeps, dummyHash password.Hashed) (changepassw
 	})
 	if err != nil {
 		return changepassword.ChangePassword{}, fmt.Errorf("change password creation failed: %w", err)
+	}
+	return uc, nil
+}
+
+// One run of the session cleanup deletes at most sessionCleanupMaxBatches
+// batches of sessionCleanupBatchSize sessions, each in a statement of its own.
+const (
+	sessionCleanupBatchSize  = 1000
+	sessionCleanupMaxBatches = 10
+)
+
+// buildSessionCleanup returns nil when SESSION_RETENTION is off.
+func buildSessionCleanup(cfg config.Config, deps infraDeps) (*sessioncleanup.SessionCleanup, error) {
+	retention, on := cfg.SessionRetention().Duration()
+	if !on {
+		return nil, nil
+	}
+
+	uc, err := sessioncleanup.New(sessioncleanup.Config{
+		SessionCleaner: deps.Sessions,
+		Clock:          deps.Clock,
+		Retention:      retention,
+		BatchSize:      sessionCleanupBatchSize,
+		MaxBatches:     sessionCleanupMaxBatches,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("session cleanup creation failed: %w", err)
 	}
 	return uc, nil
 }
