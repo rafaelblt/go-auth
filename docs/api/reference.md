@@ -1,8 +1,8 @@
 # API reference
 
-Six endpoints. All request and response bodies are JSON. The same contract,
-in machine-readable form, is [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a
-change to the contract updates both.
+Six endpoints, with JSON bodies. The same contract, machine-readable, is
+[openapi.yaml](openapi.yaml) (OpenAPI 3.1); a change to the contract updates
+both.
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -15,141 +15,110 @@ change to the contract updates both.
 
 ## Conventions
 
-**Versioning.** The auth endpoints start with `/v1`. The JWKS endpoint has no
-version, because [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) fixes its
-path.
+**Versioning.** The auth endpoints start with `/v1`. The JWKS has no version,
+because [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) fixes its path.
 
-**Content type.** Every response the service writes is
-`Content-Type: application/json`. The `POST` endpoints require
-`Content-Type: application/json`, matched regardless of case, with any
-parameters (`; charset=utf-8`) allowed and ignored. Anything else, including no
-header at all, is answered `415 unsupported_media_type` before the body is
-read ([why](../development/decisions/0051-post-endpoints-require-application-json.md)).
-`curl -d` sends `application/x-www-form-urlencoded`, so add
-`-H 'Content-Type: application/json'` or use `--json`.
+**Content type.** The `POST` endpoints require `Content-Type: application/json`,
+matched regardless of case, with any parameters (`; charset=utf-8`) ignored.
+Anything else, a missing header included, is answered
+`415 unsupported_media_type` before the body is read. `curl -d` sends a form
+type, so add `-H 'Content-Type: application/json'` or use `--json`. Every
+response body is JSON, except the redirects below, and the empty body of a
+`500` whose response could not be encoded.
 
-**Methods.** Each route accepts one method. A `GET` to `/v1/auth/login`
-returns `405 method_not_allowed`, not `404`, with an `Allow` header naming the
-accepted method.
-
-**Unknown routes.** A path no endpoint has is answered `404 route_not_found`,
-in the usual error shape. A path not in canonical form (`//v1/auth/login`, or
-one with `..` segments) gets a `307` redirect to its cleaned form from Go's
-`http.ServeMux`, not a JSON error: a `GET` gets a short HTML body, any other
-method an empty one.
+**Methods and routes.** The auth endpoints accept `POST`, and the JWKS `GET`
+and `HEAD`. Another method on a known path is `405 method_not_allowed`, with an
+`Allow` header naming the accepted ones; an unknown path is
+`404 route_not_found`. A path not in canonical form (`//v1/auth/login`, or one
+with `..` segments) gets a `307` redirect to its cleaned form from Go's
+`http.ServeMux`: a short HTML body for a `GET`, an empty one otherwise.
 
 **Rate limiting.** When the operator turns it on
 ([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login, change
-password and refresh each allow each client address a number of requests, then
-answer `429 too_many_requests` with a `Retry-After` header giving the seconds
-to wait. The limit is decided after the `Content-Type` check, so a `415` is
-never counted, and before the body is read, so nothing ran: send the same
-request again after the delay, and on `/v1/auth/refresh` the same token, which
-was not spent. Verify and the JWKS endpoint are never limited.
+password and refresh allow each client address a number of requests, then
+answer `429 too_many_requests` with a `Retry-After` header in seconds. The
+limit is decided before the body is read, so nothing ran: send the same request
+again after the delay, and on `/v1/auth/refresh` the same token, which was not
+spent. A request answered `415` is never counted. Verify and the JWKS are never
+limited.
 
-**Timestamps.** RFC 3339, in UTC, to the whole second: `2026-09-08T12:00:00Z`.
-A fraction of a second is dropped, never rounded up, so an `expires_at` is
-never later than the real expiry.
+**Timestamps.** RFC 3339, in UTC, to the whole second
+(`2026-09-08T12:00:00Z`). A fraction of a second is dropped, never rounded up,
+so an `expires_at` is never later than the real expiry.
 
-**Errors.** One shape, an `error` object with a `code`, described in
-[Error model](errors.md).
+**Errors.** One shape, described in the [Error model](errors.md). Besides the
+errors listed for each endpoint, every `POST` endpoint can answer
+`400 invalid_json_body`, `413 request_body_too_large`,
+`415 unsupported_media_type` and `500 internal_server_error`, and all but verify
+`429 too_many_requests`.
 
 ### Request bodies
 
 The body of a `POST` is one JSON object. An empty body, malformed or truncated
-JSON, a value that is not an object (`[]`, `"text"`), a field of the wrong
-type (`{"username": 1}`), and invalid UTF-8 anywhere in the object, in a field
-that is ignored too, are all `400 invalid_json_body`.
+JSON, a value that is not an object (`[]`, `"text"`), a field of the wrong type
+(`{"username": 1}`), and invalid UTF-8 anywhere in the object, in a field that
+is ignored too, are all `400 invalid_json_body`. Invalid UTF-8 is rejected
+rather than replaced because a replaced password would be stored that way:
+every invalid byte becomes the same `U+FFFD`, so a body sent in Latin-1 would
+make `senhaçã` and `senhaõé` one password.
 
-Invalid UTF-8 is rejected rather than replaced because a replaced password is
-stored that way. Every invalid byte would become the same `U+FFFD`, so a body
-sent in Latin-1 would make `senhaçã` and `senhaõé` one password. And once
-stored, such a password could not be tightened away: rejecting the bytes later
-would lock out the users who registered with them.
+A body is decoded up to its first 64 KiB (65,536 bytes): one whose first JSON
+value does not end within them is `413 request_body_too_large`. The limit is not
+a setting.
 
-A body is decoded only up to its first 64 KiB (65,536 bytes): a body whose
-first JSON value does not end within them is answered `413`
-`request_body_too_large`. No legitimate body comes near it. The value is fixed,
-not a setting.
+**Unknown fields are ignored**, which is what lets a field be added without
+breaking clients. A misspelled field is therefore not reported as such: the
+field it was meant to be arrives empty, and is reported instead
+(`{"usernme": "alice"}` at registration is `too_short` on `username`). A missing
+field is read as `""`.
 
-**Unknown fields are ignored.** That is a rule, and it is what lets a field be
-added without breaking clients. It also means a misspelled field name is not
-reported as such: the field it was meant to be arrives empty, and is reported
-instead. `{"usernme": "alice"}` at registration is `too_short` on `username`.
-
-A missing field is read as `""`.
-
-The decoder also tolerates the following. Send one well-formed object in valid
+The decoder also tolerates the following. Send one well-formed object, in valid
 UTF-8, with each field once and in lower case, and do not depend on these:
 
-- A body of `null` reads as `{}`: registration answers `422`, login, change
-  password, refresh and verify `401`.
-- A field set to `null` is read as `""`, like a missing one.
-- Anything after the first JSON value is ignored, and does not count toward
-  the 64 KiB limit.
-- Field names match regardless of case: `USERNAME` fills `username`.
-- A field sent twice keeps the last value, also when the two differ in case.
-- An escaped lone surrogate such as `\ud800` becomes `U+FFFD` without an
-  error. In a password, each one replaced counts as 3 bytes toward the 72-byte
-  limit. The bytes are valid UTF-8, so the check above does not see it, and a
-  password stored this way carries the same risk
+- a body of `null` reads as `{}`;
+- a field set to `null` is read as `""`, like a missing one;
+- anything after the first JSON value is ignored;
+- field names match regardless of case, and a field sent twice keeps the last
+  value;
+- an escaped lone surrogate such as `\ud800` becomes `U+FFFD`, which in a
+  password has consequences
   ([Limitations](../limitations.md#a-lone-surrogate-in-a-password-becomes-ufffd)).
 
 ---
 
 ## POST /v1/auth/register
 
-Creates a user with a username and a password. It does **not** log the user
-in and returns no tokens: call `/v1/auth/login` next.
-
-### Request
+Creates a user. It does **not** log the user in: call `/v1/auth/login` next.
 
 ```json
-{
-  "username": "alice",
-  "password": "correct-horse"
-}
+{ "username": "alice", "password": "correct-horse" }
 ```
 
-| Field | Type | Rules |
-|---|---|---|
-| `username` | string | 3–32 code points; only `a-z`, `0-9`, `.`, `_`, `-` |
-| `password` | string | at least 8 code points, at most 72 bytes |
+| Field | Rules |
+|---|---|
+| `username` | 3–32 code points; only `a-z`, `0-9`, `.`, `_`, `-`, after lower-casing |
+| `password` | at least 8 code points, at most 72 bytes; any character |
 
 Usernames are lower-cased before they are checked and stored, so `Alice` and
-`alice` are the same user, stored as `alice`. Spaces are not trimmed: a
-leading or trailing space is a character outside the allowed set.
-
-Passwords are stored and compared exactly as sent: no trimming, no Unicode
-normalisation, and any character is allowed. The one change happens while the
-body is decoded: an escaped lone surrogate becomes `U+FFFD` (see
-[Request bodies](#request-bodies)). The reasons for these rules are in the
-[Domain model](../architecture/domain/user.md#username).
+`alice` are the same user. Spaces are not trimmed: a leading or trailing space
+is a character outside the allowed set. Passwords are stored and compared
+exactly as sent, with no trimming and no Unicode normalisation. The reasons:
+[Domain](../architecture/domain.md#user).
 
 ### Response: `201 Created`
 
 ```json
-{
-  "user": {
-    "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
-    "username": "alice"
-  }
-}
+{ "user": { "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37", "username": "alice" } }
 ```
 
 ### Errors
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
 | `409` | `username_already_exists` | The username is taken |
-| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
-| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-| `422` | `validation_failed` | The username or the password is invalid |
-| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
+| `422` | `validation_failed` | The username or the password breaks a rule |
 
-A validation error names every field at fault, so one request reports every
-problem:
+A `422` names every field at fault, so one request reports every problem:
 
 ```json
 {
@@ -164,25 +133,17 @@ problem:
 }
 ```
 
-Usernames are unique even under concurrency: of any number of registrations
-of one username sent at the same moment, exactly one creates the account, and
-the others get `409 username_already_exists`, as they would one after the
-other.
+Of any number of registrations of one username sent at once, exactly one
+creates the account; the others get `409`, as they would one after the other.
 
 ---
 
 ## POST /v1/auth/login
 
-Checks the credentials and opens a new session, returning an access token and
-a refresh token.
-
-### Request
+Checks the credentials and opens a new session.
 
 ```json
-{
-  "username": "alice",
-  "password": "correct-horse"
-}
+{ "username": "alice", "password": "correct-horse" }
 ```
 
 ### Response: `200 OK`
@@ -202,100 +163,64 @@ a refresh token.
 }
 ```
 
-`expires_at` and `expires_in` give the same expiry two ways. `expires_in` is
-the whole seconds from the moment the service issued the token to its expiry,
-rounded down, so at that moment it never overstates the time the token has
-left. If you cannot trust your own clock, count `expires_in` from when the
-response arrives and refresh a little early: the time the service spent after
-issuing the token, and the time on the network, are not deducted.
+`expires_in` is the whole seconds from the moment the service issued the token
+to its expiry, rounded down. If you cannot trust your own clock, count it from
+when the response arrives, and refresh a little early: the time on the network
+is not deducted.
 
-`access_token.value` is a JWT. Send it to your own services, and verify it
-there ([how](token-verification.md)).
-
-`refresh_token.value` is 32 random bytes in base64url, not a JWT. It means
-nothing outside this service, which stores only its SHA-256 hash. Treat it as
-a password: keep it private, never log it, never put it in a URL.
+`access_token.value` is a JWT: send it to your services, and verify it there
+([how](token-verification.md)). `refresh_token.value` is 32 random bytes in
+base64url, meaningless outside this service. Treat it as a password: keep it
+private, never log it, never put it in a URL.
 
 ### Errors
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
-| `401` | `invalid_credentials` | Any other failure |
-| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
-| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
+| `401` | `invalid_credentials` | Any failure: an unknown username, a wrong password, or a value that breaks the registration rules |
 
-Every login failure gets the same response: a malformed username, an unknown
-username, a user without a password, and a wrong password. Login never returns
-`422`. Nothing in the response, or in how long it takes, tells an unknown
-username from a wrong password; see
-[Deliberately vague errors](errors.md#deliberately-vague-errors).
+Login never answers `422`
+([Deliberately vague errors](errors.md#deliberately-vague-errors)).
 
 ---
 
 ## POST /v1/auth/change-password
 
 Replaces a user's password, given the current one, and signs the user out of
-every session. It returns no tokens: call `/v1/auth/login` next, with the new
-password.
-
-### Request
+every session. It returns no tokens: log in again with the new password.
 
 ```json
-{
-  "username": "alice",
-  "current_password": "correct-horse",
-  "new_password": "battery-staple"
-}
+{ "username": "alice", "current_password": "correct-horse", "new_password": "battery-staple" }
 ```
 
-| Field | Type | Rules |
-|---|---|---|
-| `username` | string | as at login |
-| `current_password` | string | as at login |
-| `new_password` | string | at least 8 code points, at most 72 bytes, not the same as `current_password` |
+| Field | Rules |
+|---|---|
+| `username`, `current_password` | as at login |
+| `new_password` | as a registration's password, and not the same as `current_password` |
 
-The new password follows the rules of a registration's, and is stored exactly
-as sent, with the one change described in [Request bodies](#request-bodies). It
-cannot be the same as `current_password`, compared byte for byte, which is
-answered `422` with the field code `same_as_current`. Only the current password
-is compared: a password used before it is accepted again.
+`new_password` is compared with `current_password` byte for byte, and only with
+it: a password used before is accepted again.
 
 ### Response: `200 OK`
 
 ```json
-{
-  "user": {
-    "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
-    "username": "alice"
-  }
-}
+{ "user": { "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37", "username": "alice" } }
 ```
 
 The old password stops working at once, and **every session of the user is
 revoked**: every refresh token issued before the change, on any device, is
-answered `401 invalid_token` from then on, and the user logs in again
-everywhere. Access tokens already issued stay valid until they expire
-([why](token-verification.md#revocation-is-not-immediate)).
+answered `401 invalid_token` from then on. Access tokens already issued stay
+valid until they expire
+([Limitations](../limitations.md#access-tokens-cannot-be-revoked)).
 
 ### Errors
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
-| `401` | `invalid_credentials` | The username or the current password was rejected, for any reason |
-| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
-| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-| `422` | `validation_failed` | The new password is invalid, or the same as the current one |
-| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
+| `401` | `invalid_credentials` | The username or the current password was rejected, for any reason, as at login |
+| `422` | `validation_failed` | `new_password` breaks a rule, or is the same as `current_password` (`same_as_current`) |
 
-The `401` is login's: a malformed username, an unknown username, a user without
-a password and a wrong current password get the same response, in the same
-time; see [Deliberately vague errors](errors.md#deliberately-vague-errors). A
-`422` names only `new_password`, and comes before the account is looked up:
-its rules depend only on the two passwords sent, so it says nothing about the
-account:
+A `422` names only `new_password`, and comes before the account is looked up:
 
 ```json
 {
@@ -303,64 +228,55 @@ account:
     "code": "validation_failed",
     "message": "The input failed validation.",
     "fields": [
-      { "field": "new_password", "code": "too_short", "details": { "min": 8, "unit": "code_point" } }
+      { "field": "new_password", "code": "same_as_current", "details": {} }
     ]
   }
 }
 ```
 
-Of any number of changes sent at the same moment with the same current
-password, exactly one applies. The others get `401 invalid_credentials`, as
-they would one after the other, since by then the password they sent is no
-longer the user's.
-
-A login with the old password that is still running when the change applies
-either finishes first, and its session is revoked with the others, or gets
-`401 invalid_credentials`. No session opened with the old password outlives
-the change.
+Of any number of changes sent at once with the same current password, exactly
+one applies, and the others get `401 invalid_credentials`. A login with the old
+password still running when the change applies either finishes first, and its
+session is revoked with the others, or gets `401 invalid_credentials`.
 
 ---
 
 ## POST /v1/auth/refresh
 
-Exchanges a valid refresh token for a new access token and a new refresh
-token. The token sent is spent in the process.
-
-### Request
+Exchanges a refresh token for a new access token and a new refresh token.
 
 ```json
-{
-  "refresh_token": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01"
-}
+{ "refresh_token": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01" }
 ```
 
 ### Response: `200 OK`
 
 The same shape as the login response. **The refresh token you sent is now
-spent.** Replace your stored copy with the new one: sending the old one again
-revokes the whole session.
+spent**: replace your stored copy with the new one.
 
 ### Errors
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
-| `401` | `invalid_token` | Any other failure |
-| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
-| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-| `429` | `too_many_requests` | Rate limiting is on and this address used up the endpoint's allowance |
+| `401` | `invalid_token` | Any failure: unknown, expired, already used, or its session revoked |
 
-Every failure gets the same response: a token that never existed, one that
-expired, one already used, and one whose session was revoked. A caller cannot
-tell which it was, or whether reuse detection fired.
+**Reuse detection.** A token that was already used revokes its whole session
+before the `401`: the session's current refresh token stops working too, and
+the user has to log in again. Two concurrent refreshes with the same token
+count as reuse: one succeeds, the other revokes the session.
 
-**Reuse detection.** If the token was already used, the service revokes its
-whole session before answering `401`. The session's current refresh token
-stops working too, and the user has to log in again. Two concurrent refreshes
-with the same token count as reuse: one succeeds, the other revokes the
-session. Clients must follow the
-[client obligations](../architecture/usecases/refresh.md#client-obligations) to
-avoid logging their own users out.
+### Client obligations
+
+1. Store the refresh token privately and durably.
+2. After a successful refresh, replace it with the new one at once.
+3. Never retry a refresh with the old token: if the response was lost, the
+   retry trips reuse detection and logs the user out. Log in again instead.
+4. Never run two refreshes with the same token at once: across tabs, threads
+   or instances sharing storage, only one may be in flight.
+5. On a `401`, discard the token and send the user to log in.
+
+A `429` is the exception to point 3: the token was not spent, so wait for
+`Retry-After` and send the same one.
 
 ---
 
@@ -371,12 +287,8 @@ that would rather not verify access tokens itself. It makes the checks a
 correct local verifier makes, with the keys the JWKS publishes, and nothing
 else ([Letting go-auth verify](token-verification.md#letting-go-auth-verify)).
 
-### Request
-
 ```json
-{
-  "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..."
-}
+{ "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..." }
 ```
 
 ### Response: `200 OK`
@@ -396,31 +308,21 @@ else ([Letting go-auth verify](token-verification.md#letting-go-auth-verify)).
 | `expires_in` | Whole seconds from the moment the service checked the token to its expiry, rounded down |
 
 The answer holds until `expires_at`: nothing makes an access token invalid
-sooner, not even revoking its session
-([why](token-verification.md#revocation-is-not-immediate)).
+sooner, not even revoking its session.
 
 ### Errors
 
 | Status | Code | Cause |
 |---|---|---|
-| `400` | `invalid_json_body` | The body is not a JSON object with fields of the expected types |
-| `401` | `invalid_token` | Any other failure |
-| `413` | `request_body_too_large` | The body's JSON value runs past 64 KiB |
-| `415` | `unsupported_media_type` | The `Content-Type` is not `application/json` |
-
-Every failure gets the same response: a missing or malformed token, one signed
-with another algorithm or by a key the JWKS does not publish, one altered after
-it was signed, and an expired one.
+| `401` | `invalid_token` | Any failure: a missing or malformed token, another algorithm, a key the JWKS does not publish, an altered token, an expired one |
 
 ---
 
 ## GET /.well-known/jwks.json
 
-Publishes the public keys that verify access tokens, as a
-[JWK Set](https://www.rfc-editor.org/rfc/rfc7517). It holds no secrets and
-needs no authentication.
-
-### Response: `200 OK`
+The public keys that verify access tokens, as a
+[JWK Set](https://www.rfc-editor.org/rfc/rfc7517). It holds no secrets and needs
+no authentication.
 
 ```json
 {
@@ -439,18 +341,10 @@ needs no authentication.
 
 | Field | Meaning |
 |---|---|
-| `kty` | Key type: always `OKP` (octet key pair) |
-| `crv` | Curve: always `Ed25519` |
+| `kty`, `crv` | Always `OKP` and `Ed25519` |
 | `x` | The public key, base64url without padding |
-| `use` | Always `sig`: the key verifies signatures |
-| `alg` | Always `EdDSA` |
-| `kid` | Key ID: the RFC 7638 thumbprint of the key |
+| `use`, `alg` | Always `sig` and `EdDSA` |
+| `kid` | Key ID: the RFC 7638 thumbprint of the key, and the `kid` in the header of the tokens it signed |
 
-A token's `kid` header matches the `kid` of the key that signed it, so a
-verifier can pick the right key without trying each one.
-
-The document holds the key signing now, the next one from a day before it
-starts signing, and the previous one for 25 hours after it stops: usually one
-or two keys. The response has no cache headers. How to cache it, and what
-happens when the key rotates:
+It usually holds one or two keys, and has no cache headers. How to cache it:
 [Fetching and caching keys](token-verification.md#fetching-and-caching-keys).

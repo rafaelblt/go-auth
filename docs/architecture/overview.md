@@ -5,21 +5,11 @@ business rules sit in the middle and know nothing about HTTP, PostgreSQL,
 bcrypt or JWT. Those live at the edges, and the middle reaches them only
 through interfaces.
 
-## A service, not a library
-
-`go-auth` is meant to be reused by projects written in any language, so it is
-a standalone service with an HTTP and JSON API rather than a Go library, which
-would serve only Go projects.
-
-The cost is a network round trip on every call to it. That is why access
-tokens can be verified without calling it: the round trip happens on login and
-refresh, which are rare, and not on the requests an application serves (see
-[Token model](tokens.md#token-model)). A service that would rather pay that
-round trip than verify tokens itself can have `go-auth` check them
-([Letting go-auth verify](../api/token-verification.md#letting-go-auth-verify)).
-
-Everything is under `internal/`, so no other module can import it. The public
-interface is HTTP.
+It is a standalone service with an HTTP and JSON API rather than a Go library,
+so that projects in any language can use it. The cost is a network round trip
+on every call, which is why access tokens can be verified without calling it
+([Token model](tokens.md#token-model)). Everything is under `internal/`: the
+public interface is HTTP.
 
 ## Layers
 
@@ -34,8 +24,7 @@ internal/api      internal/infra        adapters (inbound / outbound)
    │                   │
    └─────────┬─────────┘
              │
-    internal/usecase                    application logic: register, login, change password,
-                                        refresh, verify
+    internal/usecase                    application logic
              │
      internal/port                      interfaces the use cases depend on
              │
@@ -43,85 +32,55 @@ internal/api      internal/infra        adapters (inbound / outbound)
   internal/validation, shared
 ```
 
-**The dependency rule:** arrows point inward only. `usecase` imports `port`
-and the domain packages, and never `api`, `infra`, `bootstrap` or `config`.
-The infrastructure implements the `port` interfaces and is injected at
-startup.
+**The dependency rule:** dependencies point inward. `usecase` imports `port`
+and the domain packages, never `api`, `infra`, `bootstrap` or `config`. The
+adapters implement the `port` interfaces and are injected at startup, so every
+use case is tested against in-memory fakes, with no database and no HTTP.
 
-The immediate payoff is test speed: every use case is tested against
-in-memory fakes, with no database and no HTTP, in milliseconds. The longer
-term payoff is that replacing bcrypt with argon2, say, means a new package
-that implements an existing interface, not a rewrite.
+## Packages
 
-Each layer has its own document:
+Each package's doc comment names its document too.
 
-| Layer | Document |
-|---|---|
-| `internal/domain`, `validation`, `shared` | [Domain](domain/README.md) |
-| `internal/port`, `internal/usecase` | [Use cases](usecases/README.md) |
-| `internal/api` | [HTTP](http.md) |
-| `internal/infra/postgres`, `migrations` | [Persistence](persistence/README.md) |
-| `internal/bootstrap`, `cmd` | [Startup](startup.md) |
+| Package | Role | Document |
+|---|---|---|
+| `cmd`, `internal/bootstrap` | Entry point, and the composition root: wires everything, runs the server and the background task | [Startup](startup.md) |
+| `internal/config` | Loads and validates the environment variables | [Configuration](../configuration.md) |
+| `internal/api` | HTTP: routing, JSON bodies, middleware, rate limiting, error translation | [HTTP](http.md) |
+| `internal/usecase/...` | One package per use case, `credential`, the check login and change password share, and the DTOs | [Use cases](usecases.md) |
+| `internal/port` | The interfaces the use cases depend on | [Use cases](usecases.md#ports) |
+| `internal/domain/user`, `password`, `session` | Entities and value objects | [Domain](domain.md) |
+| `internal/validation` | Input rules: issues, validators, accumulator | [Domain](domain.md#validation) |
+| `internal/shared` | Generic helpers | [Domain](domain.md#shared) |
+| `internal/infra` | `SystemClock` | [Conventions](conventions.md#clock) |
+| `internal/infra/postgres`, `internal/infra/migrate`, `migrations` | Pool, repositories, unit of work, schema check, migrations | [Persistence](persistence.md) |
+| `internal/infra/bcrypt` | Password hashing | [`BCRYPT_COST`](../configuration.md#bcrypt_cost) |
+| `internal/infra/jwt`, `internal/infra/jwt/ed25519` | Access tokens and the signing keys | [Tokens](tokens.md) |
+| `internal/infra/ratelimit` | The in-memory rate limiter | [HTTP](http.md#rate-limiting) |
+| `internal/testutil/...`, `tests/e2e`, `tests/docs` | Test helpers, end-to-end and documentation tests | [Testing](../development/testing.md) |
 
-## Package map
+## A request, end to end
 
-| Package | Role |
-|---|---|
-| `cmd` | `main`: load the config, build the app, handle signals |
-| `internal/bootstrap` | Composition root: wires every dependency, runs the server and the background tasks |
-| `internal/config` | Loads and validates the environment variables |
-| `internal/api` | HTTP: routing, JSON bodies, middleware, error translation |
-| `internal/usecase` | Application logic, one package per use case, and `credential`, the credential check login and change password share |
-| `internal/port` | Interfaces the use cases depend on |
-| `internal/domain/user` | `User` entity, `ID`, `Username`, `Status` |
-| `internal/domain/password` | `Password` entity, `ID`, `Plain`, `Hashed` |
-| `internal/domain/session` | `Session` and `RefreshToken` entities, `RefreshTokenSecret`, `RefreshTokenHash`, `AccessToken` |
-| `internal/validation` | Input validation: issues, validators, accumulator |
-| `internal/shared` | Helpers used across packages: `EntityID`, `Set`, `Ptr`, `ClonePtr` |
-| `internal/infra` | `SystemClock` |
-| `internal/infra/postgres` | Repositories, connection pool, unit of work, schema version |
-| `internal/infra/migrate` | Runs the embedded migrations with golang-migrate |
-| `internal/infra/bcrypt` | Password hashing and verification |
-| `internal/infra/jwt` | Issues and validates access tokens |
-| `internal/infra/jwt/ed25519` | Ed25519 keys, keyring and key rotation, JWT signer |
-| `internal/infra/ratelimit` | Counts requests per key for rate limiting, in memory |
-| `migrations` | Embedded `.sql` files, and `Latest()` |
-| `internal/testutil` | Test helpers, shared across packages |
-| `tests/e2e` | End-to-end tests against a real server and database |
-
-## Request lifecycle
-
-A login request, end to end:
+A login:
 
 ```
 POST /v1/auth/login
   │
-  ├─ logging middleware      give the request an ID, tag the logger, log "request received"
-  ├─ recovery middleware     catch panics from here on
+  ├─ logging middleware      request ID, logger in the context, "request received"
+  ├─ recovery middleware     a panic from here on becomes a 500
+  ├─ jsonRouteErrors         the mux's 404 and 405 become JSON
   ├─ ServeMux                match POST /v1/auth/login
-  │                          no route → 404, wrong method → 405 (JSON, jsonRouteErrors)
   │
   ├─ adaptUseCase            Content-Type not application/json → 415
-  │                          rate limit for this endpoint and address used up → 429
-  │                          decoder reads at most 64 KiB; past it → 413
+  │                          rate limit used up → 429
+  │                          body past 64 KiB → 413, not JSON → 400
   ├─ loginDecoder            JSON body → login.Input
-  ├─ login.Execute           validate → find user → find password → verify
-  │                          → create session → issue access token
-  │                          → create refresh token → save both in one transaction
+  ├─ login.Execute           check the credentials, open a session, issue both tokens
   ├─ loginEncoder            login.Output → response body
-  ├─ loginSuccessLog         log "success login"
+  ├─ loginSuccessLog         "success login"
   ├─ writeJSON               marshal, set Content-Type, write status and body
   │
-  └─ logging middleware      log "request finished" with the status and duration
+  └─ logging middleware      "request finished", with the status and duration
 ```
 
-On error, `translateError` takes the encoder's place; see
-[HTTP](http.md#error-translation).
-
-## Where to look next
-
-- [Domain](domain/README.md): what the entities guarantee.
-- [Use cases](usecases/README.md): the five flows in detail.
-- [Tokens](tokens.md): the two token types and the security properties.
-- [Persistence](persistence/README.md): schema, repositories, transactions.
-- [Code conventions](conventions.md): the patterns repeated throughout.
+On error, `translateError` takes the encoder's place
+([Error translation](http.md#error-translation)).

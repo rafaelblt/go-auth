@@ -1,104 +1,117 @@
 # Tokens
 
-The two credentials the service hands out, how the access token is signed, and
-the security properties that follow from both.
+`internal/infra/jwt`, `internal/infra/jwt/ed25519`
+
+The two credentials the service hands out, the keys that sign one of them, and
+the security properties that follow.
 
 ## Token model
 
-Two tokens, with opposite trade-offs. A token that can be verified without
+Two tokens, with opposite trade-offs: a token that can be verified without
 calling this service cannot be revoked, and a token that can be revoked has to
-be checked here. No single token has both properties.
+be checked here.
 
 | | Access token | Refresh token |
 |---|---|---|
 | Format | JWT, EdDSA (Ed25519) | 32 random bytes, base64url |
-| State | stateless | stored in the database |
-| Verified by | any service, locally, with the JWKS, or this service on request | this service only |
-| Lifetime | short (default 30m) | long (default 7d) |
-| Revocable | no | yes |
-| Stored as | not stored | SHA-256 hash |
-| Reusable | yes, until `exp` | no, single use |
+| Verified by | any service, with the JWKS, or this service on request | this service only |
+| Lifetime | `ACCESS_TOKEN_TTL`, default 30m | `REFRESH_TOKEN_TTL`, default 7 days |
+| Stored | no | as its SHA-256 hash |
+| Use | until it expires | once: every refresh replaces it |
+| Revocable | no | yes, with its session |
 
-The access token is what your services check on every request, and it cannot
-be revoked, so checking it needs no call to `go-auth`. The refresh token is
-where control lies: it is stored, used once, and revoking its session stops
-the client from getting new access tokens.
+The access token is what services check on every request, without a call to
+`go-auth`; the refresh token is where control lies. So `ACCESS_TOKEN_TTL` is
+how long a revoked session can still present a valid access token
+([Limitations](../limitations.md#access-tokens-cannot-be-revoked)).
 
-`ACCESS_TOKEN_TTL` is the gap between the two: how long a revoked session can
-still present a valid access token. That is why the default is 30 minutes,
-not a day.
+The refresh token is random bytes rather than a JWT: it is looked up on every
+use, so it needs no content, only to be impossible to guess, and a JWT would
+invite clients to read claims from it. Only its SHA-256 is stored, so a leaked
+database gives out digests rather than working tokens. A slow hash would add
+nothing: there is nothing to guess in 32 random bytes, and bcrypt would cost
+every refresh hundreds of milliseconds.
 
-**The refresh token is random bytes, not a JWT.** It is looked up in the
-database on every use, so it needs no content of its own. Its only job is to
-be impossible to guess. A JWT would be larger, and would invite clients to
-read claims from it.
+## Access tokens
 
-**Only its SHA-256 hash is stored**, so a leaked database gives out digests,
-not working tokens. A slow hash like bcrypt is unnecessary: the token is 32
-bytes of uniform randomness, with nothing to guess, and bcrypt would add
-hundreds of milliseconds to every refresh.
-
-The value objects behind both are in
-[Session and refresh tokens](domain/session.md). How they are issued and
-rotated is in [Login](usecases/login.md) and [Refresh](usecases/refresh.md).
+`jwt.AccessTokenService` issues them with two claims, `sub` and `exp`
+([Token format](../api/token-verification.md#token-format)), and a lifetime
+that it accepts only between 1 minute and 24 hours (`MaxExpiration`).
+`ed25519.Signer` signs them with the key the keyring says signs now, putting its
+ID in the `kid` header. Validation pins `EdDSA`, picks the key by `kid` among the
+published ones and requires `exp`, by the injected clock; the verify endpoint
+runs the same code.
 
 ## Signing keys
 
-`internal/infra/jwt/ed25519`
+Ed25519, because verifiers outside this service hold the keys: with HMAC,
+every verifier would hold the signing secret and could mint tokens. Ed25519
+keys and signatures are much smaller than RSA's, and JWKS supports them
+(`OKP`) as standard.
 
-Access tokens are signed with Ed25519. They are verified outside this
-service, so the algorithm decides what verifiers must hold. With HMAC, every
-verifier would hold the signing secret, and any of them could mint tokens.
-Ed25519 keys and signatures are much smaller than RSA's, signing is faster,
-and JWKS supports its keys (`OKP`) as standard.
-
-The `Keyring` holds every published key, loaded from the `signing_keys`
-table through `port.SigningKeyStore`, so the keys survive a restart and every
-instance signs with the same ones. A key's ID is its RFC 7638 thumbprint,
-derived from the key itself, so it needs no storage of its own. The signer
-puts the ID in the JWT's `kid` header, and the keyring publishes the matching
-public keys at `/.well-known/jwks.json`, so a verifier picks the right key
-without trying each one.
-
-Each key goes through three windows:
+The keys are rows of `signing_keys`, read and written through
+`port.SigningKeyStore`, so they survive a restart and every instance signs and
+publishes the same ones. A key's ID is its RFC 7638 thumbprint, derived from the
+key. Each key goes through three windows:
 
 - it is added, and published, a day before its `active_at`. The first key is
   the exception: it signs at once;
 - it signs from its `active_at` until the next key's, 7 days later;
-- it stays published for 25 hours more, longer than any access token lives,
-  and is then deleted.
+- it stays published for 25 hours more, an hour longer than any access token
+  can live, and is then deleted.
 
-Every 10 minutes each instance reads the table again, adds the next key when
-it is due, and deletes the retired ones
-([Startup](startup.md#background-tasks)). Each instance's own clock decides
-which key signs, so the switch needs no coordination: by then every instance
-has had the next key for most of a day
-([why](../development/decisions/0053-signing-keys-are-shared-through-the-database.md)). When two instances add the same
-generation, its primary key keeps the first, and both read it back
-([guarded writes](persistence/repositories.md#guarded-writes)).
+A key is therefore published for about 9 days, and the JWKS holds one or two
+keys. The windows are constants in `internal/bootstrap/infra.go`.
 
-Reads go through an `atomic.Pointer`, and only a sync takes a lock, so
-signing never waits for it. A key's seed is stored sealed with AES-256-GCM
-when [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key)
-is set ([why](../development/decisions/0054-signing-key-seeds-are-sealed-when-a-key-is-set.md)),
-and as it is otherwise
-([Limitations](../limitations.md#signing-keys-are-stored-in-the-database)).
+`Keyring.Sync` runs every 10 minutes on each instance
+([Background tasks](startup.md#background-tasks)): it lists the keys, adds the
+next one when it is due, lists them again, publishes those not retired, and then
+deletes the retired ones. Startup loads the keys the same way, without the
+delete. Each instance's own clock decides which key signs, so the switch needs
+no coordination: by then every instance has had the next key for most of a day.
+When two instances add the same generation, the primary key keeps the first and
+both read it back ([Guarded writes](persistence.md#guarded-writes)). Signing
+reads the keys through an `atomic.Pointer`, and only a sync takes a lock. Why
+the keys are shared this way:
+[decision 0053](../development/decisions/0053-signing-keys-are-shared-through-the-database.md).
+
+A sync that fails changes nothing: the instance keeps the keys it last loaded,
+and switches to one it already holds when that key's time comes, but does not
+see keys other instances add. If every instance keeps failing, the current key
+signs past its 7 days. The delete comes last, so one that fails, for instance
+because the database role cannot `DELETE`, leaves the retired keys in the table
+and nothing else.
+
+### Sealed seeds
+
+When [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key)
+is set, the keyring seals each seed it adds with AES-256-GCM (a random 12-byte
+nonce and a 16-byte tag, with the key's generation as additional data, so a
+sealed seed opens only in its own row), and opens the stored ones as it reads
+them. The repository stores whatever bytes it is given.
+
+The length tells the two forms apart: 32 bytes is a plaintext seed and 60 a
+sealed one, so no column records it. A plaintext seed loads whether or not the
+key is set, which is what lets a running deployment set it with nothing else to
+do: the keys stored before age out within about 9 days. Sealing protects a copy
+of the database, not the database itself: a plaintext row written into the
+table still loads, by whoever could just as well replace a password hash.
 
 ## Security properties
 
 | Property | Holds |
 |---|---|
-| Passwords stored hashed (bcrypt, configurable cost) | yes |
-| Refresh tokens never stored, only their SHA-256 | yes |
+| Passwords stored as bcrypt hashes, at a configurable cost | yes |
+| Refresh tokens stored only as their SHA-256 | yes |
 | Refresh tokens single use, replaced on every refresh | yes |
 | Reusing a refresh token revokes its session | yes |
 | Changing the password revokes every session of the user | yes |
-| Login and change password errors do not reveal whether an account exists | yes |
-| Login and change password timing does not reveal whether an account exists | yes, unless `BCRYPT_COST` changed ([why](../limitations.md#login-timing-after-a-bcrypt_cost-change)) |
-| Refresh errors do not reveal a token's state | yes |
-| Access tokens can be revoked | **no** ([why](../api/token-verification.md#revocation-is-not-immediate)) |
-| Signing key survives a restart | yes |
-| Key rotation keeps issued tokens valid | yes |
-| Signing keys encrypted at rest | only when [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key) is set, required from v2 ([why](../limitations.md#signing-keys-are-stored-in-the-database)) |
-| Rate limiting | only when [`RATE_LIMIT`](../configuration.md#rate_limit) is set; otherwise use a reverse proxy ([why](../limitations.md#run-it-behind-a-reverse-proxy)) |
+| Login and change password answer every credential failure alike | yes ([why](../api/errors.md#deliberately-vague-errors)) |
+| A missing account takes as long as a wrong password | yes, until `BCRYPT_COST` changes ([why](../limitations.md#login-timing-after-a-bcrypt_cost-change)) |
+| Whether a username exists is secret | **no**: registration says it ([why](../limitations.md#registration-reveals-whether-a-username-exists)) |
+| Refresh failures look alike in the response | yes |
+| Access tokens can be revoked | **no** ([why](../limitations.md#access-tokens-cannot-be-revoked)) |
+| Signing keys survive a restart, and rotate without breaking issued tokens | yes |
+| Signing keys encrypted at rest | only with [`SIGNING_KEY_ENCRYPTION_KEY`](../configuration.md#signing_key_encryption_key) |
+| Rate limiting | only with [`RATE_LIMIT`](../configuration.md#rate_limit) |
 | Maximum session age | **no** ([why](../limitations.md#sessions-have-no-maximum-age)) |

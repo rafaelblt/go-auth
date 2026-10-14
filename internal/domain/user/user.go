@@ -1,7 +1,7 @@
 // Package user holds the User entity and its value objects: the ID, the Username
 // and the Status.
 //
-// See docs/architecture/domain/user.md.
+// See docs/architecture/domain.md#user.
 package user
 
 import (

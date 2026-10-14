@@ -3,7 +3,7 @@
 // else: it reads no database, so the tokens of a revoked session still pass
 // until they expire.
 //
-// See docs/architecture/usecases/verify.md.
+// See docs/architecture/usecases.md#verify.
 package verify
 
 import (

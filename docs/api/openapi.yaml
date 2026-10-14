@@ -459,8 +459,8 @@ components:
       type: object
       required: [username, password]
       description: |
-        No length or charset rules are applied here: any failure is
-        `401 invalid_credentials`.
+        No rule is reported here: any failure, a value that breaks the
+        registration rules included, is `401 invalid_credentials`.
       properties:
         username:
           type: string

@@ -1,9 +1,9 @@
 // Package login verifies a username and password, opens a session, and hands
 // back both tokens. Every failure answers the same way, and a missing account
-// costs a bcrypt comparison too, so neither the response nor its timing says
-// whether an account exists.
+// costs a bcrypt comparison too, so an unknown username answers like a wrong
+// password, in about the same time.
 //
-// See docs/architecture/usecases/login.md.
+// See docs/architecture/usecases.md#login.
 package login
 
 import (

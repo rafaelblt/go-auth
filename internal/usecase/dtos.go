@@ -3,7 +3,7 @@
 // case itself lives in a subpackage, and that boundary is what makes a mapper
 // the only way to build a DTO that is not zero.
 //
-// See docs/architecture/usecases/README.md, and
+// See docs/architecture/usecases.md#the-shape-of-a-use-case, and
 // docs/development/decisions/0034-protected-dtos.md.
 package usecase
 

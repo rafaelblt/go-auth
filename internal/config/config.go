@@ -1,6 +1,6 @@
 // Package config loads and validates the service's settings, from environment
-// variables or directly from code. Every problem is reported at once, so the
-// service never starts half-configured.
+// variables or directly from code. Every problem it finds is reported at once,
+// so the service never starts half-configured.
 //
 // See docs/configuration.md.
 package config

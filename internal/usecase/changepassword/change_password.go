@@ -3,7 +3,7 @@
 // login does: one answer for every failure, and a bcrypt comparison even when
 // the account is missing.
 //
-// See docs/architecture/usecases/change-password.md.
+// See docs/architecture/usecases.md#change-password.
 package changepassword
 
 import (
@@ -83,7 +83,7 @@ func (uc ChangePassword) Execute(ctx context.Context, input Input) (Output, erro
 // password was checked against: a change that loses that race is rejected like
 // a wrong current password, which by then it is.
 //
-// See docs/architecture/usecases/change-password.md.
+// See docs/architecture/usecases.md#change-password.
 func (uc ChangePassword) save(
 	ctx context.Context, pwd *password.Password, previous password.Hashed, now time.Time,
 ) error {

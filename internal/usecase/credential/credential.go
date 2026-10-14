@@ -1,9 +1,9 @@
 // Package credential checks a username and a password for login and change
 // password alike. Every failure answers the same way, and a missing account
-// costs a bcrypt comparison too, so neither the response nor its timing says
-// whether an account exists.
+// costs a bcrypt comparison too, so an unknown username answers like a wrong
+// password, in about the same time.
 //
-// See docs/architecture/usecases/README.md#the-shared-credential-check.
+// See docs/architecture/usecases.md#shared-credential-check.
 package credential
 
 import (

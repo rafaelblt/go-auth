@@ -7,8 +7,8 @@ Your application talks to it over JSON, so it can be written in any language.
 It issues short-lived JWT access tokens signed with Ed25519, and long-lived
 refresh tokens that rotate on every use and can be revoked. It publishes its
 public keys as a JWKS document, so your services verify access tokens
-themselves, without calling `go-auth` on every request, or, if they would
-rather not, ask `go-auth` to check each one.
+themselves, without calling `go-auth` on every request, or ask `go-auth` to
+check each one.
 
 ```
 POST /v1/auth/register         create a user
@@ -23,29 +23,15 @@ GET  /.well-known/jwks.json    public keys for verifying access tokens
 
 - Registration and login with a username and password, and password changes
   that sign the user out of every session.
-- Passwords stored as bcrypt hashes.
-- Stateless access tokens: JWTs signed with EdDSA (Ed25519), valid for a short
-  time.
-- Stateful refresh tokens: single use, replaced on every refresh, stored only
-  as a SHA-256 hash.
-- Reuse detection: presenting a refresh token that was already used revokes
-  its whole session.
-- Access token checks on request, for services that would rather not verify
-  tokens themselves.
-- Login answers every failure the same way: one error for every cause, and a
-  bcrypt comparison even when the account does not exist.
-- Optional rate limiting of register, login, change password and refresh per
-  client address, at three levels.
-- Structured logs, with an ID for each request.
-- Migrations embedded in the binary, and a startup check that the database
-  schema matches the binary.
+- Passwords stored as bcrypt hashes; refresh tokens stored only as a SHA-256
+  hash.
+- Single-use refresh tokens: presenting one twice revokes its whole session.
+- Login and change password answer every credential failure the same way.
+- Optional rate limiting per client address, structured logs with a request
+  ID, and migrations embedded in the binary.
 
-## What it does not do
-
-It has no email, OAuth or passwordless login, no password reset, no logout,
-no roles or scopes, and no multi-tenancy. It has no TLS of its own, and its
-rate limiting is off by default, so run it behind a reverse proxy. The signing keys are stored
-in its database, unencrypted unless you set an encryption key. Read
+It has no email, OAuth or passwordless login, no password reset, no logout, no
+roles or scopes, and no TLS of its own: run it behind a reverse proxy. Read
 [Limitations](docs/limitations.md) before deciding whether it fits your
 project.
 
@@ -59,8 +45,8 @@ cd go-auth
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-This starts PostgreSQL and the API with the migrations applied, and the API
-listens on `http://localhost:8080`.
+This starts PostgreSQL and the API, with the migrations applied, on
+`http://localhost:8080`:
 
 ```bash
 curl -X POST http://localhost:8080/v1/auth/register \
@@ -68,29 +54,12 @@ curl -X POST http://localhost:8080/v1/auth/register \
   -d '{"username":"alice","password":"correct-horse"}'
 ```
 
-Full walkthrough: [Getting started](docs/getting-started.md).
-
 ## Documentation
 
-| | |
-|---|---|
-| [Getting started](docs/getting-started.md) | Run the service and make your first requests |
-| [Configuration](docs/configuration.md) | Every environment variable |
-| [Limitations](docs/limitations.md) | What it does not do, and the trade-offs to know before deploying |
-| [API reference](docs/api/reference.md) | Endpoints, request and response bodies |
-| [Error model](docs/api/errors.md) | Status codes and error codes |
-| [OpenAPI spec](docs/api/openapi.yaml) | The API contract in OpenAPI 3.1 |
-| [Verifying access tokens](docs/api/token-verification.md) | Validating a JWT in your own service with the JWKS, or letting `go-auth` do it |
-| [Architecture](docs/architecture/overview.md) | Layers, packages, dependency rules |
-| [Code conventions](docs/architecture/conventions.md) | The patterns used throughout the code, and why |
-| [Testing](docs/development/testing.md) | The test layers, how to run them, the helpers |
-| [All documentation](docs/README.md) | Everything else |
-
-## Contributing
-
-Read [Code conventions](docs/architecture/conventions.md) before writing code,
-and [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and shape a
-commit.
+Start with [Getting started](docs/getting-started.md),
+[Configuration](docs/configuration.md) and the
+[API reference](docs/api/reference.md); [docs/README.md](docs/README.md) lists
+every document. To contribute, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

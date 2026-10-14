@@ -1,58 +1,50 @@
 # Startup
 
-`cmd/api.go`, `internal/bootstrap`
+`cmd`, `internal/bootstrap`
 
 ## Composition root
 
 `internal/bootstrap` is the only package that knows how everything fits
-together, and `Run` is the whole of it: `cmd/api.go` installs the signal
-handler and turns the returned error into an exit code, nothing else.
+together. `cmd/api.go` cancels a context on `SIGINT` or `SIGTERM`, calls
+`bootstrap.Run`, and turns its error into exit status 1.
 
-`Run` loads the configuration, builds the [logger](logging.md#the-setup) from
-it, and hands both to `NewApp` in an `AppParams`, which runs, in order:
+`Run` loads the configuration, builds the [logger](../logging.md#setup) from
+it, and hands both to `NewApp`, which:
 
-1. Build the infrastructure: pool, repositories, hasher, rate limiter
-   (`infra.go`).
-2. Apply the migrations, if `AUTO_MIGRATE` is set (`schema.go`).
-3. Check that the schema version matches the latest embedded migration, and
-   fail if not (`schema.go`).
-4. Build the keyring, which reads the signing keys and adds the first one
-   when there is none, then the signer and the token service
-   (`infra.go`, `buildSigning`). It comes after the check because it reads
-   the database.
-5. Build the use cases from the config and the infrastructure
-   (`usecases.go`).
-6. Build the router (`router.go`), with the limits of the `RATE_LIMIT` level
-   from `rate_limit.go`, or none when it is `off`.
+1. builds the infrastructure: pool, repositories, hasher, rate limiter
+   (`infra.go`);
+2. applies the migrations, when `AUTO_MIGRATE` is set (`schema.go`);
+3. checks that the schema version is the latest embedded migration, and fails
+   if not ([Migrations](persistence.md#migrations));
+4. builds the keyring, which loads the signing keys and adds the first one when
+   there is none, then the signer and the token service (`buildSigning`). It
+   comes after the check because it reads the database;
+5. builds the use cases, and the dummy password hash login and change password
+   share (`usecases.go`);
+6. builds the router, with the limits of the `RATE_LIMIT` level from
+   `rate_limit.go`, or none when it is `off`.
 
-A failure at any step after the pool exists closes the pool before
-returning, so a startup that fails leaves no open connections behind. Both
-`newInfra` and `NewApp` do it with a deferred cleanup guarded by the named
-error, rather than a `Close` at each return. On success `App.Close` owns the
-pool.
+Every `New` rejects a `nil` dependency or an invalid value
+([Config struct](conventions.md#config-struct-with-a-validating-constructor)),
+so a wiring mistake stops the service here rather than on the first request
+that needs it. A failure after the pool exists closes the pool before
+returning, through a deferred cleanup guarded by the named error; on success,
+`App.Close` owns it.
 
-`App.Run` then starts the background tasks and the HTTP server, and blocks
-until the server fails or the context is cancelled. On cancellation it lets
-in-flight requests finish, for up to 10 seconds. `cmd/api.go` cancels the
-context on `SIGINT` or `SIGTERM`.
+The logger is the one dependency that may be `nil`: `NewApp` then builds it from
+the configuration's `LOG_FORMAT`, which is all a caller could have built it
+from. `tests/e2e` does that. From there the logger is passed by hand to the
+router and the background tasks.
 
-Every `New` returns an error for a `nil` dependency or an invalid value, so a
-wiring mistake stops the service at startup instead of surfacing as a `nil`
-dereference on the first request.
-
-The logger is the one exception. `AppParams.Logger` may be `nil`, and `NewApp`
-then builds it from the `LOG_FORMAT` in the configuration it was given, which
-is the only thing a caller could have built it from anyway: a missing logger is
-not a wiring mistake, because nothing has to be guessed. `tests/e2e` takes that
-route. From there the logger travels in `dependencies` to the router and to the
-background tasks, and no package reads it from `slog.Default()`.
-
-The schema check in steps 2 and 3 is described in
-[Migrations](persistence/migrations.md#version-check).
+`App.Run` starts the background tasks and the HTTP server, and blocks until the
+server fails or the context is cancelled. On cancellation it lets in-flight
+requests finish, for up to 10 seconds.
 
 ## Background tasks
 
-`periodic.go` runs functions on a ticker, with a timeout for each run, until
-the app's context is cancelled. There is one task: every 10 minutes it syncs
-the [signing keys](tokens.md#signing-keys). It reads them again, adds the next
-one when it is due, and deletes the retired ones.
+`periodic.go` runs a function on a ticker, with a timeout for each run, until
+the app's context is cancelled. There is one task, `jwt_keyring_rotation`, which
+runs [`Keyring.Sync`](tokens.md#signing-keys) every 10 minutes with a 3-second
+timeout. The first run comes 10 minutes after startup, which has already loaded
+the keys. A failed run is logged and retried at the next tick
+([Background tasks](../logging.md#background-tasks)).

@@ -59,7 +59,7 @@ type RefreshTokenRestoreParams struct {
 // the secret is a return value rather than a field so it never travels into a
 // writer, a log line or a restored token.
 //
-// See docs/development/decisions/0049-refresh-token-secret-in-the-domain.md.
+// See docs/architecture/domain.md#session.
 func NewRefreshToken(params RefreshTokenCreationParams) (*RefreshToken, RefreshTokenSecret, error) {
 	if params.SessionID.IsZero() {
 		return nil, RefreshTokenSecret{}, errors.New("session id zero")

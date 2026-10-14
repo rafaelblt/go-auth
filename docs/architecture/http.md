@@ -1,156 +1,136 @@
-# HTTP layer
+# HTTP
 
-`internal/api`
+`internal/api`, `internal/infra/ratelimit`
 
-Everything shaped by HTTP: JSON bodies, routing, middleware, and turning
-errors into responses. The use cases never see an `http.Request`.
+Everything shaped by HTTP: routing, JSON bodies, middleware, rate limiting, and
+turning errors into responses. The use cases never see an `http.Request`. The
+endpoints themselves are in the [API reference](../api/reference.md).
 
-The endpoints themselves, with their request and response bodies, are in the
-[API reference](../api/reference.md).
+## Use case adapter
 
-## The use case adapter
+`adaptUseCase` serves every endpoint backed by a use case, given a decoder, an
+encoder and a success logger, so a new endpoint is three small functions rather
+than a handler with its own copy of the error handling. In order, it:
 
-Every endpoint backed by a use case decodes a request, runs the use case,
-translates its error, logs, and writes a response. `adaptUseCase` does all of
-that for any use case, given a decoder, an encoder and a success logger:
+1. answers `415` when the `Content-Type` is not `application/json`, before
+   anything is read ([Content type](#content-type));
+2. when the endpoint has a rate limit, counts the request and answers `429`
+   once the client address has used up its allowance, still before reading the
+   body ([Rate limiting](#rate-limiting));
+3. limits the body to 64 KiB with `http.MaxBytesReader`, and decodes it: `413`
+   past the limit, `400` when it is not the expected JSON
+   ([Request bodies](../api/reference.md#request-bodies));
+4. runs the use case, then translates its error or encodes its output, logs
+   the success, and writes the response.
 
-```go
-adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
-    UseCase:    cfg.Dependencies.Register,
-    Decoder:    registerDecoder,
-    Encoder:    registerEncoder,
-    SuccessLog: registerSuccessLog,
-})
-```
+### Content type
 
-A new endpoint is three small functions, not another handler with its own
-copy of the error handling to get subtly wrong.
+A browser sends a cross-site `POST` without asking the site first when its
+body is `text/plain`, a form or URL-encoded. For any other type,
+`application/json` included, it first sends a CORS preflight, and `go-auth`
+grants none: it sends no CORS headers at all. The decoders read any body as
+JSON, so without this check a page on any site could send logins and
+registrations through its visitors' browsers, each from its own address, past
+any per-address rate limit, without needing to read the answers.
 
-Before it decodes anything, the adapter answers `415` to a request whose
-`Content-Type` is not `application/json`, so every endpoint it serves requires
-that header ([API reference](../api/reference.md),
-[why](../development/decisions/0051-post-endpoints-require-application-json.md)).
-Next, when rate limiting is on, it counts the request against the endpoint's
-allowance for the client address and answers `429` once that is used up, still
-without reading the body ([Rate limiting](#rate-limiting)).
-It then limits the body the decoder reads to 64 KiB (`requestBodyMaxBytes`,
-with `http.MaxBytesReader`) and answers `413` when the decoder reaches the
-limit, so every endpoint it serves has it
-([API reference](../api/reference.md#request-bodies)). The wrap reads nothing
-by itself, so the `415` still comes first.
+So the check is the first thing the adapter does, and it answers `415` without
+reading the body. It sits in the adapter rather than in a middleware, which
+would have to exempt the JWKS `GET` and would answer `415` before the mux
+answers `404`, or in a wrapper on each route, which a new route could miss. A
+reverse proxy that answers CORS preflights for these endpoints, for origins the
+operator does not control, undoes it.
 
-## JWKS is a plain handler
+## Rate limiting
 
-It has no business logic: it reads the keys from a provider and reshapes
-them. A use case for it would add a layer that only passes data along. The
-keys it publishes come from the [keyring](tokens.md#signing-keys).
+Off unless [`RATE_LIMIT`](../configuration.md#rate_limit) sets a level. Each
+endpoint has its own allowance per client address, keyed as
+`<endpoint> <address>` (`login 203.0.113.9`). Register, login, change password
+and refresh have one, when `NewRouter` is given their limits; a new endpoint
+needs its limit there and in each level's table in
+`internal/bootstrap/rate_limit.go`.
+
+The limit is decided in the adapter, right after the `415`:
+
+- **After the `415`**, because the requests answered `415` are the ones a
+  browser sends cross-site without a preflight: counting them would let any
+  page spend its visitors' allowance.
+- **Before the body is read**, so a refused request has read and run nothing.
+  A `429` never spends a refresh token, and the same request can be sent again
+  after `Retry-After`.
+- **Every request past the `415` counts**, whatever its answer: a decision
+  taken before the use case runs cannot know it.
+- **A limiter error is a `500`**, and the use case does not run. Failing open
+  would remove the limit without anyone noticing.
+
+Verify has no limit, on purpose. It reads no database, and no number of tries
+finds a signature that passes; a limit would only cost the services that
+delegate verification, which call it on every request they serve, usually from
+one address.
+
+### Client address
+
+The client address is the TCP peer, `r.RemoteAddr`. Only when the peer is in
+[`TRUSTED_PROXIES`](../configuration.md#trusted_proxies) is `X-Forwarded-For`
+read: its lines are joined, the entries are read from the right, and each
+trusted proxy is skipped, so the client is the first address that is not one,
+or the leftmost when all are. An empty entry, or one that is not a bare
+address (`ip:port` included), stops the walk at the last good address. Reading
+from the right is what keeps a client from choosing its address: the leftmost
+entries are whatever it sent, and only those a trusted proxy appended can be
+believed.
+
+Every address is normalised alike: IPv4-mapped IPv6 becomes IPv4, and a zone is
+dropped. An IPv6 client counts as its /64, since one host normally holds a
+whole /64 and could otherwise rotate through it. A `RemoteAddr` that is not
+`ip:port` is used as it is, and no header is read.
+
+### The limiter
+
+`port.RateLimiter` counts requests per key; `ratelimit.InMemory` is its only
+implementation. A limit of N per period allows N requests at once, then one
+more every period/N, and a refused request is not counted. Per key it keeps one
+time, the moment the key has its whole allowance back, and a sweep, at most once
+a minute, drops the keys past it. The counts live in the process: a restart
+forgets them, and each instance counts on its own. A store shared between
+instances would implement the same port.
+
+## JWKS
+
+`/.well-known/jwks.json` is a plain handler: it reads the keys from a
+`port.PublicKeyProvider` (the [keyring](tokens.md#signing-keys)) and reshapes
+them, so a use case would only pass data along.
 
 ## Unknown routes
 
 `NewRouter` wraps the `ServeMux` in `jsonRouteErrors`. When the mux has no
-pattern for a request, the mux still answers it, and its plain-text `404` and
-`405` are replaced with `route_not_found` and `method_not_allowed` through
-`writeJSON`, keeping the `Allow` header the mux computed
-([Error model](../api/errors.md)). A catch-all `/` pattern would not do: it
-would swallow the `405`s and their `Allow`. A response from a matched route,
-and the mux's path-cleaning redirects, pass through untouched. The wrapper sits
-inside `logging` and `recovery` and logs nothing of its own: `request finished`
-carries the status.
+pattern for a request, its plain-text `404` and `405` are replaced with
+`route_not_found` and `method_not_allowed`, keeping the `Allow` header the mux
+computed. A catch-all `/` pattern would not do: it would swallow the `405`s.
+Matched routes and the mux's path-cleaning redirects pass through untouched.
 
 ## Middleware
 
-Middleware wraps the router in this order: `logging`, then `recovery`.
-`logging` takes the logger and the clock `NewRouter` was given, tags the
-logger with a request ID and puts it into the request context, so every log
-line for the request carries the same ID. It times each request with that
-clock.
-`recovery` catches a panic, logs it and answers `500` instead of dropping the
-connection. It lets `http.ErrAbortHandler` through, since that panic is a
-deliberate abort, not a bug. What each line carries is in
-[Logging](logging.md).
+The router is wrapped in `logging`, then `recovery`. `logging` gives every
+request an ID, puts a logger tagged with it in the request context, and times
+the request with the clock it was given ([Logging](../logging.md)). `recovery`
+turns a panic into a logged `500`, except `http.ErrAbortHandler`, a deliberate
+abort, which it lets through.
 
 ## Error translation
 
-`translateError` turns an error into a response:
+`translateError` turns a use case's error into a response:
 
-| Error type | Result |
+| Error | Response |
 |---|---|
-| `usecase.UseCaseError` | Logged with its `reason`; status from its `kind`, code from its `code` |
-| `validation.ValidationError` | `422 validation_failed`, with an entry in `fields` for each failed field |
-| anything else | Logged, and answered `500 internal_server_error` |
+| `usecase.UseCaseError` | status from its `kind`, code from its `code`; logged at `info` with its `reason` |
+| `validation.ValidationError` | `422 validation_failed`, with an entry in `fields` per failed rule |
+| anything else | `500 internal_server_error`; the error is logged, and kept from the client |
 
-A [`UseCaseError`](usecases/README.md#usecaseerror) is logged at `info`, since
-a rejected login is expected traffic rather than a defect. The line carries
-the `code`, the `kind` and the `reason`, which is the only place a
-deliberately generic code is told apart. Errors that carry no reason are
-logged without the field.
-
-Any other error is a bug, so it is logged as an error and its details are
-kept from the client.
-
-Every reason a generic code can hide is listed in
-[Logging](logging.md#outcomes).
-
-The shapes these responses take, and every code they can carry, are in the
-[Error model](../api/errors.md).
-
-## Rate limiting
-
-Rate limiting is off unless [`RATE_LIMIT`](../configuration.md#rate_limit)
-sets a level. It is checked in the use case adapter, right after the `415`, so
-only `POST` endpoints can be limited: JWKS, a `404` and a `405` never are
-([why](../development/decisions/0052-rate-limit-is-decided-before-the-body-is-read.md)).
-An endpoint is limited only when `NewRouter` passes it a limit, so a new one
-needs its limit there and a row in each level's table in
-`internal/bootstrap/rate_limit.go`.
-
-Register, login, change password and refresh have one; verify does not, on
-purpose. A limit there would protect nothing: verify reads no database, and no
-number of tries finds a signature that passes. And it would cost the services
-that delegate verification, which call it on every request they serve, usually
-from one address, and would soon use up an allowance meant for one person's
-logins and refreshes.
-
-Every `application/json` request counts against the allowance, whatever its
-answer. A request answered `415` is never counted: those are the requests a
-browser sends cross-site without a preflight, and counting them would let any
-web page spend its visitors' allowance. Each endpoint has its own allowance per
-client address; the key is `<endpoint> <address>`, such as
-`login 203.0.113.9`.
-
-A refused request gets `429 too_many_requests` with `Retry-After`, and is not
-counted. Nothing of it was read or run, so the same request can be sent again
-after the wait. A limiter error is answered `500`, like any other failing
-dependency.
-
-### Client address
-
-The client address starts as the TCP peer, `r.RemoteAddr`. `X-Forwarded-For`
-is read only when the peer is in
-[`TRUSTED_PROXIES`](../configuration.md#trusted_proxies): every header line is
-joined, the entries are read from the right, and each trusted proxy is
-skipped, so the first address that is not one is the client. When every entry
-is trusted, the leftmost is the client. An empty entry, or one that is not a
-bare address (`ip:port` included), stops the walk at the last good address.
-Reading from the right is what keeps the address from being chosen by the
-client: the leftmost entries are whatever the client sent, and only those a
-trusted proxy appended can be believed.
-
-Every address, the peer and each header entry, is normalised the same way: an
-IPv4-mapped IPv6 address (`::ffff:a.b.c.d`) becomes IPv4, and a zone is
-dropped. An IPv4 client counts as its address, and an IPv6 client as its /64,
-since one host normally holds a whole /64 and could otherwise rotate through
-it. A `RemoteAddr` that is not `ip:port` is used as it is, and no header is
-read.
-
-### The limiter
-
-`port.RateLimiter` counts requests per key and says whether a request was
-within its limit. `ratelimit.InMemory` is the only implementation. A limit of
-N per period allows N requests at once, then one more every period/N; a
-refused request is not counted.
-
-Per key it keeps a single time: the moment at which the key has its whole
-allowance back. A sweep, at most once a minute, drops the keys past that time,
-so an idle key costs nothing. The counts live in the process, and a restart
-forgets them. A store shared between processes would implement the same port.
+A rejected login is expected traffic, so a `UseCaseError` is `info`; anything
+else is a bug, so it is `error`. Three catalogs in `internal/api/errors.go` map
+the internal names to the response: `kindStatusCatalog` and
+`kindMessageCatalog` by `ErrorKind`, and `errorFieldCatalog` from a use case's
+field name to the name in the JSON body. A new `ErrorKind` or a newly validated
+field needs its entries; a missing one is logged
+([Defects](../logging.md#defects)). The shapes and codes of the responses are
+in the [Error model](../api/errors.md).

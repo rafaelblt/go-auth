@@ -2,7 +2,7 @@
 // its own schema and needs no files on disk. Latest reports the version this
 // binary was built for.
 //
-// See docs/architecture/persistence/migrations.md.
+// See docs/architecture/persistence.md#migrations.
 package migrations
 
 import (

@@ -4,7 +4,7 @@
 // whose failures the API answers with a 422, and config, whose failures become
 // the startup error.
 //
-// See docs/architecture/domain/validation.md.
+// See docs/architecture/domain.md#validation.
 package validation
 
 import (

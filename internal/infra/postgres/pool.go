@@ -2,8 +2,7 @@
 // repository per table, the unit of work, and the schema version check. It is
 // the only code in the service that writes SQL.
 //
-// See docs/architecture/persistence/README.md and
-// docs/architecture/persistence/repositories.md.
+// See docs/architecture/persistence.md.
 package postgres
 
 import (

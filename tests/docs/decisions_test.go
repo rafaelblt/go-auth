@@ -79,8 +79,7 @@ type decisionRecord struct {
 	status decisionStatus
 }
 
-// decisionRecords returns the NNNN-slug.md records, with README.md and
-// template.md left out.
+// decisionRecords returns the NNNN-slug.md records, with README.md left out.
 func decisionRecords(t *testing.T) []decisionRecord {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(repoRoot, decisionsDir, "[0-9]*.md"))

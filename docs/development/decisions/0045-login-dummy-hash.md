@@ -1,75 +1,67 @@
-# Login verifies a dummy hash when the account is missing
+# A missing account costs a bcrypt comparison too
 
 - **Status:** Accepted
-- **Date:** 2026-09-13
-- **Related:** [Deliberately vague errors](../../api/errors.md#deliberately-vague-errors)
 
 ## Invariant
 
-Every login failure past the format checks pays a bcrypt comparison, against a
-hash of the configured cost. The calls that exist only for the time they take are
-in `rejectWithDummyVerify`, and the hash comes from
-`login.Config.DummyPasswordHash`, which `internal/bootstrap` builds with the
-configured hasher. Dropping either call, or hard-coding a hash of a fixed cost,
+Every credential check that fails past the format checks pays a bcrypt
+comparison, against a hash of the configured cost. The comparison that exists
+only for the time it takes is in `credential.Checker.rejectWithDummyVerify`,
+and its hash is the one `internal/bootstrap` builds at startup with the
+configured hasher. Dropping the call, or hard-coding a hash of a fixed cost,
 reopens the timing difference.
 
 ## Context
 
-[Uniform errors](../../api/errors.md#deliberately-vague-errors) make every login failure return
-the same response, but not take the same time. Login used to return as soon as
-the user or its password row was missing, before the bcrypt comparison.
-Bcrypt is slow by design, so an unknown username answered hundreds of
-milliseconds faster than a wrong password, and response time alone revealed
-whether an account existed.
+Login and change password answer every credential failure with the same
+`401 invalid_credentials`
+([Deliberately vague errors](../../api/errors.md#deliberately-vague-errors)),
+but the same answer does not take the same time by itself. Returning as soon as
+the user or its password row is missing skips the bcrypt comparison, which is
+slow by design, so an unknown username would answer hundreds of milliseconds
+faster than a wrong password, and response time alone would reveal whether an
+account exists.
 
-The miss paths have to do the same work as a real check. The obstacle is that
-a bcrypt hash carries its cost, and `BCRYPT_COST` is configurable: a dummy
-hash of any other cost takes a different time to verify.
+The miss has to do the work of a real check, and a bcrypt hash carries its
+cost: since `BCRYPT_COST` is configurable, a dummy hash of any other cost takes
+a different time to verify.
 
 ## Decision
 
-When `FindByUsername` finds no user, or `FindByUserID` finds no password,
-login calls `PasswordChecker.Verify` with the submitted password and a dummy
-hash, ignores the result, and returns the rejection for that miss
-(`ErrUserNotFound` or `ErrPasswordNotFound`, both answered as
-`invalid_credentials`). An error from that call is returned as an unexpected
-error, since it can only mean the dummy hash is broken.
+When `FindByUsername` finds no user, or `FindByUserID` no password, the
+[shared credential check](../../architecture/usecases.md#shared-credential-check)
+verifies the submitted password against a dummy hash, ignores the result, and
+returns the rejection for that miss. An error from that call is unexpected,
+since it can only mean the dummy hash is broken.
 
-The dummy hash is a `password.Hashed` injected through
-`login.Config.DummyPasswordHash`. `internal/bootstrap` produces it at startup
-by hashing a fixed password with the configured `PasswordHasher`, so it always
-has the configured cost, and `Login` keeps depending on `PasswordChecker`
-alone.
+The dummy hash is a `password.Hashed` that `internal/bootstrap` produces at
+startup by hashing a fixed password with the configured `PasswordHasher`, so it
+always has the configured cost. Login and change password receive it in their
+`Config` and pass it to their `credential.Checker`, which keeps depending on
+`PasswordChecker` alone.
 
-The validation early returns (username and password format) are left as they
-are: their timing depends only on the input, and the format rules are public.
+The format checks keep failing fast: their time depends only on the input, and
+the format rules are public.
 
-## Alternatives considered
+## Alternatives
 
-- **A hard-coded hash and password in the `login` package** — the hash would
-  have a fixed cost, so any other `BCRYPT_COST` reopens the gap in one
-  direction or the other. It would also put a bcrypt string inside a use case,
-  and a different hasher would reject it with an error, turning the miss path
-  into a `500` that reveals the account is missing more plainly than timing.
-- **Injecting `PasswordHasher` and hashing lazily on the first miss** — no
-  startup cost, but the first miss pays for two hashes, and login gains a
-  dependency it uses only for this.
-- **A dummy hash owned by the adapter**, exposed through a new port method —
-  the adapter knows its cost, but the port would carry a method that exists
-  only for one use case, and whether to return early is the use case's policy.
-- **Padding responses to a fixed minimum duration** — the right duration
-  depends on hardware and load, and a slow outlier still leaks. Random delays
-  only add noise that averages out over repeated requests.
+- **A hash hard-coded in the use case**: it has a fixed cost, so any other
+  `BCRYPT_COST` reopens the gap, and another hasher would reject it with an
+  error, turning the miss into a `500` that reveals more than timing.
+- **Hashing lazily on the first miss**: no startup cost, but the first miss
+  pays two hashes, and the use cases gain a dependency used only for this.
+- **Padding every response to a fixed duration**: the right duration depends on
+  hardware and load, a slow outlier still leaks, and random delays average out.
 
 ## Consequences
 
 - Startup hashes one password at the configured cost: roughly 200–400 ms at
-  cost 12, and far more at the upper end of the range.
-- A miss still skips the `FindByUserID` query. The difference is one database
-  round trip, small next to bcrypt and to network jitter, and accepted.
-- The dummy hash matches the configured cost, not the cost of every stored
-  hash. After a `BCRYPT_COST` change the gap reopens for accounts hashed
-  before it ([Limitations](../../limitations.md#login-timing-after-a-bcrypt_cost-change)).
-- This removes the timing signal from login only. Register still answers
-  `409 username_already_exists` for a taken username, so account existence is
-  not secret; what limits enumeration through either endpoint is rate limiting.
+  cost 12, far more at the top of the range.
+- A miss still skips the `FindByUserID` query, a difference of one database
+  round trip, small next to bcrypt and network jitter, and accepted.
+- The dummy hash has the configured cost, not the cost of every stored hash, so
+  after a `BCRYPT_COST` change the gap reopens for older accounts
+  ([Limitations](../../limitations.md#login-timing-after-a-bcrypt_cost-change)).
+- This hides account existence from login and change password only:
+  registration answers `409` for a taken username
+  ([Limitations](../../limitations.md#registration-reveals-whether-a-username-exists)).

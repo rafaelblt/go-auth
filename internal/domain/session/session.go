@@ -3,7 +3,7 @@
 // invalidates its tokens, and reuse detection reads a token and revokes its
 // session in one operation.
 //
-// See docs/architecture/domain/session.md, and docs/architecture/tokens.md for
+// See docs/architecture/domain.md#session, and docs/architecture/tokens.md for
 // what the two token types are for.
 package session
 

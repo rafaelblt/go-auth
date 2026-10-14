@@ -1,7 +1,7 @@
 // Package refresh exchanges a refresh token for a new pair, and carries reuse
 // detection: a token presented a second time revokes its whole session.
 //
-// See docs/architecture/usecases/refresh.md.
+// See docs/architecture/usecases.md#refresh.
 package refresh
 
 import (

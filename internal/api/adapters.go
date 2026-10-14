@@ -37,14 +37,14 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 		ctx := r.Context()
 		logger := loggerFrom(ctx)
 
-		// See docs/development/decisions/0051-post-endpoints-require-application-json.md.
+		// See docs/architecture/http.md#content-type.
 		if !hasJSONContentType(r) {
 			logger.Info("unsupported media type error", "content_type", r.Header.Get("Content-Type"))
 			writeJSON(ctx, w, unsupportedMediaTypeError())
 			return
 		}
 
-		// See docs/development/decisions/0052-rate-limit-is-decided-before-the-body-is-read.md.
+		// See docs/architecture/http.md#rate-limiting.
 		if p.RateLimit != nil {
 			decision, client, err := p.RateLimit.allow(r)
 			if err != nil {
@@ -97,8 +97,8 @@ func hasJSONContentType(r *http.Request) bool {
 	return err == nil && mediaType == "application/json"
 }
 
-// decodeJSONBody reads only the first JSON value, as before, and checks its
-// bytes before encoding/json can turn invalid UTF-8 into U+FFFD. See
+// decodeJSONBody reads only the first JSON value, and checks its bytes before
+// encoding/json can turn invalid UTF-8 into U+FFFD. See
 // docs/api/reference.md#request-bodies.
 func decodeJSONBody(r *http.Request, body any) error {
 	var raw json.RawMessage

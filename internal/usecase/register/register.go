@@ -1,7 +1,7 @@
 // Package register creates an account. It does not log the user in: it creates
 // no session and no token.
 //
-// See docs/architecture/usecases/register.md.
+// See docs/architecture/usecases.md#register.
 package register
 
 import (
@@ -113,7 +113,7 @@ func (uc Register) createPassword(params password.CreationParams) (*password.Pas
 // it: a registration that loses the race for the username is reported as a
 // conflict, not as an unexpected failure.
 //
-// See docs/development/decisions/0048-duplicate-username-reported-by-the-writer.md.
+// See docs/architecture/persistence.md#guarded-writes.
 func (uc Register) save(ctx context.Context, usr *user.User, pwd *password.Password) error {
 	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
 		err := deps.UserWriter.Add(ctx, usr)

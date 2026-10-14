@@ -45,7 +45,7 @@ func (repo *PasswordRepo) Add(ctx context.Context, pwd *password.Password) error
 // updated, it checks whether the password exists, so a missing password is not
 // reported as a lost race.
 //
-// See docs/architecture/persistence/repositories.md#guarded-writes.
+// See docs/architecture/persistence.md#guarded-writes.
 func (repo *PasswordRepo) UpdateHash(
 	ctx context.Context, pwd *password.Password, previous password.Hashed,
 ) error {

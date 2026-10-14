@@ -25,7 +25,7 @@ func NewUserRepo(db DB) (*UserRepo, error) {
 // nothing and gets user.ErrUsernameAlreadyExists. A conflict on any other
 // column, the primary key included, is still an error.
 //
-// See docs/development/decisions/0048-duplicate-username-reported-by-the-writer.md.
+// See docs/architecture/persistence.md#guarded-writes.
 func (repo *UserRepo) Add(ctx context.Context, usr *user.User) error {
 	model, err := mapUserToModel(usr)
 	if err != nil {

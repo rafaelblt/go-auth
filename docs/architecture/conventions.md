@@ -1,25 +1,30 @@
 # Code conventions
 
-Patterns that recur throughout the code. Following them keeps new code
-consistent with what is already here. The conventions for tests are in
+The patterns that recur throughout the code. Following them keeps new code
+consistent with what is already here. Test conventions are in
 [Testing](../development/testing.md).
 
 ## Principles
 
-Simplicity and readability come first. The patterns below exist because each
-one removes a way to get something wrong; they are not a goal in themselves.
-When a pattern does not buy anything in a given place, the simpler code wins.
+Simplicity and readability come first. Each pattern below removes a way to get
+something wrong; none is a goal in itself, and where one buys nothing, the
+simpler code wins.
 
-**Comments are the exception.** Code should say what it does through its names
-and its shape; if it needs a comment to be understood, first try to make it
-simpler. A comment is warranted for what the simplest code still cannot
-express — a reason, a constraint, a non-obvious consequence — and it can be a
-link to the document that explains it (`See docs/...`) rather than the whole
-argument. Never restate the code.
+**Comments are the exception.** Code says what it does through its names and
+its shape; if it needs a comment to be understood, first try to make it
+simpler. A comment is for what the simplest code still cannot say: a reason, a
+constraint, a non-obvious consequence. When that takes more than a few lines,
+the explanation goes in a document and the comment links to it
+(`See docs/...`).
+
+A comment that links to a [decision record](../development/decisions/README.md)
+marks code that exists for its timing or its atomicity rather than its result,
+and looks removable. Read the record before changing that code.
 
 ## Protected struct
 
-Unexported fields, exported accessor methods.
+Unexported fields, exported accessors named after the field, with no `Get`
+prefix.
 
 ```go
 type User struct {
@@ -33,55 +38,28 @@ func (u *User) Username() Username { return u.username }
 
 Used for every entity, value object, `Config` and DTO. Code outside the
 package cannot assign to a field, so the checks in the constructor cannot be
-bypassed afterwards. For DTOs the point is how they are built rather than
-immutability: use cases live in subpackages of `internal/usecase`, so a mapper
-is the only way they can get a DTO that is not zero
-([decision 0034](../development/decisions/0034-protected-dtos.md)).
+bypassed afterwards. For the DTOs, what it protects is how they are built:
+[decision 0034](../development/decisions/0034-protected-dtos.md).
 
-Accessors are named after the field, without a `Get` prefix, as is usual in
-Go.
-
-**Where it is not used:** params structs, and use case `Input` and `Output`.
-They are plain data, and an `Output` is built in its own package, where
-unexported fields would restrict nothing. To decide for a new type: protect it
-when there is a rule for how it is built, and code that could break that rule
-lives in another package.
+Params structs and use case `Input` and `Output` are plain data with exported
+fields: an `Output` is built in its own package, where unexported fields would
+restrict nothing. For a new type, protect it when there is a rule for how it is
+built and code that could break that rule lives in another package.
 
 ## Params struct
 
-Constructors and functions with more than about two arguments take a struct.
-
-```go
-type CreationParams struct {
-    Username  Username
-    CreatedAt time.Time
-}
-
-func NewUser(params CreationParams) (*User, error)
-```
-
-Every value is named at the call site, so two arguments of the same type
-cannot be swapped, and adding a field does not break existing callers.
-
-Names: `CreationParams` and `RestoreParams` for entities, `Config` for
-components with dependencies.
+A function with more than about two arguments takes a struct, so every value is
+named at the call site, two arguments of the same type cannot be swapped, and
+adding a field does not break callers. Entities take `CreationParams` and
+`RestoreParams`; components take a `Config`.
 
 ## Config struct with a validating constructor
 
-Every component takes its dependencies in a `Config`, and rejects invalid
-ones.
+Every component takes its dependencies in a `Config`, and its `New` rejects
+missing or invalid ones:
 
 ```go
-type Config struct {
-    UserReader      port.UserReader
-    Clock           port.Clock
-    RefreshTokenTTL time.Duration
-}
-
 func New(cfg Config) (Login, error) {
-    if cfg.UserReader == nil {
-        return Login{}, errors.New("user reader cannot be nil")
-    }
     if cfg.Clock == nil {
         return Login{}, errors.New("clock cannot be nil")
     }
@@ -92,199 +70,123 @@ func New(cfg Config) (Login, error) {
 }
 ```
 
-The `Config` struct lists exactly what the component needs: `register.Config`
-has four fields, so registration touches four things. And a wiring mistake
-fails at startup with an error that names it, not with a `nil` dereference on
-the first request that takes that path.
+The `Config` lists exactly what the component needs, and a wiring mistake fails
+at startup with an error that names it, not with a `nil` dereference on the
+first request that takes that path.
+
+## Constructors
+
+| Constructor | Builds | Returns |
+|---|---|---|
+| `New<Entity>(CreationParams)` | a new entity: it generates the ID and sets the initial state | `(*E, error)` |
+| `Restore<Entity>(RestoreParams)` | an entity read back from storage: it takes every field and checks the invariants, such as a non-zero ID | `(*E, error)` |
+| `New<Value>(input)` | a value from a user: `Username`, `Plain` | `(V, validation.Issues)` |
+| `New<Value>(input)` | a value generated internally: `Hashed`, `AccessToken`, `RefreshTokenHash` | `(V, error)` |
+| `Parse<Value>(string)` | a value in a fixed string format: the IDs, `Status`, `RefreshTokenSecret` | `(V, error)` |
+
+An input constructor returns `validation.Issues` because its failure is always
+a set of broken rules to report, which `Accumulator.Add` takes directly. A
+value generated internally has nothing to report to a user, so its failure is
+a programming error and an `error`.
+
+Values read back from storage go through the same `New` and `Parse`
+constructors as input does, so a stored value has to pass today's rules
+([Compatibility](../../CONTRIBUTING.md#compatibility)).
 
 ## Value objects
 
-Domain values are types, not bare strings and UUIDs. A `user.Username` cannot
-be passed where a `password.Plain` is expected, nor a `user.ID` where a
-`session.SessionID` is.
+Domain values are types, not bare strings and UUIDs: a `user.Username` cannot
+be passed where a `password.Plain` is expected.
 
-### Two constructors
-
-| Constructor | For | Checks |
-|---|---|---|
-| `NewX(input)` | values arriving from outside | input rules **and** invariants |
-| `RestoreX(params)` | values read back from storage | invariants only |
-
-Input rules, such as a minimum length, can reasonably be tightened later.
-Invariants, such as a non-nil ID or a non-empty hash, hold for any valid
-value. `New` guards the boundary, so it checks both. `Restore` checks only the
-invariants, so data already accepted stays readable: if `Restore` applied the
-input rules, raising the minimum username length would make existing users
-fail to load, and a policy change would need a data migration.
-
-Values read from a string in a fixed format use `ParseX`: `user.ParseID`,
-`user.ParseStatus`, `session.ParseRefreshTokenSecret`.
-
-### Two error conventions
-
-| Signature | When |
-|---|---|
-| `NewX(input) (X, validation.Issues)` | Input from users: `Username`, `Plain` |
-| `NewX(input) (X, error)` | Values generated internally: `Hashed`, `AccessToken` |
-
-Returning `Issues` from an input constructor is a contract: its failure is
-always a set of broken rules that can be reported, so `Accumulator` takes it
-directly. With `error`, every caller would need an `errors.As` to get the
-issues back, and a branch for some other error that never happens. A value
-generated internally has nothing to report to a user: its failure is a
-programming error, so it returns `error`.
-
-### `IsZero`
-
-Every value object has one. Constructors check `IsZero()` on their inputs, so
-a zero value that did not come from a constructor is caught instead of spread.
-
-### `Value()` rather than `String()`
-
-Types holding sensitive data expose `Value()`, never `String()`:
-`password.Plain`, `password.Hashed`, `session.AccessToken`,
-`session.RefreshTokenHash` and `session.RefreshTokenSecret`.
-
-`fmt` and `slog` call `String()` on their own, so a struct holding such a type
-would print it through any `%v`, without anyone deciding to log it. `Value()`
-has to be called on purpose. `Username` and `Status` do have `String()`: they
-are not sensitive, and printing them is useful.
-
-## Defensive copying
-
-A value object holding a slice, a map or a pointer copies it on the way in and
-on the way out.
-
-```go
-func NewRefreshTokenHash(value []byte) (RefreshTokenHash, error) {
-    // ...
-    return RefreshTokenHash{value: slices.Clone(value)}, nil
-}
-
-func (h RefreshTokenHash) Value() []byte {
-    return slices.Clone(h.value)
-}
-```
-
-Copying a struct copies the slice header, not the array behind it. Without
-both clones, whoever passed the slice in, or read it back, could change a
-stored hash later: a silent corruption of exactly the data that must not
-change. The same applies to `Issue.Details()` (`maps.Clone`) and to nullable
-pointer fields (`shared.ClonePtr`).
+- **`IsZero`.** Every value object has one, and constructors check it on their
+  inputs, so a zero value that did not come from a constructor is caught
+  instead of spread.
+- **`Value()` rather than `String()`** on anything sensitive: `password.Plain`,
+  `password.Hashed`, `session.AccessToken`, `session.RefreshTokenSecret` and
+  `session.RefreshTokenHash`. `fmt` and `slog` call `String()` on their own,
+  so a struct holding such a type would print it through any `%v`; `Value()`
+  has to be called on purpose. `Username` and `Status` do have `String()`.
+- **Defensive copies.** A value holding a slice, a map or a pointer copies it
+  on the way in and on the way out (`slices.Clone`, `maps.Clone`,
+  `shared.ClonePtr`), so whoever passed it in, or read it back, cannot change
+  it later.
 
 ## Nullable fields
 
-`*T` for the field, and a comma-ok accessor.
+`*T` for the field, and a comma-ok accessor, so the pointer never leaves the
+entity:
 
 ```go
-type Session struct {
-    revokedAt *time.Time
-}
-
-func (s *Session) RevokedAt() (time.Time, bool) {
-    if s.revokedAt == nil {
-        return time.Time{}, false
-    }
-    return *s.revokedAt, true
-}
-
-func (s *Session) IsRevoked() bool { return s.revokedAt != nil }
+func (s *Session) RevokedAt() (time.Time, bool)
+func (s *Session) IsRevoked() bool
 ```
-
-The pointer never leaves the entity, so no caller can change the entity
-through it. `shared.PtrFromOk` turns the comma-ok result back into a pointer
-when mapping to a database model.
 
 When the question is only whether it is set, a predicate (`IsRevoked`,
 `IsUsed`, `HasParent`) reads better than a discarded comma-ok.
+`shared.PtrFromOk` turns the comma-ok result back into a pointer for a
+database model.
 
 ## Behaviour on entities
 
 State changes are methods that enforce their own rules, not field assignments
-by the caller.
+by the caller: `RefreshToken.Use`, `Session.Revoke`, `Password.ChangeHash`. The
+rule lives in one place, is tested without a database, and cannot be skipped by
+a use case. An idempotent operation is idempotent in the code too:
+`Session.Revoke` on a revoked session keeps the first time.
 
-```go
-func (t *RefreshToken) Use(usedAt time.Time) error {
-    if t.usedAt != nil { return ErrTokenAlreadyUsed }
-    if usedAt.After(t.expiresAt) { return ErrTokenExpired }
-    t.usedAt = &usedAt
-    t.updatedAt = usedAt
-    return nil
-}
-```
+## Clock
 
-The rule lives in one place, can be tested without a database, and cannot be
-skipped by a use case.
+Code reads the time from a `port.Clock`. Components take one in their `Config`,
+and `infra.SystemClock`, which returns `time.Now().UTC()`, is the
+implementation outside tests. Tests set a fake clock, which is how expiry and
+reuse detection are tested without sleeping. A use case reads it once and
+reuses `now` for the entities it creates, so they share a timestamp.
 
-Idempotent operations are idempotent in the code too: `Session.Revoke` returns
-early if the session is already revoked, so a second revocation cannot
-overwrite the first timestamp.
+The background-task runner in `internal/bootstrap/periodic.go` is the
+exception: it ticks with `time.NewTicker` and times each run with `time.Now`,
+for its log line only.
 
-## Injected clock
+## Errors
 
-Nothing but `infra.SystemClock` calls `time.Now()`. Components take a
-`port.Clock`.
+Errors are wrapped on the way up with `%w` and a lowercase message naming the
+operation that failed (`password hashing failed: %w`), so `errors.Is` and
+`errors.As` still work at the top, where `translateError` relies on them.
+Sentinel errors are package-level `var`s, compared with `errors.Is`, never by
+message.
 
-```go
-now := uc.clock.Now()
-```
+## Logging
 
-Tests replace it with a fake clock, which is how expiry and reuse detection
-are tested without sleeping. A flow usually reads the clock once and reuses
-`now`, so entities created together share a timestamp.
+Only `internal/api` and `internal/bootstrap` log. The domain, the use cases and
+the adapters return errors, and the HTTP boundary logs each failure once, where
+the request ID and the outcome are both known: one failed request is one line,
+not one per layer it fell through.
 
-## Error wrapping
+- In `internal/api`, take the logger from the request context with
+  `loggerFrom(ctx)`, so the line carries the request ID. In `bootstrap`, use
+  the `*slog.Logger` the function is given. Nothing relies on `slog.Default()`.
+- The message is a constant lowercase phrase; everything variable is an
+  attribute, in `snake_case` (`error`, `user_id`, `duration`). The startup
+  lines ending in `...` predate this.
+- The level says who has to act: [Levels](../logging.md#levels).
+- Never log a password, a token, a hash, a key, or any value from a request
+  body. This holds because of the call sites, not a filter:
+  [What is never logged](../logging.md#what-is-never-logged).
 
-Errors are wrapped with context on the way up, with `%w`:
-
-```go
-if err != nil {
-    return Output{}, fmt.Errorf("password hashing failed: %w", err)
-}
-```
-
-Messages describe the operation that failed, in lower case, without
-punctuation. `%w` keeps the chain, so `errors.Is` and `errors.As` still work
-at the top of the stack, which `translateError` relies on.
-
-Sentinel errors are package-level `var`s (`session.ErrTokenExpired`,
-`postgres.ErrSchemaDirty`), compared with `errors.Is`, never by message.
+To assert on a line in a test, use `contextWithLoggedLines` and `loggedLines`
+from `internal/api/middleware_test.go`.
 
 ## Naming
 
 | Thing | Convention | Example |
 |---|---|---|
-| Constructor | `New<Type>` | `NewUsername` |
-| Rebuild from storage | `Restore<Type>` | `RestoreUser` |
-| Read from a string | `Parse<Type>` | `ParseStatus` |
 | Accessor | field name, no `Get` | `Username()` |
-| Zero check | `IsZero()` | |
 | State predicate | `Is<State>` / `Has<Thing>` | `IsRevoked()`, `HasParent()` |
 | Sentinel error | `Err<Condition>` | `ErrTokenExpired` |
 | Fake | `Fake<Interface>` | `FakeUserReader` |
 
-Package names are singular nouns (`user`, `password`, `session`,
-`validation`), and are part of the type's name where it is used: `user.ID`,
-not `user.UserID`.
-
-**The exception is `session`**, the one package holding two entities. Its
-`Session` types keep the entity in their names — `session.SessionID`,
-`session.SessionCreationParams`, `session.SessionRestoreParams` — so that they
-read unambiguously next to `session.RefreshTokenID` and
-`session.RefreshTokenCreationParams`. A `session.ID` would not say which of the
-two it identified, and the two do appear in one signature:
-`RefreshTokenRestoreParams` carries both. A package with one entity uses the
-short form: `user.ID`, `password.ID`, `user.CreationParams`.
-
-The rule for a new package, then: drop the package name from the type unless the
-package holds more than one entity.
-
-## Formatting
-
-Standard `gofmt`. Before committing:
-
-```bash
-gofmt -l .        # list files that need formatting
-gofmt -w .        # format them
-go vet ./...      # catch suspicious constructs
-```
+Package names are singular nouns and part of the type's name where it is used:
+`user.ID`, not `user.UserID`. The exception is `session`, the one package with
+two entities: its types keep the entity in their names (`session.SessionID`,
+`session.RefreshTokenID`), because a `session.ID` would not say which of the
+two it identified. A new package drops the package name from its types unless
+it holds more than one entity.

@@ -2,7 +2,7 @@
 // so that nothing in usecase or domain names a concrete adapter. The
 // infrastructure implements them and is injected at startup.
 //
-// See docs/architecture/usecases/README.md#ports.
+// See docs/architecture/usecases.md#ports.
 package port
 
 import (

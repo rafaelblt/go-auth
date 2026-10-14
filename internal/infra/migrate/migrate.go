@@ -1,6 +1,6 @@
 // Package migrate applies the embedded SQL migrations with golang-migrate.
 //
-// See docs/architecture/persistence/migrations.md.
+// See docs/architecture/persistence.md#migrations.
 package migrate
 
 import (
