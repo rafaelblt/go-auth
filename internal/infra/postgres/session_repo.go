@@ -86,6 +86,46 @@ func (repo *SessionRepo) RevokeAllByUserID(
 	return nil
 }
 
+// DeleteDeadBefore deletes whole sessions, never a refresh token on its own:
+// ON DELETE CASCADE takes their tokens. It goes by the expires_at stored with
+// each token, never by the current TTL. SKIP LOCKED leaves a session another
+// transaction holds to a later call, so instances deleting at once do not wait
+// on each other.
+//
+// See docs/architecture/persistence.md#deleting-dead-sessions.
+func (repo *SessionRepo) DeleteDeadBefore(
+	ctx context.Context, cutoff time.Time, limit int,
+) (int, error) {
+	if cutoff.IsZero() {
+		return 0, errors.New("cutoff zero")
+	}
+	if limit <= 0 {
+		return 0, errors.New("limit zero or negative")
+	}
+
+	sql := `DELETE FROM sessions
+			WHERE id IN (
+				SELECT s.id FROM sessions s
+				WHERE s.created_at < @cutoff
+					AND (s.revoked_at < @cutoff OR NOT EXISTS (
+						SELECT 1 FROM refresh_tokens t
+						WHERE t.session_id = s.id AND t.expires_at >= @cutoff
+					))
+				LIMIT @limit
+				FOR UPDATE SKIP LOCKED
+			)`
+	tag, err := repo.db.Exec(ctx, sql, pgx.NamedArgs{
+		"cutoff": cutoff,
+		"limit":  limit,
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("dead sessions delete failed: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
+}
+
 func (repo *SessionRepo) FindByID(ctx context.Context, id session.SessionID) (*session.Session, error) {
 	sql := "SELECT * FROM sessions WHERE id = $1"
 
