@@ -50,11 +50,11 @@ get current schema version failed: schema not initialized: schema_migrations tab
 ```
 
 ```
-the database schema version (4) is behind the latest migration (5): apply the pending migrations
+the database schema version (5) is behind the latest migration (6): apply the pending migrations
 ```
 
 ```
-the database schema version (6) is ahead of the latest migration (5): the binary is older than the database
+the database schema version (7) is ahead of the latest migration (6): the binary is older than the database
 ```
 
 `AUTO_MIGRATE=true` is the right setting for development, and workable for a

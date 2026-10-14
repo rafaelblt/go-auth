@@ -40,7 +40,8 @@ The SQL is in [`migrations/`](../../migrations). What the constraints are for:
 - **`refresh_tokens.hash`** is the raw SHA-256 digest, never the token, and
   `UNIQUE`, which gives the lookup its index. **`parent_id`** is `UNIQUE`, so a
   token has at most one successor and the rotation chain cannot fork.
-  **`used_at`** is `NULL` until the token is spent.
+  **`used_at`** is `NULL` until the token is spent. **`session_id`** is indexed
+  together with `expires_at`, for [deleting dead sessions](#deleting-dead-sessions).
 - **`signing_keys.generation`** orders the keys and, as the primary key,
   settles two instances adding the same one. **`seed`** is the Ed25519 private
   key, 32 bytes as it is or 60 bytes sealed
@@ -80,6 +81,16 @@ that the `down` undoes the `up` on the right table: a wrong `down` only shows up
 during a rollback. `Latest()` and the test helpers pick it up. A released
 migration is never edited; a change is a new migration.
 
+`000006` builds its index `CONCURRENTLY`, so that logins and refreshes keep
+writing to `refresh_tokens` while it builds, however large the table has grown:
+a plain `CREATE INDEX` blocks every write to the table until it is done. Such a
+statement cannot run inside a transaction. golang-migrate sends each file as one
+query without opening one, but PostgreSQL runs a query of several statements as
+a single transaction, so the file holds that statement alone. A build that fails
+leaves the schema dirty, like any failed migration, and an invalid index too:
+drop it, with `DROP INDEX CONCURRENTLY idx_refresh_tokens_session_id_expires_at`,
+before applying the migration again.
+
 ## Repositories
 
 One per table, each taking a `DB` interface (`QueryRow`, `Query`, `Exec`)
@@ -90,7 +101,7 @@ plain query and a write inside a transaction.
 |---|---|
 | `UserRepo` | `UserReader`, `UserWriter`, `UserExistsChecker` |
 | `PasswordRepo` | `PasswordReader`, `PasswordWriter` |
-| `SessionRepo` | `SessionReader`, `SessionWriter` |
+| `SessionRepo` | `SessionReader`, `SessionWriter`, `SessionCleaner` |
 | `RefreshTokenRepo` | `RefreshTokenReader`, `RefreshTokenWriter` |
 | `SigningKeyRepo` | `SigningKeyStore` |
 
@@ -179,3 +190,48 @@ and commits; any error rolls everything back. `UowDeps` holds only writers, so
 reads happen before the transaction opens, which keeps transactions short, and
 a write that depends on what was read checks again itself, as a guarded write.
 `LockHash` reads inside the transaction only to lock.
+
+## Deleting dead sessions
+
+`SessionRepo.DeleteDeadBefore` is the one statement that deletes sessions, and
+refresh tokens with them. Given a cutoff and a limit, it deletes up to that many
+sessions created before the cutoff that were revoked before it, or that have no
+refresh token expiring at or after it, and returns how many it deleted:
+
+```sql
+DELETE FROM sessions
+WHERE id IN (
+    SELECT s.id FROM sessions s
+    WHERE s.created_at < @cutoff
+        AND (s.revoked_at < @cutoff OR NOT EXISTS (
+            SELECT 1 FROM refresh_tokens t
+            WHERE t.session_id = s.id AND t.expires_at >= @cutoff
+        ))
+    LIMIT @limit
+    FOR UPDATE SKIP LOCKED
+)
+```
+
+- **Whole sessions, never a token on its own.** `ON DELETE CASCADE` takes a
+  session's tokens with it. A spent token of a live session is what
+  [reuse detection](usecases.md#reuse-detection) looks for: once deleted, a
+  replay of it would get "not found" instead of revoking the session. The tokens
+  of a dead session can no longer be refreshed, so nothing is lost with them.
+- **By the stored `expires_at`**, never by `REFRESH_TOKEN_TTL`, which can change
+  between deploys: each token keeps the expiry it was issued with. Each refresh
+  issues a token that expires after the ones before it, so no token expiring at
+  or after the cutoff means the latest one expired before it.
+- **`created_at` before the cutoff** keeps out a session that has no token yet.
+  Login inserts a session and its first token in one transaction, so none
+  should ever be seen; the condition costs nothing, and the delete does not
+  depend on that.
+- **`LIMIT`**, so that each call is one short statement, and a backlog is
+  deleted by many of them rather than by one long transaction holding its locks.
+- **`SKIP LOCKED`** passes over a session another transaction holds, such as a
+  revocation or another instance's delete, and leaves it to a later call:
+  instances deleting at the same time share the work rather than wait on each
+  other.
+
+The `NOT EXISTS` and the cascade both look tokens up by session, which is what
+`idx_refresh_tokens_session_id_expires_at` is for: without it, the cascade reads
+the whole `refresh_tokens` table once for every session it deletes.

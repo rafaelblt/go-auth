@@ -79,6 +79,15 @@ type SessionWriter interface {
 	RevokeAllByUserID(ctx context.Context, userID user.ID, revokedAt time.Time) error
 }
 
+type SessionCleaner interface {
+	// DeleteDeadBefore deletes up to limit sessions that died before cutoff,
+	// revoked before it or with every refresh token expired before it, and
+	// their refresh tokens with them. It returns how many sessions it deleted.
+	// A session still alive at cutoff, or created after it, is never deleted,
+	// and neither is a refresh token on its own.
+	DeleteDeadBefore(ctx context.Context, cutoff time.Time, limit int) (int, error)
+}
+
 // RefreshToken
 
 type RefreshTokenWriter interface {
