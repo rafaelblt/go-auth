@@ -306,18 +306,18 @@ rate limited ([why](http.md#rate-limiting)).
 longer than [`SESSION_RETENTION`](../configuration.md#session_retention), with
 their refresh tokens, so that `sessions` and `refresh_tokens` stop growing for
 as long as the deployment runs. A session is dead once it is revoked, or once
-its latest refresh token has expired: nothing can refresh it again. It runs
-every hour as a [background task](startup.md#background-tasks), and not at all
-while the retention is `off`.
+its latest refresh token has expired: nothing can refresh it again. It runs on
+every instance as a [background task](startup.md#background-tasks), and not at
+all while the retention is `off`.
 
 Each run reads the clock once, and deletes the sessions that died before that
 time minus the retention ([which ones](persistence.md#deleting-dead-sessions)),
-in batches of 1000, until a batch comes back short or 10 have run. A run
-therefore deletes at most 10,000 sessions, and a backlog, such as the one a
-deployment that ran without the cleanup has, takes as many runs as it needs
-rather than one long one. Every instance runs it, so a deployment deletes up to
-10,000 sessions an hour per instance: one that opens more than that accumulates
-dead sessions faster than they go.
+a batch at a time, until a batch comes back short or the run has made its
+maximum number of batches ([sizes](startup.md#background-tasks)). A run
+therefore deletes a bounded number of sessions, and a backlog, such as the one
+a deployment that ran without the cleanup has, takes as many runs as it needs
+rather than one long one. A deployment that opens sessions faster than its
+instances delete them accumulates dead sessions faster than they go.
 
 A refresh that presents a token of a session at the moment the cleanup deletes
 it, a token dead for longer than the retention and refused either way, gets
