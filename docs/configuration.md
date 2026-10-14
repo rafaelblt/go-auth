@@ -214,8 +214,11 @@ else is a [duration](#durations-and-presets) of at least `1h`:
 
 - **At least an hour**, because a refresh checks its session only at its start,
   and fails its writes, with a `500`, if the session is deleted before it ends.
-  A session can be deleted under a refresh only if that refresh started more
-  than the retention ago, which an hour rules out.
+  A rotation needs a live session, so the cleanup can delete one under it only
+  if the refresh started more than the retention ago, which an hour rules out.
+  Reuse detection is not covered: it also runs for a session that is already
+  dead, which the cleanup can delete at any moment
+  ([Session cleanup](architecture/usecases.md#session-cleanup)).
 - **`0` does not mean `off`.** It is a duration under the minimum, and stops
   the service from starting like any other, so that no value can be read both
   as "keep nothing" and as "delete nothing".

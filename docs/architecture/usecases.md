@@ -225,8 +225,8 @@ carries reuse detection.
    outliving its session, so it is the [session cleanup](#session-cleanup)
    deleting both between the two reads, and the token is unknown from then on.
 3. Session revoked: `session revoked`.
-4. `token.Use(now)`. Expired: `token expired`. Already used: reuse detection.
-   Otherwise, rotate.
+4. `token.Use(now)`. Already used, expired or not: reuse detection. Expired:
+   `token expired`. Otherwise, rotate.
 
 Every rejection is `401 invalid_token`, with the reason only in the log, so the
 response tells someone holding a stolen token nothing about its state.
@@ -323,4 +323,8 @@ A refresh that presents a token of a session at the moment the cleanup deletes
 it, a token dead for longer than the retention and refused either way, gets
 `invalid token`, as it would a moment later ([Refresh](#refresh), step 2). The
 exception is a spent token whose session is deleted after the refresh read it:
-reuse detection then finds no session to revoke, and the refresh answers `500`.
+reuse detection then finds no session to revoke, and the refresh answers `500`
+where a moment later it would answer `invalid token`. The
+[minimum retention](../configuration.md#session_retention) does not prevent
+it: a spent token goes to reuse detection even once it has expired (step 4), so
+a replay of one at the moment its session is deleted is enough.
