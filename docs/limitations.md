@@ -89,6 +89,22 @@ signed in.
 With `SESSION_RETENTION` set to `off`, nothing is deleted, and both tables grow
 for as long as the deployment runs.
 
+### The session cleanup can fall behind
+
+The [session cleanup](architecture/usecases.md#session-cleanup) runs on each
+instance as a background task, whose first run comes one interval after the
+instance starts, and each run deletes a bounded number of sessions
+([Background tasks](architecture/startup.md#background-tasks)). As a result:
+
+- **an instance that lives less than an interval never runs it.** When every
+  instance is replaced sooner, by frequent deploys, autoscaling or a platform
+  that stops idle instances, nothing is deleted, and both tables grow as they
+  do with `SESSION_RETENTION` set to `off`.
+- **a deployment that opens sessions faster than its instances delete them
+  falls behind**, and its dead sessions pile up until the rate drops. Nothing
+  in the logs shows it: the line a run writes says how long it took, not how
+  many sessions it deleted ([Background tasks](logging.md#background-tasks)).
+
 ## Accounts
 
 ### Registration reveals whether a username exists
