@@ -124,14 +124,17 @@ database applies it only while the rule still holds:
 | Statement | Condition | When nothing matched |
 |---|---|---|
 | `UserRepo.Add` | `ON CONFLICT (username) DO NOTHING` | `user.ErrUsernameAlreadyExists`: register's `409` |
-| `RefreshTokenRepo.MarkUsed` | `WHERE id = @id AND used_at IS NULL` | `session.ErrTokenAlreadyUsed`: reuse ([0050](../development/decisions/0050-refresh-token-use-is-settled-at-write.md)) |
+| `RefreshTokenRepo.MarkUsed` | `WHERE id = @id AND used_at IS NULL` | `session.ErrTokenAlreadyUsed`: reuse ([Rotation](usecases.md#rotation)) |
 | `PasswordRepo.UpdateHash` | `WHERE id = @id AND hash = @previous_hash` | `password.ErrHashChanged`: `401`, `password changed` |
-| `PasswordRepo.LockHash` | `WHERE id = @id AND hash = @hash FOR SHARE` | `password.ErrHashChanged`: `401`, `password changed` ([0055](../development/decisions/0055-login-locks-the-password-it-checked.md)) |
-| `SigningKeyRepo.Add` | `ON CONFLICT (generation) DO NOTHING` | nothing: the keyring lists the keys again ([0053](../development/decisions/0053-signing-keys-are-shared-through-the-database.md)) |
+| `PasswordRepo.LockHash` | `WHERE id = @id AND hash = @hash FOR SHARE` | `password.ErrHashChanged`: `401`, `password changed` ([The password lock](usecases.md#the-password-lock)) |
+| `SigningKeyRepo.Add` | `ON CONFLICT (generation) DO NOTHING` | nothing: the keyring lists the keys again ([Signing keys](tokens.md#signing-keys)) |
 
-`LockHash` takes a lock instead of writing, for a rule that spans two tables:
-login writes `sessions` and a password change writes `passwords`, so neither
-write can carry the other's condition, and they meet on the password row.
+`LockHash` takes a lock instead of writing, for a rule that spans two tables
+([The password lock](usecases.md#the-password-lock)). `FOR SHARE` is the
+weakest lock that works: the `UPDATE` of a password change takes
+`FOR NO KEY UPDATE`, which conflicts with `FOR SHARE` but not with
+`FOR KEY SHARE`, and `FOR UPDATE` would also make the logins of one user wait
+for each other.
 
 **The outcome comes from `RowsAffected`**, never from the driver's error.
 Matching SQLSTATE `23505` would also need the constraint's name, which

@@ -49,38 +49,64 @@ every verifier would hold the signing secret and could mint tokens. Ed25519
 keys and signatures are much smaller than RSA's, and JWKS supports them
 (`OKP`) as standard.
 
-The keys are rows of `signing_keys`, read and written through
-`port.SigningKeyStore`, so they survive a restart and every instance signs and
-publishes the same ones. A key's ID is its RFC 7638 thumbprint, derived from the
-key. Each key goes through three windows:
+The keys are rows of `signing_keys`, in the database every instance already
+shares, read and written through `port.SigningKeyStore`. So they survive a
+restart, and every instance signs and publishes the same ones: with keys held in
+memory, a token would fail against another instance, or after a restart. A
+key's ID is its RFC 7638 thumbprint, derived from the key. Each key goes
+through three windows:
 
-- it is added, and published, a day before its `active_at`. The first key is
-  the exception: it signs at once;
+- it is added, and published, a day before its `active_at`, so by the time it
+  signs, every instance has loaded it, and so has any verifier that fetches the
+  JWKS at least every 23 hours. The first key is the exception: it signs at
+  once, since nothing else can;
 - it signs from its `active_at` until the next key's, 7 days later;
-- it stays published for 25 hours more, an hour longer than any access token
-  can live, and is then deleted.
+- it stays published for 25 hours more, an hour longer than the longest access
+  token `infra/jwt` accepts, whatever TTL each instance runs with, and is then
+  deleted, so a copy of the database gives out only the keys of the last 9 days
+  or so.
 
 A key is therefore published for about 9 days, and the JWKS holds one or two
 keys. The windows are constants in `internal/bootstrap/infra.go`.
+
+**The clock decides which key signs**: each instance signs with the key whose
+`active_at` is the latest not after its own clock. Every instance reads the
+same rows, so all of them switch at the same moment, give or take their clock
+skew, with no write and no message. A key stops signing only once a successor
+exists, so a rotation that fails leaves the current key signing, never none. An
+instance whose clock lags the one that added the first key finds no key active
+yet, and signs with the first to activate rather than failing logins.
 
 `Keyring.Sync` runs every 10 minutes on each instance
 ([Background tasks](startup.md#background-tasks)): it lists the keys, adds the
 next one when it is due, lists them again, publishes those not retired, and then
 deletes the retired ones. Startup loads the keys the same way, without the
-delete. Each instance's own clock decides which key signs, so the switch needs
-no coordination: by then every instance has had the next key for most of a day.
-When two instances add the same generation, the primary key keeps the first and
-both read it back ([Guarded writes](persistence.md#guarded-writes)). Signing
-reads the keys through an `atomic.Pointer`, and only a sync takes a lock. Why
-the keys are shared this way:
-[decision 0053](../development/decisions/0053-signing-keys-are-shared-through-the-database.md).
+delete. When two instances add the same generation, the primary key keeps the
+first ([Guarded writes](persistence.md#guarded-writes)), and both sign with the
+row read back, never with a key one of them only generated. Signing reads the
+keys through an `atomic.Pointer`, and only a sync takes a lock.
 
 A sync that fails changes nothing: the instance keeps the keys it last loaded,
 and switches to one it already holds when that key's time comes, but does not
 see keys other instances add. If every instance keeps failing, the current key
 signs past its 7 days. The delete comes last, so one that fails, for instance
 because the database role cannot `DELETE`, leaves the retired keys in the table
-and nothing else.
+and nothing else. A key cannot be withdrawn while the service runs, since
+deleting its row leaves the instances disagreeing until each has synced:
+withdrawing one means
+[replacing every key](../configuration.md#replacing-the-signing-keys) with the
+instances stopped.
+
+Considered and rejected:
+
+- **A "current" flag that rotation flips**: every instance would have to reload
+  at the same instant, or sign for a while with a key the others no longer use.
+- **A `sign_until` and a `publish_until` stored with each key**: a rotation that
+  failed would leave no key signing once `sign_until` passed.
+- **One key per instance, all published**: the JWKS grows with the number of
+  instances, and an instance that goes away leaves its key behind.
+- **A retire window derived from `ACCESS_TOKEN_TTL`**: instances, and restarts,
+  can run with different TTLs.
 
 ### Sealed seeds
 

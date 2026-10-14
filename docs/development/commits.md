@@ -28,7 +28,7 @@ and names the identifiers it touches rather than the files: *remove unused
 | `refactor` | The same behaviour in a different shape: a rename, a move, an extraction |
 | `perf` | The same behaviour, faster or lighter |
 | `test` | Test code and nothing else |
-| `docs` | Documentation and nothing else: `docs/`, the READMEs, comments, decision records |
+| `docs` | Documentation and nothing else: `docs/`, the READMEs, comments |
 | `style` | Whitespace, import order, `gofmt` output |
 | `build` | `go.mod`, `go.sum`, the Dockerfiles, the Compose files |
 | `chore` | The repository around the code: `.gitignore`, editor and tooling configuration |
@@ -67,8 +67,8 @@ the single place that says what is required, what the default is and
 which values are acceptable.
 ```
 
-When the reasoning outgrows a body, it belongs in the documentation, or in a
-[decision record](decisions/README.md), and the message points at it.
+When the reasoning outgrows a body, it belongs in the documentation, and the
+message points at it.
 
 ## What goes in one commit
 

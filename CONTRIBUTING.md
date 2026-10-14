@@ -33,6 +33,10 @@ edited: a schema change is a new migration.
   is what is wrong.
 - **Every fact has one home.** A document that needs a fact explained elsewhere
   links to it rather than restating it.
+- **A decision is explained where its code is documented**, in that package's
+  section: what has to hold, why, and the alternatives that were really
+  weighed, when there were any. One that spans packages lives with the code
+  that enforces it, and the others link there.
 - **A change updates the documents it makes wrong**, in the same commit.
 - **`docs/` describes what exists**, not plans or ideas. A deprecation is
   documented, with what replaces it.
@@ -47,6 +51,4 @@ go test ./...   # needs Docker; see Testing for the subset that does not
 
 [Testing](docs/development/testing.md) covers the test layers and helpers, and
 [Commits](docs/development/commits.md) the message format and what goes in one
-commit. When the reasoning behind a change takes more than a commit body, it
-goes in the documents, or in a
-[decision record](docs/development/decisions/README.md).
+commit.

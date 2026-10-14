@@ -458,8 +458,9 @@ func TestKeyring_Sync_DeletesThePreviousKey_OncePublishAfterHasPassed(t *testing
 	assert.ErrorIs(t, err, errKidUnknown)
 }
 
-// A late rotation tells the rule decision 0053 states from an age-based one:
-// the first key is RotationInterval + PublishAfter old, and still signs.
+// A late rotation tells the rule that a key signs until the next one is active
+// from an age-based one: the first key is RotationInterval + PublishAfter old,
+// and still signs.
 func TestKeyring_Sync_KeepsTheSigningKey_WhenRotationRanLate(t *testing.T) {
 	cfg := keyringConfigForTest(nil, nil)
 	first := storedKeyForTest(t, 1, t0)

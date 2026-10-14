@@ -74,10 +74,10 @@ value that cannot fail, so a test reads as its scenario.
 ### HTTP tests
 
 DTO fields are unexported, so a test cannot write a DTO literal
-([decision 0034](decisions/0034-protected-dtos.md)). `apitest` builds DTOs
-through the real mappers. The HTTP tests cover each piece of `internal/api` on
-its own, with a fake use case for the adapter; the end-to-end tests cover the
-path through a real one.
+([DTOs](../architecture/usecases.md#dtos)). `apitest` builds DTOs through the
+real mappers; an exported constructor for tests would let any code skip them.
+The HTTP tests cover each piece of `internal/api` on its own, with a fake use
+case for the adapter; the end-to-end tests cover the path through a real one.
 
 ## Test databases
 
@@ -124,9 +124,7 @@ nothing else would report:
 | `TestDocLinksInCodeCommentsResolve` | Every `docs/….md` path in a comment exists, anchor included |
 | `TestOpenAPISpecMatchesTheRoutes` | The routes in `docs/api/openapi.yaml` are the ones `internal/api/router.go` registers |
 | `TestEveryPackageHasAPackageComment` | Every package has a doc comment |
-| `TestEveryAcceptedDecisionIsLinkedFromCode` | Every decision record is mentioned by some `.go` file |
-| `TestSupersededDecisionsAreNotLinkedFromCode` | No `.go` file mentions a superseded record |
-| `TestNoUseCaseLivesInTheUsecasePackageItself` | The invariant of [decision 0034](decisions/0034-protected-dtos.md) |
+| `TestNoUseCaseLivesInTheUsecasePackageItself` | No use case sits in `internal/usecase` itself, where it could fill a DTO by hand ([DTOs](../architecture/usecases.md#dtos)) |
 
 A rule the compiler, a unit test or a database constraint already enforces
 gets no test here: it would only be a second place to update.

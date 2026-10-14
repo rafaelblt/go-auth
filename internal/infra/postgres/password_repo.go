@@ -93,7 +93,7 @@ func (repo *PasswordRepo) UpdateHash(
 // locked, it checks whether the password exists, so a missing password is not
 // reported as a changed hash.
 //
-// See docs/development/decisions/0055-login-locks-the-password-it-checked.md.
+// See docs/architecture/persistence.md#guarded-writes.
 func (repo *PasswordRepo) LockHash(ctx context.Context, pwd *password.Password) error {
 	model, err := mapPasswordToModel(pwd)
 	if err != nil {

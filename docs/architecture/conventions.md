@@ -15,11 +15,9 @@ its shape; if it needs a comment to be understood, first try to make it
 simpler. A comment is for what the simplest code still cannot say: a reason, a
 constraint, a non-obvious consequence. When that takes more than a few lines,
 the explanation goes in a document and the comment links to it
-(`See docs/...`).
-
-A comment that links to a [decision record](../development/decisions/README.md)
-marks code that exists for its timing or its atomicity rather than its result,
-and looks removable. Read the record before changing that code.
+(`See docs/...`). Code that is there for its timing or its atomicity rather
+than its result looks removable: give it such a comment, and read what one
+links to before changing the code it is on.
 
 ## Protected struct
 
@@ -38,8 +36,8 @@ func (u *User) Username() Username { return u.username }
 
 Used for every entity, value object, `Config` and DTO. Code outside the
 package cannot assign to a field, so the checks in the constructor cannot be
-bypassed afterwards. For the DTOs, what it protects is how they are built:
-[decision 0034](../development/decisions/0034-protected-dtos.md).
+bypassed afterwards. For the DTOs, what it protects is how they are built
+([DTOs](usecases.md#dtos)).
 
 Params structs and use case `Input` and `Output` are plain data with exported
 fields: an `Output` is built in its own package, where unexported fields would

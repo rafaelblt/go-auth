@@ -124,7 +124,7 @@ replaying a token that was spent and has since expired still counts as reuse
 and revokes the session. The other way round, someone holding an old stolen
 token could wait for it to expire, replay it, and never trip the alarm. `Use`
 decides in memory, on a token read before the write, so the write checks again
-([decision 0050](../development/decisions/0050-refresh-token-use-is-settled-at-write.md)).
+([Rotation](usecases.md#rotation)).
 
 **`RefreshTokenSecret`** is what the client holds: 32 bytes from `crypto/rand`,
 which `Value()` encodes in base64url. `ParseRefreshTokenSecret` reads a

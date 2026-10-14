@@ -113,7 +113,7 @@ func (c Checker) Check(
 // exists. The result of the check is deliberately discarded: the call is here
 // for the time it takes, and removing it reopens the timing difference.
 //
-// See docs/development/decisions/0045-login-dummy-hash.md.
+// See docs/architecture/usecases.md#the-dummy-hash.
 func (c Checker) rejectWithDummyVerify(plain password.Plain, rejection error) error {
 	_, err := c.pwdChecker.Verify(plain, c.dummyHash)
 	if err != nil {

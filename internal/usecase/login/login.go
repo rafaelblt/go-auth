@@ -82,7 +82,7 @@ func (uc Login) Execute(ctx context.Context, input Input) (Output, error) {
 		// checked above, and a change of it waits until it is saved, so the
 		// change's revocation reaches it.
 		//
-		// See docs/development/decisions/0055-login-locks-the-password-it-checked.md.
+		// See docs/architecture/usecases.md#the-password-lock.
 		err := deps.PasswordWriter.LockHash(ctx, pwd)
 		if err != nil {
 			return fmt.Errorf("password writer lock hash failed: %w", err)

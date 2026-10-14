@@ -16,7 +16,7 @@ func TestMarkdownLinksResolve(t *testing.T) {
 
 		for _, match := range markdownURL.FindAllStringSubmatch(body, -1) {
 			target := match[1]
-			if isExternal(target) || isPlaceholder(target) {
+			if isExternal(target) {
 				continue
 			}
 
@@ -37,9 +37,9 @@ func TestMarkdownLinksResolve(t *testing.T) {
 	}
 }
 
-// Package comments and decision links point at documents by path. They are the
-// only route from a file to the document explaining it, so a stale one is worse
-// than none.
+// Comments point at documents by path, package comments first among them. They
+// are the only route from a file to the document explaining it, so a stale one
+// is worse than none.
 func TestDocLinksInCodeCommentsResolve(t *testing.T) {
 	docPath := regexp.MustCompile(`docs/[a-zA-Z0-9/._-]+\.md(#[a-z0-9_-]+)?`)
 
@@ -62,12 +62,6 @@ func TestDocLinksInCodeCommentsResolve(t *testing.T) {
 
 func isExternal(target string) bool {
 	return strings.HasPrefix(target, "http") || strings.HasPrefix(target, "mailto")
-}
-
-// isPlaceholder skips the NNNN-slug.md the template and the lifecycle rules use
-// to show the shape of a record's file name.
-func isPlaceholder(target string) bool {
-	return strings.Contains(target, "NNNN")
 }
 
 func splitAnchor(target string) (file, anchor string) {

@@ -28,10 +28,8 @@ Each use case is a package under `internal/usecase` with:
 - `Input` and `Output`: plain data, with no HTTP or SQL types;
 - one `Execute(ctx, Input) (Output, error)`.
 
-`internal/usecase` itself holds what they share: the DTOs outputs carry, the
-mappers that are the only way to build one
-([decision 0034](../development/decisions/0034-protected-dtos.md)), and
-`UseCaseError`.
+`internal/usecase` itself holds what they share: the [DTOs](#dtos) outputs
+carry, with their mappers, and `UseCaseError`.
 
 A `UseCaseError` has a `code`, a `kind` (`conflict`, `unauthorized`) and an
 optional `reason`. The HTTP layer maps the kind to a status, so `usecase`
@@ -39,6 +37,21 @@ never refers to HTTP, and it logs the reason but never sends it
 ([Error translation](http.md#error-translation)). That is how login, change
 password, refresh and verify answer every failure with one code while the log
 tells the failures apart ([reasons](../logging.md#outcomes)).
+
+### DTOs
+
+A DTO's fields are unexported, with accessors
+([Protected struct](conventions.md#protected-struct)), so the only way to build
+one that is not zero is its mapper, and every mapper rejects a zero or nil
+entity. With exported fields, a use case could build a DTO by hand and skip the
+mapper's checks, unnoticed for as long as the result happened to be right. The
+HTTP layer checks `IsZero` before it reads a DTO, and panics on a zero one.
+
+That holds because every use case lives in a subpackage, out of reach of the
+unexported fields. A use case placed in `internal/usecase` itself could fill
+them, and the fields would still look protective, so `tests/docs` checks that
+none is there. A mapper guarantees that a DTO came from a valid entity, not from
+the right one: mapping the wrong user is for the use case tests to catch.
 
 ## Shared credential check
 
@@ -55,15 +68,42 @@ package, which is not a use case:
   rules are public.
 - `Checker.Check` finds the user, then its password, and verifies it. When
   either is missing, `rejectWithDummyVerify` first verifies the password
-  against a dummy hash, so a missing account costs a bcrypt comparison like a
-  wrong password does
-  ([decision 0045](../development/decisions/0045-login-dummy-hash.md)).
+  against a [dummy hash](#the-dummy-hash), so a missing account costs a bcrypt
+  comparison like a wrong password does.
 - Every rejection is `401 invalid_credentials`, each with its own reason.
   `ErrPasswordChanged` is the one the use cases return themselves, when the
   password is replaced between the check and their write.
 
-Each use case builds its `Checker` in `New`. `internal/bootstrap` creates one
-dummy hash at startup, with the configured hasher, and gives it to both.
+### The dummy hash
+
+The same `401` does not take the same time by itself. Returning as soon as the
+user or its password is missing would skip bcrypt, which is slow by design, so
+an unknown username would answer hundreds of milliseconds sooner than a wrong
+password. A miss therefore verifies the submitted password against a dummy hash,
+ignores the result, and returns the rejection for that miss: the call is there
+for the time it takes, and an error from it can only mean the dummy hash is
+broken.
+
+A bcrypt hash carries its cost, and `BCRYPT_COST` is configurable, so
+`internal/bootstrap` makes the dummy hash at startup, by hashing a fixed
+password with the configured hasher. Login and change password get it in their
+`Config`, and pass it to the `Checker` each builds in `New`. Considered and
+rejected:
+
+- **A hash written in the code**: its cost is fixed, so any other `BCRYPT_COST`
+  reopens the gap, and another hasher would reject it with an error, a `500`
+  that reveals more than the timing did.
+- **Hashing it on the first miss**: that miss pays two hashes, and the use
+  cases gain a dependency used only for this.
+- **Padding every response to a fixed duration**: the right duration depends on
+  hardware and load, and a slow outlier still leaks.
+
+What is left: a missing user skips the `FindByUserID` query, one database
+round trip, small next to bcrypt and network jitter; after a `BCRYPT_COST`
+change, the accounts hashed before no longer take as long as a missing one
+([Limitations](../limitations.md#login-timing-after-a-bcrypt_cost-change)); and
+registration says whether a username is taken anyway
+([Limitations](../limitations.md#registration-reveals-whether-a-username-exists)).
 
 ## Register
 
@@ -98,16 +138,47 @@ and returns both tokens.
 Every rejection is `401 invalid_credentials`, so login never answers `422`,
 even to input registration would reject with one.
 
-Step 3 is atomic, so a refresh token never exists without its session. It
-first locks the password row, only while its hash is still the one step 1
-checked. Step 1 takes hundreds of milliseconds, and a password change that
-committed in between would otherwise miss the session about to be saved, which
-would stay refreshable for good with a password that no longer works. With the
-lock, a change that comes later waits for this transaction, and its revocation
-reaches the session; a change that came first leaves nothing to lock, and the
-login rolls back and answers `401` with the reason `password changed`, as it
-would have a moment later
-([decision 0055](../development/decisions/0055-login-locks-the-password-it-checked.md)).
+Step 3 is atomic, so a refresh token never exists without its session.
+
+### The password lock
+
+No session opened with a password may outlive a change of that password. A
+change revokes the sessions that exist when it runs, but login checks the
+password, which takes hundreds of milliseconds, before it saves the session: a
+change that commits in between misses that session, which then refreshes for
+good with a password that no longer works. Login writes `sessions` and the
+change writes `passwords`, so neither write can carry the other's condition as
+a [guarded write](persistence.md#guarded-writes), and under `READ COMMITTED`
+neither sees the other's uncommitted row.
+
+So login's transaction first runs `LockHash`, which locks the password row only
+while its hash is still the one step 1 checked, and the two meet on that row:
+
+- **The change first.** Its `UPDATE` holds the row, so the lock waits for it to
+  commit, then matches nothing. Login rolls back, never returns the access
+  token it issued, and answers `401` with the reason `password changed`, as it
+  would have a moment later.
+- **The login first.** The change's `UPDATE` waits for login to commit, and the
+  revocation that follows reaches the session.
+
+A `401` can therefore answer a password that was right when it was sent. Every
+login runs one more indexed query, and a change waits, for milliseconds, for the
+logins of the same user that are saving their sessions; bcrypt stays outside
+the transaction. Any new path that opens a session from a checked password has
+to take the same lock. Considered and rejected:
+
+- **Reading the password inside the transaction**, `FOR UPDATE` or under
+  `SERIALIZABLE`: either bcrypt runs inside it, holding a connection and a lock
+  for hundreds of milliseconds per login, or the password is read twice, and
+  the second read is this lock.
+- **A guarded session insert**, made only while the stored hash is unchanged:
+  with both transactions in flight, the insert does not see the uncommitted
+  change, nor the revocation the uncommitted session. Tried against two
+  connections, it left a session active.
+- **A security stamp**, a version on the user copied into each session and
+  compared on every refresh: no lock, but a migration, a column on `sessions`
+  and a check in refresh. It is the better tool if the service ever needs to
+  sign a user out everywhere for other reasons.
 
 ## Change password
 
@@ -137,8 +208,7 @@ Two changes with the same current password can both pass step 3. `UpdateHash`
 is a [guarded write](persistence.md#guarded-writes), so exactly one applies;
 the other rolls back and gets `401` with the reason `password changed`, since
 the password it presented is no longer the user's. A login running alongside is
-covered by [login's lock](#login): no session opened with the old password
-outlives the change.
+covered by [login's lock](#the-password-lock).
 
 ## Refresh
 
@@ -166,9 +236,24 @@ reuse detectable at all.
 In one transaction, `MarkUsed` spends the token and the new one is inserted, so
 a failure between the two cannot burn the client's only token. `MarkUsed` is a
 [guarded write](persistence.md#guarded-writes) on `used_at IS NULL`: two
-requests with the same token can both pass step 4, and exactly one rotates. The
-other is treated as reuse
-([decision 0050](../development/decisions/0050-refresh-token-use-is-settled-at-write.md)).
+requests with the same token can both pass step 4, and exactly one rotates.
+
+The others roll back and are answered as [reuse](#reuse-detection): whether a
+spent token is found on read or at write, the session is revoked. Two requests
+presenting one token at once are what reuse detection describes, two parties
+holding it. Arriving together makes neither more trustworthy, and if the
+attacker's arrives first, revoking is the only thing that locks them out.
+Considered and rejected:
+
+- **The `UNIQUE` on `parent_id` alone**: the second insert fails, so the loser
+  answers `500` and the session stays active. The constraint stays, so the
+  chain cannot fork.
+- **A plain `401` for the loser**: it would spare a client that refreshes from
+  two tabs at once, but when the legitimate client loses and does not retry, an
+  attacker who won keeps a rotating credential.
+- **Optimistic locking with a `version` column**: generic, but it needs a
+  migration and puts a persistence detail on the entities; worth it only if
+  more entities need concurrency control.
 
 ### Reuse detection
 

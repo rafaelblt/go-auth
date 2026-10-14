@@ -27,14 +27,13 @@ repository root.
   dependency rule, and the package map, which names each package's document.
 - **[Code conventions](architecture/conventions.md)**: the patterns repeated
   throughout, and why.
-- One document per layer: [Domain](architecture/domain.md),
-  [Use cases](architecture/usecases.md), [HTTP](architecture/http.md),
-  [Persistence](architecture/persistence.md), [Tokens](architecture/tokens.md),
-  [Startup](architecture/startup.md).
+- One document per layer, with the reasoning behind its design:
+  [Domain](architecture/domain.md), [Use cases](architecture/usecases.md),
+  [HTTP](architecture/http.md), [Persistence](architecture/persistence.md),
+  [Tokens](architecture/tokens.md), [Startup](architecture/startup.md).
 
 ## Contributing
 
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)**: compatibility, documentation
   rules, what to run before committing.
-- **[Testing](development/testing.md)**, **[Commits](development/commits.md)**,
-  and the **[decision records](development/decisions/README.md)**.
+- **[Testing](development/testing.md)** and **[Commits](development/commits.md)**.
