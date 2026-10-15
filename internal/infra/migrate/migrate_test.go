@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rafaelblt/go-auth/internal/infra/migrate"
@@ -75,6 +76,22 @@ func TestRunMigrations_WhenAlreadyMigrated(t *testing.T) {
 	err := migrate.RunMigrations(db.ConnectionString())
 
 	assert.NoError(t, err)
+}
+
+func TestRunMigrations_ClosesItsConnection(t *testing.T) {
+	db := testutil.NewDatabaseForTest(t, t.Context())
+	conn := connectForTest(t, db.ConnectionString())
+
+	require.NoError(t, migrate.RunMigrations(db.ConnectionString()))
+
+	assert.Eventually(t, func() bool {
+		var others int
+		err := conn.QueryRow(t.Context(), `
+			SELECT count(*) FROM pg_stat_activity
+			WHERE backend_type = 'client backend' AND pid <> pg_backend_pid()
+		`).Scan(&others)
+		return err == nil && others == 0
+	}, 5*time.Second, 50*time.Millisecond, "a connection opened by RunMigrations is still open")
 }
 
 func TestRunMigrations_WithInvalidURL(t *testing.T) {

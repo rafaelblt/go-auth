@@ -23,10 +23,15 @@ func RunMigrations(dbURL string) error {
 		return fmt.Errorf("new migrate instance failed: %w", err)
 	}
 
-	err = mgrt.Up()
+	upErr := mgrt.Up()
+	_, closeErr := mgrt.Close()
 
-	if err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("migration up failed: %w", err)
+	if upErr != nil && upErr != migrate.ErrNoChange {
+		return fmt.Errorf("migration up failed: %w", upErr)
+	}
+
+	if closeErr != nil {
+		return fmt.Errorf("migrate database close failed: %w", closeErr)
 	}
 
 	return nil
