@@ -49,6 +49,9 @@ go vet ./...
 go test ./...   # needs Docker; see Testing for the subset that does not
 ```
 
+[CI](.github/workflows/ci.yml) runs the same checks, the tests with `-race`, on
+every push to `main` and every pull request.
+
 [Testing](docs/development/testing.md) covers the test layers and helpers, and
 [Commits](docs/development/commits.md) the message format and what goes in one
 commit.
