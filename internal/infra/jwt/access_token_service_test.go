@@ -275,6 +275,30 @@ func TestAccessTokenService_Validate_ReturnsErrTokenInvalid(t *testing.T) {
 	assert.ErrorIs(t, err, session.ErrTokenInvalid)
 }
 
+func TestAccessTokenService_Validate_ReturnsErrTokenInvalid_WhenSubjectIsNotUserID(t *testing.T) {
+	testCases := []struct {
+		desc    string
+		subject string
+	}{
+		{desc: "missing", subject: ""},
+		{desc: "not a uuid", subject: "not-a-uuid"},
+		{desc: "nil uuid", subject: "00000000-0000-0000-0000-000000000000"},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			helper := NewServiceTestHelper(t)
+			parsed := helper.FakeSigner.DefaultParsedClaims()
+			parsed.Subject = tC.subject
+			helper.FakeSigner.SetParsedClaims(parsed)
+
+			claims, err := helper.Service().Validate("token")
+
+			assert.Zero(t, claims)
+			assert.ErrorIs(t, err, session.ErrTokenInvalid)
+		})
+	}
+}
+
 func TestAccessTokenService_Validate_ReturnsErrTokenExpired(t *testing.T) {
 	helper := NewServiceTestHelper(t)
 	helper.FakeSigner.SetParseError(ErrTokenExpired)

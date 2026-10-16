@@ -287,8 +287,9 @@ rather not verify it itself.
 
 It reads the clock, then validates the token with
 `infra/jwt.AccessTokenService.Validate`: EdDSA, a published `kid`, the
-signature and `exp`, then `sub` as the user ID. A malformed or forged token, or
-one signed by an unknown key, is `invalid token`; an expired one is
+signature and `exp`, then `sub` as the user ID. A malformed or forged token,
+one signed by an unknown key, or one whose `sub` is not a user ID, is
+`invalid token`; an expired one is
 `token expired`; both answer `401 invalid_token`, and anything else `500`.
 `ExpiresIn` is never negative, because the clock is read before the token is
 checked.
