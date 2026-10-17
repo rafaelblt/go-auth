@@ -269,6 +269,11 @@ is calling, so it revokes the whole session, which locks out both: the attacker
 for good, the user until they log in again. Serving the request instead would
 let an attacker who replayed a token keep a rotating credential indefinitely.
 
+The session revoked can already be dead: a spent token comes here even once it
+has expired (step 4), and the [session cleanup](#session-cleanup) can delete a
+dead session after step 2. The revocation then finds no session, and the
+answer is `invalid token`, as at step 2: the token is unknown from then on.
+
 The legitimate client pays when it sends a token twice itself, after a lost
 response or from two tabs
 ([Limitations](../limitations.md#a-repeated-refresh-logs-the-user-out)). The
@@ -322,10 +327,6 @@ rather than one long one, though a deployment can fall behind
 
 A refresh that presents a token of a session at the moment the cleanup deletes
 it, a token dead for longer than the retention and refused either way, gets
-`invalid token`, as it would a moment later ([Refresh](#refresh), step 2). The
-exception is a spent token whose session is deleted after the refresh read it:
-reuse detection then finds no session to revoke, and the refresh answers `500`
-where a moment later it would answer `invalid token`. The
-[minimum retention](../configuration.md#session_retention) does not prevent
-it: a spent token goes to reuse detection even once it has expired (step 4), so
-a replay of one at the moment its session is deleted is enough.
+`invalid token`, as it would a moment later, whether the session is gone when
+the refresh reads it ([Refresh](#refresh), step 2) or when reuse detection
+revokes it ([Reuse detection](#reuse-detection)).

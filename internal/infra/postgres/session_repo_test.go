@@ -157,14 +157,14 @@ func TestSessionRepo_Update(t *testing.T) {
 	require.True(t, helper.CheckSessionExists(sess))
 }
 
-func TestSessionRepo_Update_FailsWithSessionNonExistent(t *testing.T) {
+func TestSessionRepo_Update_ReturnsSessionNotFound_WhenSessionNotExists(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
 	sess := sessiontest.NewSession(t, nil)
 
 	repo := helper.Repo()
 	err := repo.Update(t.Context(), sess)
 
-	require.Error(t, err)
+	assert.ErrorIs(t, err, session.ErrSessionNotFound)
 }
 
 func TestSessionRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {

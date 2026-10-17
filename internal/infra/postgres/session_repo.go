@@ -41,6 +41,11 @@ func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	return nil
 }
 
+// Update reports a missing session as session.ErrSessionNotFound, without the
+// lookup a guarded write makes: the session cleanup can delete a session after
+// it was read, so a missing one is stored state, not a bug.
+//
+// See docs/architecture/persistence.md#repositories.
 func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) error {
 	model, err := mapSessionToModel(sess)
 	if err != nil {
@@ -57,7 +62,7 @@ func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) erro
 		return fmt.Errorf("session update failed: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("no rows affected in session update")
+		return session.ErrSessionNotFound
 	}
 
 	return nil

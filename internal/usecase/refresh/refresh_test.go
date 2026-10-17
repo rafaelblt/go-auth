@@ -196,6 +196,22 @@ func TestRefresh_RevokesSession_WhenTokenIsSpentConcurrently(t *testing.T) {
 	assert.Equal(t, helper.FakeClock.Now(), revokedAt)
 }
 
+// The session cleanup can delete the session of a spent token between the read
+// of the session and its revocation.
+func TestRefresh_ReturnsTokenInvalidError_WhenSessionOfTokenAlreadyUsedIsGone(t *testing.T) {
+	helper := NewTestHelper(t)
+	fixture := helper.SeedUsedToken()
+
+	helper.FakeUnitOfWork.FakeSessionWriter.SetError(session.ErrSessionNotFound)
+
+	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
+
+	assert.ErrorIs(t, err, refresh.ErrTokenInvalid)
+	assert.Zero(t, out)
+	helper.AssertNoAccessTokenIssued()
+	helper.AssertNoRefreshTokenWrites()
+}
+
 func TestRefresh_ReturnsError_WhenRevokingSessionOfTokenAlreadyUsedFails(t *testing.T) {
 	helper := NewTestHelper(t)
 	fixture := helper.SeedUsedToken()

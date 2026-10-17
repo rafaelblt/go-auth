@@ -116,8 +116,15 @@ with `pgx.NamedArgs`, `RevokeAllByUserID` with positional arguments.
 
 A `Find*` that finds nothing returns `(nil, nil)`: whether a missing row is a
 problem is the caller's decision. An update that matches no row is an error,
-since the row vanished; `RevokeAllByUserID` is the exception, as a user may
-have no session left to revoke.
+since the row vanished, with two exceptions. `RevokeAllByUserID` returns
+nothing, as a user may have no session left to revoke. `SessionRepo.Update`
+returns `session.ErrSessionNotFound`, without the lookup of a
+[guarded write](#guarded-writes). Nothing deletes a password, and the
+[minimum retention](../configuration.md#session_retention) keeps the cleanup
+away from a token being rotated, so a row missing there is a bug. A session is
+different: the [session cleanup](usecases.md#session-cleanup) can delete one
+at any moment once it is dead, so a missing session is stored state for the
+caller to answer ([Reuse detection](usecases.md#reuse-detection)).
 
 ## Guarded writes
 

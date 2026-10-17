@@ -141,6 +141,13 @@ func (uc *Refresh) handleTokenReuse(ctx context.Context, sess *session.Session, 
 		}
 		return nil
 	})
+	if errors.Is(err, session.ErrSessionNotFound) {
+		// The session cleanup deleted the session, and the token with it,
+		// after the session was read: the token is unknown from now on.
+		//
+		// See docs/architecture/usecases.md#reuse-detection.
+		return ErrTokenInvalid
+	}
 	if err != nil {
 		return fmt.Errorf("session revocation failed: %w", err)
 	}
