@@ -6,6 +6,11 @@ restart. Every missing or malformed variable is reported in one error, and the
 service exits rather than start half-configured
 ([Startup validation](#startup-validation)).
 
+[`.env.example`](../.env.example) lists every variable with its default, as a
+template to copy into wherever the deployment sets the environment. It is not
+a config file: the service reads no `.env` file, and `docker-compose.dev.yml`
+sets the development stack's variables itself.
+
 | Variable | Required | Default | Format |
 |---|---|---|---|
 | `DATABASE_URL` | yes | | PostgreSQL connection URL |
