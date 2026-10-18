@@ -123,6 +123,7 @@ nothing else would report:
 | `TestMarkdownLinksResolve` | Every relative link between documents resolves, file and anchor |
 | `TestDocLinksInCodeCommentsResolve` | Every `docs/….md` path in a comment exists, anchor included |
 | `TestOpenAPISpecMatchesTheRoutes` | The routes in `docs/api/openapi.yaml` are the ones `internal/api/router.go` registers |
+| `TestEnvExampleMatchesTheConfigVariables` | The variables in `.env.example` are the ones `internal/config/env_vars.go` declares, commented out or not |
 | `TestEveryPackageHasAPackageComment` | Every package has a doc comment |
 | `TestNoUseCaseLivesInTheUsecasePackageItself` | No use case sits in `internal/usecase` itself, where it could fill a DTO by hand ([DTOs](../architecture/usecases.md#dtos)) |
 
