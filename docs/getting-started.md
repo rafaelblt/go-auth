@@ -18,7 +18,7 @@ docker compose -f docker-compose.dev.yml up --build
 ```
 
 The API listens on `http://localhost:8080`, and PostgreSQL on `localhost:5432`,
-with the credentials in the compose file; data is kept in the `goauth_pg_data`
+with the credentials in the compose file; data is kept in the `go-auth_pg_data`
 volume. This stack is for development only: the credentials are hard-coded, and
 its image carries the whole Go toolchain. To deploy, build the
 [production image](#the-production-image).
