@@ -268,12 +268,58 @@ rejected:
 ### Reuse detection
 
 `handleTokenReuse` revokes the session with `Session.Revoke` and
-`SessionWriter.Update`, then answers `ErrTokenAlreadyUsed`. `Update` is the only
-caller of that method, and is not guarded: two requests that both revoke write
-twice, harmlessly. A spent token reaches here however long ago it expired, so
-its session may be dead and deleted by the session cleanup after step 2:
-`Update` then returns `session.ErrSessionNotFound`, answered with
+`SessionWriter.Update`, then answers `ErrTokenAlreadyUsed`. `Update`, which
+[logout](#logout) calls too, is not guarded: two requests that both revoke
+write twice, harmlessly. A spent token reaches here however long ago it
+expired, so its session may be dead and deleted by the session cleanup after
+step 2: `Update` then returns `session.ErrSessionNotFound`, answered with
 `ErrTokenInvalid`, as at step 2.
+
+## Logout
+
+`internal/usecase/logout`. Implements [Logging out](../system.md#logging-out).
+
+| File | Holds |
+|---|---|
+| `logout.go` | `Input`, `Output`, `ErrTokenInvalid`, `Execute`, and the steps: `resolveToken`, `getSessionOfToken`, `revoke` |
+| `config.go` | `Config`, `New` |
+
+**Rules the code keeps**
+
+- `resolveToken` and `getSessionOfToken` find the token and its session as
+  [refresh](#refresh)'s do, and answer a token or a session that is missing
+  with `ErrTokenInvalid`.
+- A revoked session is left as it is. Any other is revoked with
+  `Session.Revoke` and `SessionWriter.Update`, in a unit of work, whatever the
+  token's state; `session.ErrSessionNotFound` from `Update` is
+  `ErrTokenInvalid`, as in [reuse detection](#reuse-detection).
+- The token is never written. Refresh checks the session before the token, so
+  the revocation stops every token of the session, and a spent token stays one
+  for reuse detection to find.
+- `Output.ReuseDetected` is set for a spent token of a session that was still
+  active, and `internal/api` logs it with refresh's reason for reuse
+  ([Outcomes](../logging.md#outcomes)). The token's state is read for nothing
+  else: an expired token ends its session like a current one.
+
+A logout and a refresh of the same session never wait on each other: the
+`UPDATE` locks the session row `FOR NO KEY UPDATE`, which does not conflict
+with the `FOR KEY SHARE` a rotation's insert takes through the foreign key. A
+refresh that spends the token between the logout's read and its write is not
+reported as reuse: the logout reads the token once and never writes it, and the
+session ends revoked either way.
+
+**When you change it:** the steps in [Logging out](../system.md#logging-out),
+and the `success logout` line in [Logging](../logging.md#outcomes).
+
+### One revoked state
+
+Logout revokes the session as reuse detection and the password change do,
+rather than with a state of its own, such as a `logged_out_at`: `revoked_at`
+means the session issues no more tokens, whatever the cause, and everything
+that reads it, step 3 of the refresh, the
+[session cleanup](persistence.md#deleting-dead-sessions) and
+`RevokeAllByUserID`, treats every cause alike. A second state would have each
+of them check both. The cause is in the log, not in the database.
 
 ## Verify
 

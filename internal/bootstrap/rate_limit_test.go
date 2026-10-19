@@ -76,6 +76,7 @@ func TestNewRateLimiting_ReturnsTheLevelsLimits(t *testing.T) {
 	assert.Equal(t, port.RateLimit{Requests: 100, Period: time.Minute}, rateLimiting.Refresh)
 	assert.Equal(t, port.RateLimit{Requests: 10, Period: time.Hour}, rateLimiting.ChangePassword)
 	assert.Equal(t, port.RateLimit{Requests: 100, Period: time.Minute}, rateLimiting.Me)
+	assert.Equal(t, port.RateLimit{Requests: 100, Period: time.Minute}, rateLimiting.Logout)
 }
 
 // The numbers are documented per level in docs/configuration.md; a change here
@@ -88,6 +89,7 @@ func TestRateLimitsByLevel_MatchesTheDocumentedTable(t *testing.T) {
 			refresh:        port.RateLimit{Requests: 300, Period: time.Minute},
 			changePassword: port.RateLimit{Requests: 30, Period: time.Hour},
 			me:             port.RateLimit{Requests: 300, Period: time.Minute},
+			logout:         port.RateLimit{Requests: 300, Period: time.Minute},
 		},
 		config.RateLimitNormal: {
 			register:       port.RateLimit{Requests: 10, Period: time.Hour},
@@ -95,6 +97,7 @@ func TestRateLimitsByLevel_MatchesTheDocumentedTable(t *testing.T) {
 			refresh:        port.RateLimit{Requests: 100, Period: time.Minute},
 			changePassword: port.RateLimit{Requests: 10, Period: time.Hour},
 			me:             port.RateLimit{Requests: 100, Period: time.Minute},
+			logout:         port.RateLimit{Requests: 100, Period: time.Minute},
 		},
 		config.RateLimitStrict: {
 			register:       port.RateLimit{Requests: 3, Period: time.Hour},
@@ -102,6 +105,7 @@ func TestRateLimitsByLevel_MatchesTheDocumentedTable(t *testing.T) {
 			refresh:        port.RateLimit{Requests: 30, Period: time.Minute},
 			changePassword: port.RateLimit{Requests: 3, Period: time.Hour},
 			me:             port.RateLimit{Requests: 30, Period: time.Minute},
+			logout:         port.RateLimit{Requests: 30, Period: time.Minute},
 		},
 	}
 

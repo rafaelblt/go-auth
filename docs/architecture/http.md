@@ -32,7 +32,8 @@ encoder and a success logger, so a new endpoint is three small functions in
    JSON. What the decoder accepts and tolerates is part of the contract:
    [Request bodies](../api/reference.md#request-bodies);
 4. runs the use case, then translates its error or encodes its output, logs
-   the success, and writes the response with `writeJSON`.
+   the success, and writes the response with `writeJSON`, or only its status
+   when the encoder gives no body, as logout's `204` has none.
 
 Each step's log line is in [Logging](../logging.md#outcomes).
 

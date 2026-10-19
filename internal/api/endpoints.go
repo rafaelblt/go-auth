@@ -10,6 +10,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/logout"
 	"github.com/rafaelblt/go-auth/internal/usecase/me"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -244,6 +245,35 @@ func meEncoder(out me.Output) response {
 
 func meSuccessLog(ctx context.Context, out me.Output) {
 	loggerFrom(ctx).Info("success me", "user_id", out.User.ID())
+}
+
+type logoutRequestBody struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func logoutDecoder(r *http.Request) (logout.Input, error) {
+	var body logoutRequestBody
+	if err := decodeJSONBody(r, &body); err != nil {
+		return logout.Input{}, err
+	}
+	in := logout.Input{
+		RefreshToken: body.RefreshToken,
+	}
+	return in, nil
+}
+
+func logoutEncoder(logout.Output) response {
+	return response{StatusCode: http.StatusNoContent}
+}
+
+func logoutSuccessLog(ctx context.Context, out logout.Output) {
+	attrs := []any{"user_id", out.UserID, "session_id", out.SessionID}
+	if out.ReuseDetected {
+		// Refresh's reason for reuse, so that one query finds both. See
+		// docs/logging.md#outcomes.
+		attrs = append(attrs, "reason", refresh.ErrTokenAlreadyUsed.Reason())
+	}
+	loggerFrom(ctx).Info("success logout", attrs...)
 }
 
 type jwksBody struct {

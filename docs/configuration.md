@@ -119,6 +119,7 @@ case-insensitive. No other request is ever limited.
 | `POST /v1/auth/login` | 30 per minute | 10 per minute | 3 per minute |
 | `POST /v1/auth/change-password` | 30 per hour | 10 per hour | 3 per hour |
 | `POST /v1/auth/refresh` | 300 per minute | 100 per minute | 30 per minute |
+| `POST /v1/auth/logout` | 300 per minute | 100 per minute | 30 per minute |
 | `POST /v1/auth/me` | 300 per minute | 100 per minute | 30 per minute |
 
 "10 per minute" means up to 10 requests at once, then one more every 6 seconds:
@@ -133,8 +134,10 @@ rare and cost a bcrypt hash or comparison each, so they are counted per hour.
 Refresh costs no bcrypt, and a client refreshes about once per
 `ACCESS_TOKEN_TTL` per session, so `normal` covers about 3000 sessions behind
 one address. Me costs no bcrypt either, only a token check and one indexed
-read, so it gets refresh's numbers. The counts are per address and kept in
-memory ([Limitations](system.md#rate-limiting-is-per-address-and-per-process)).
+read, so it gets refresh's numbers. So does logout, which costs less than a
+refresh: two indexed reads and at most one write. The counts are per address
+and kept in memory
+([Limitations](system.md#rate-limiting-is-per-address-and-per-process)).
 
 **`off` is deprecated.** It is the v1 default, so upgrading changes nothing; v2
 removes it, and `RATE_LIMIT` will only choose the level. While it is `off`,
@@ -217,9 +220,10 @@ else is a [duration](#durations-and-presets) of at least `1h`:
   and a rotation fails its writes, with a `500`, if the session is deleted
   before it ends. A rotation needs a live session, so the cleanup can delete
   one under it only if the refresh started more than the retention ago, which
-  an hour rules out. Reuse detection needs no margin: it answers a session
-  deleted under it as an unknown token
-  ([Reuse detection](system.md#reuse-detection)).
+  an hour rules out. Reuse detection and logout need no margin: they answer a
+  session deleted under them as an unknown token
+  ([Reuse detection](system.md#reuse-detection),
+  [Logging out](system.md#logging-out)).
 - **`0` does not mean `off`.** It is a duration under the minimum, and stops
   the service from starting like any other, so that no value can be read both
   as "keep nothing" and as "delete nothing".

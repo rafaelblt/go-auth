@@ -113,6 +113,7 @@ func (d *FakeDecoder) Decode(r *http.Request) (FakeInput, error) {
 
 type FakeEncoder struct {
 	statusCode int
+	noBody     bool
 	outputs    []FakeOutput
 }
 
@@ -125,6 +126,9 @@ func NewFakeEncoder() *FakeEncoder {
 
 func (e *FakeEncoder) Encode(out FakeOutput) response {
 	e.outputs = append(e.outputs, out)
+	if e.noBody {
+		return response{StatusCode: e.statusCode}
+	}
 	body := FakeResponseBody{RespValue: out.OutValue}
 	return response{StatusCode: e.statusCode, Body: body}
 }
@@ -222,6 +226,10 @@ func (h *TestAdapterUseCaseHelper) SetErrorInUseCase(err error) {
 	h.fakeUseCase.err = err
 }
 
+func (h *TestAdapterUseCaseHelper) SetNoBodyInEncoder() {
+	h.fakeEncoder.noBody = true
+}
+
 // Tests
 
 func TestAdaptUseCase_ExecutesUseCaseWithInput(t *testing.T) {
@@ -254,6 +262,19 @@ func TestAdaptUseCase_WritesSuccessResponse(t *testing.T) {
 	require.Equal(t, helper.ExpectedStatusCode(), recorder.Code)
 	resp := helper.DecodeSuccessBody(recorder)
 	assert.Equal(t, value, resp.RespValue)
+}
+
+func TestAdaptUseCase_WritesStatusAlone_WhenEncoderGivesNoBody(t *testing.T) {
+	helper := NewTestAdapterUseCaseHelper(t)
+	helper.SetNoBodyInEncoder()
+	recorder := httptest.NewRecorder()
+
+	helper.Handle(recorder, helper.NewRequest("value"))
+
+	require.Equal(t, helper.ExpectedStatusCode(), recorder.Code)
+	assert.Empty(t, recorder.Body.Bytes())
+	assert.Empty(t, recorder.Header().Get("Content-Type"))
+	testutil.Only(t, helper.fakeSuccessLogger.outputs)
 }
 
 func TestAdaptUseCase_TranslatesError_WhenUseCaseFails(t *testing.T) {

@@ -21,6 +21,7 @@ func TestPostEndpoints_ReturnUnsupportedMediaType_WhenContentTypeIsNotJSON(t *te
 		{path: VerifyPath, body: VerifyRequestBody{AccessToken: "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9"}},
 		{path: ChangePasswordPath, body: ChangePasswordRequestBody{Username: "alice", CurrentPassword: "correct-horse", NewPassword: "battery-staple"}},
 		{path: MePath, body: MeRequestBody{AccessToken: "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9"}},
+		{path: LogoutPath, body: LogoutRequestBody{RefreshToken: "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01"}},
 	}
 	contentTypes := []string{"", "text/plain;charset=UTF-8", "application/x-www-form-urlencoded"}
 	for _, endpoint := range endpoints {

@@ -96,6 +96,7 @@ one of these, or a [defect](#defects).
 | `success login` | `INFO` | `user_id`, `session_id` | `200` |
 | `success change password` | `INFO` | `user_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
+| `success logout` | `INFO` | `user_id`, `session_id`, `reason` | `204` |
 | `success verify` | `INFO` | `user_id` | `200` |
 | `success me` | `INFO` | `user_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415` |
@@ -124,7 +125,7 @@ which:
 | `invalid_credentials` | `password not found` | The account has no password row, which registration should make impossible |
 | `invalid_credentials` | `password mismatch` | Wrong password |
 | `invalid_credentials` | `password changed` | The password was replaced after it was checked: on login, by a change that committed first; on change password, by another change |
-| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](system.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](system.md#checking-an-access-token), other than expiry |
+| `invalid_token` | `invalid token` | Refresh and logout: the token is unknown or malformed, or the [session cleanup](system.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](system.md#checking-an-access-token), other than expiry |
 | `invalid_token` | `token expired` | The token is past its expiry |
 | `invalid_token` | `token already used` | Refresh: [reuse detected](system.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | Refresh: the session was already revoked |
@@ -136,6 +137,12 @@ logs `invalid token` from then on.
 
 A code that already says everything, such as `username_already_exists`, has
 no reason, and the field is left out.
+
+`success logout` has a `reason` only when the token had already been spent and
+its session was still active: `token already used`, as refresh logs
+[reuse](system.md#reuse-detection), so one query finds both
+([Reading the logs](#reading-the-logs)). The logout revoked the session, as it
+does whatever the token's state, and answered `204`.
 
 ### Defects
 
@@ -214,9 +221,9 @@ sites, not because of a filter:
 
 Otherwise, a configured value is echoed only when it fails to parse, and only
 for a number, a duration, a boolean or a trusted proxy entry. Success lines
-carry `user_id`, and login and refresh `session_id`, which tie an account's
-requests together; failures carry neither, since naming the account behind a
-rejected attempt would put its existence in the log.
+carry `user_id`, and login, refresh and logout `session_id`, which tie an
+account's requests together; failures carry neither, since naming the account
+behind a rejected attempt would put its existence in the log.
 
 ## Reading the logs
 
@@ -232,10 +239,10 @@ jq -c 'select(.level == "ERROR")' < logs.json
 # Why clients are getting 401
 jq -c 'select(.msg == "use case error") | {request_id, path, code, reason}' < logs.json
 
-# Reuse detection firing, which revoked a session
+# Reuse detected, by a refresh or a logout, either of which revoked a session
 jq -c 'select(.reason == "token already used")' < logs.json
 
-# The life of one session, from its login to its last refresh
+# The life of one session, from its login to its last refresh or its logout
 jq -c 'select(.session_id == "0b9f3f02-9a1f-4f7f-9a0e-4a1b6f2d9c77")' < logs.json
 ```
 
