@@ -161,7 +161,11 @@ not one per layer it fell through.
 
 - In `internal/api`, take the logger from the request context with
   `loggerFrom(ctx)`, so the line carries the request ID. In `bootstrap`, use
-  the `*slog.Logger` the function is given. Nothing relies on `slog.Default()`.
+  the `*slog.Logger` the function is given. Pass the logger by hand rather than
+  call `slog` directly: `slog.Default()` is only `loggerFrom`'s fallback for a
+  context without a logger, which in the service never happens, since
+  `logging` wraps every route, and in the HTTP tests means a line nobody
+  asserts on.
 - The message is a constant lowercase phrase; everything variable is an
   attribute, in `snake_case` (`error`, `user_id`, `duration`). The startup
   lines ending in `...` predate this.
