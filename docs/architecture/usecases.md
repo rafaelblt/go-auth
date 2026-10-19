@@ -39,8 +39,8 @@ A `UseCaseError` has a `code`, a `kind` (`conflict`, `unauthorized`) and an
 optional `reason`. The HTTP layer maps the kind to a status, so `usecase`
 never refers to HTTP, and it logs the reason but never sends it
 ([Error translation](http.md#error-translation)). That is how login, change
-password, refresh and verify answer every failure with one code while the log
-tells the failures apart ([reasons](../logging.md#outcomes)).
+password, refresh, verify and me answer every failure with one code while the
+log tells the failures apart ([reasons](../logging.md#outcomes)).
 
 ### DTOs
 
@@ -305,6 +305,24 @@ token passes here exactly when it would pass a correct verifier elsewhere, and a
 service can switch between the two. An access token names a user, not a
 session, so the tokens of a revoked session pass until their `exp`. It is never
 rate limited ([why](http.md#rate-limiting)).
+
+## Me
+
+`internal/usecase/me` returns the user an access token was issued to, for a
+client that holds the token and needs more than the user ID it carries, such
+as the username.
+
+It validates the token as [verify](#verify) does, then reads the user its
+`sub` names with `UserReader.FindByID`. A token verify would reject is
+`invalid token` or `token expired`, as there, and a token whose user is no
+longer stored is `user not found`: all three answer `401 invalid_token`, and
+anything else `500`. Nothing in the service deletes a user, so that last one
+takes a change made outside it, such as a row deleted by hand or a database
+restored from an older backup.
+
+Like verify, it reads nothing about the token's session, which the token does
+not name, so the tokens of a revoked session still get their user until their
+`exp`. Unlike verify, it is rate limited ([why](http.md#rate-limiting)).
 
 ## Session cleanup
 

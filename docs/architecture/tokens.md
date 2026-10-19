@@ -39,8 +39,8 @@ every refresh hundreds of milliseconds.
 that it accepts only between 1 minute and 24 hours (`MaxExpiration`).
 `ed25519.Signer` signs them with the key the keyring says signs now, putting its
 ID in the `kid` header. Validation pins `EdDSA`, picks the key by `kid` among the
-published ones and requires `exp`, by the injected clock; the verify endpoint
-runs the same code.
+published ones and requires `exp`, by the injected clock; the verify and me
+endpoints run the same code.
 
 ## Signing keys
 

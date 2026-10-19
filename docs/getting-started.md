@@ -144,7 +144,22 @@ curl -sX POST http://localhost:8080/v1/auth/verify \
 The answer names the user the token was issued to, as `user_id`, or is
 `401 invalid_token`.
 
-### 5. Change the password
+### 5. Find out whose token it is
+
+An access token carries the user ID and nothing else. To show the username,
+ask for the user the token was issued to:
+
+```bash
+curl -sX POST http://localhost:8080/v1/auth/me \
+  -H 'Content-Type: application/json' \
+  -d '{"access_token":"eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..."}'
+```
+
+```json
+{ "user": { "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37", "username": "alice" } }
+```
+
+### 6. Change the password
 
 ```bash
 curl -sX POST http://localhost:8080/v1/auth/change-password \

@@ -8,6 +8,7 @@ import (
 
 type FakeUserReader struct {
 	data map[user.ID]*user.User
+	err  error
 }
 
 func NewFakeUserReader() *FakeUserReader {
@@ -16,7 +17,10 @@ func NewFakeUserReader() *FakeUserReader {
 	}
 }
 
-func (read FakeUserReader) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
+func (read *FakeUserReader) FindByID(ctx context.Context, id user.ID) (*user.User, error) {
+	if read.err != nil {
+		return nil, read.err
+	}
 	usr, exists := read.data[id]
 	if exists {
 		return usr, nil
@@ -24,7 +28,10 @@ func (read FakeUserReader) FindByID(ctx context.Context, id user.ID) (*user.User
 	return nil, nil
 }
 
-func (read FakeUserReader) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
+func (read *FakeUserReader) FindByUsername(ctx context.Context, username user.Username) (*user.User, error) {
+	if read.err != nil {
+		return nil, read.err
+	}
 	for _, usr := range read.data {
 		if usr.Username() == username {
 			return usr, nil
@@ -33,6 +40,10 @@ func (read FakeUserReader) FindByUsername(ctx context.Context, username user.Use
 	return nil, nil
 }
 
-func (read FakeUserReader) InsertUser(user *user.User) {
+func (read *FakeUserReader) InsertUser(user *user.User) {
 	read.data[user.ID()] = user
+}
+
+func (read *FakeUserReader) SetError(err error) {
+	read.err = err
 }

@@ -1,6 +1,6 @@
 # API reference
 
-Six endpoints, with JSON bodies. The same contract, machine-readable, is
+Seven endpoints, with JSON bodies. The same contract, machine-readable, is
 [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a change to the contract updates
 both.
 
@@ -11,6 +11,7 @@ both.
 | `POST` | `/v1/auth/change-password` | Replace a password, given the current one, and revoke every session |
 | `POST` | `/v1/auth/refresh` | Exchange a refresh token for a new pair |
 | `POST` | `/v1/auth/verify` | Check an access token, for a service that does not verify it itself |
+| `POST` | `/v1/auth/me` | Return the user an access token was issued to |
 | `GET` | `/.well-known/jwks.json` | Public keys for verifying access tokens |
 
 ## Conventions
@@ -35,7 +36,7 @@ with `..` segments) gets a `307` redirect to its cleaned form from Go's
 
 **Rate limiting.** When the operator turns it on
 ([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login, change
-password and refresh allow each client address a number of requests, then
+password, refresh and me allow each client address a number of requests, then
 answer `429 too_many_requests` with a `Retry-After` header in seconds. The
 limit is decided before the body is read, so nothing ran: send the same request
 again after the delay, and on `/v1/auth/refresh` the same token, which was not
@@ -315,6 +316,35 @@ sooner, not even revoking its session.
 | Status | Code | Cause |
 |---|---|---|
 | `401` | `invalid_token` | Any failure: a missing or malformed token, another algorithm, a key the JWKS does not publish, an altered token, an expired one |
+
+---
+
+## POST /v1/auth/me
+
+Checks an access token and returns the user it was issued to, for a client
+that holds the token and needs more than the user ID it carries, such as the
+username to show. It checks the token as [verify](#post-v1authverify) does,
+then reads the user.
+
+```json
+{ "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6IjRxNi4uLiIsInR5cCI6IkpXVCJ9..." }
+```
+
+### Response: `200 OK`
+
+```json
+{ "user": { "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37", "username": "alice" } }
+```
+
+The same `user` as register returns. As with verify, revoking the token's
+session does not change the answer: the user is returned until the token
+expires.
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `401` | `invalid_token` | Any failure: whatever verify rejects, and a token whose user no longer exists |
 
 ---
 

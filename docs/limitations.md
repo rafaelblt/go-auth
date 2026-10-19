@@ -32,10 +32,10 @@ provide:
 reverse proxy that:
 
 - terminates TLS;
-- rate limits register, login, change password and refresh while `RATE_LIMIT`
-  is `off`: nothing else limits password guessing then, beyond the cost of a
-  bcrypt comparison;
-- exposes only the six endpoints.
+- rate limits register, login, change password, refresh and me while
+  `RATE_LIMIT` is `off`: nothing else limits password guessing then, beyond
+  the cost of a bcrypt comparison;
+- exposes only the seven endpoints.
 
 With the service's own rate limiting on, set
 [`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
@@ -146,9 +146,10 @@ refresh token at once, but the access tokens already issued stay valid until
 they expire: they hold everything needed to check them, not even their session.
 `ACCESS_TOKEN_TTL` is therefore how long a revoked session keeps working, 30
 minutes by default. [`POST /v1/auth/verify`](api/reference.md#post-v1authverify)
-does not change that: it makes the checks a local verifier makes. An
-application that needs revocation to take effect at once cannot get it from
-access tokens.
+does not change that: it makes the checks a local verifier makes. Nor does
+[`POST /v1/auth/me`](api/reference.md#post-v1authme), which makes the same
+checks and then reads only the user. An application that needs revocation to
+take effect at once cannot get it from access tokens.
 
 A refresh already running when its session is revoked can also still finish,
 as if it had finished just before; the refresh token it returns is useless.

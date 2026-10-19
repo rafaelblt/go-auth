@@ -92,6 +92,7 @@ one of these, or a [defect](#defects).
 | `success change password` | `INFO` | `user_id` | `200` |
 | `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
 | `success verify` | `INFO` | `user_id` | `200` |
+| `success me` | `INFO` | `user_id` | `200` |
 | `unsupported media type error` | `INFO` | `content_type` | `415` |
 | `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `429` |
 | `request body too large error` | `INFO` | — | `413` |
@@ -118,10 +119,11 @@ which:
 | `invalid_credentials` | `password not found` | The account has no password row, which registration should make impossible |
 | `invalid_credentials` | `password mismatch` | Wrong password |
 | `invalid_credentials` | `password changed` | The password was replaced after it was checked: on login, by a change that committed first; on change password, by another change |
-| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](architecture/usecases.md#session-cleanup) deleted its session. Verify: the access token is malformed, not EdDSA, or not signed by a published key |
+| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](architecture/usecases.md#session-cleanup) deleted its session. Verify and me: the access token is malformed, not EdDSA, or not signed by a published key |
 | `invalid_token` | `token expired` | The token is past its expiry |
 | `invalid_token` | `token already used` | Refresh: [reuse detected](architecture/usecases.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | Refresh: the session was already revoked |
+| `invalid_token` | `user not found` | Me: the access token is valid, but its user is no longer stored |
 
 Once the session cleanup has deleted a session, its tokens are unknown: a token
 that logged `token expired`, `token already used` or `session revoked` before

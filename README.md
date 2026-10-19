@@ -16,6 +16,7 @@ POST /v1/auth/login            exchange credentials for tokens
 POST /v1/auth/change-password  replace a password and revoke every session
 POST /v1/auth/refresh          exchange a refresh token for a new token pair
 POST /v1/auth/verify           check an access token on your service's behalf
+POST /v1/auth/me               return the user an access token was issued to
 GET  /.well-known/jwks.json    public keys for verifying access tokens
 ```
 

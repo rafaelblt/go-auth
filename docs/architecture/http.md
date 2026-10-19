@@ -44,9 +44,9 @@ operator does not control, undoes it.
 
 Off unless [`RATE_LIMIT`](../configuration.md#rate_limit) sets a level. Each
 endpoint has its own allowance per client address, keyed as
-`<endpoint> <address>` (`login 203.0.113.9`). Register, login, change password
-and refresh have one, when `NewRouter` is given their limits; a new endpoint
-needs its limit there and in each level's table in
+`<endpoint> <address>` (`login 203.0.113.9`). Register, login, change
+password, refresh and me have one, when `NewRouter` is given their limits; a
+new endpoint needs its limit there and in each level's table in
 `internal/bootstrap/rate_limit.go`.
 
 The limit is decided in the adapter, right after the `415`:
@@ -66,6 +66,12 @@ Verify has no limit, on purpose. It reads no database, and no number of tries
 finds a signature that passes; a limit would only cost the services that
 delegate verification, which call it on every request they serve, usually from
 one address.
+
+Me checks the token as verify does, and has a limit all the same: every token
+that passes costs a database read, and it serves the clients that hold the
+tokens, which ask for their user when they need it, not on every request a
+service serves. A service that needs only the user ID on every request has
+verify, or its own check.
 
 ### Client address
 

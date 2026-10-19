@@ -110,7 +110,7 @@ read in a terminal; case-insensitive. Every line the service writes is in
 
 ### `RATE_LIMIT`
 
-How strictly register, login, change password and refresh are limited per
+How strictly register, login, change password, refresh and me are limited per
 client address; case-insensitive. Verify, the JWKS, unknown paths and wrong
 methods are never limited.
 
@@ -120,6 +120,7 @@ methods are never limited.
 | `POST /v1/auth/login` | 30 per minute | 10 per minute | 3 per minute |
 | `POST /v1/auth/change-password` | 30 per hour | 10 per hour | 3 per hour |
 | `POST /v1/auth/refresh` | 300 per minute | 100 per minute | 30 per minute |
+| `POST /v1/auth/me` | 300 per minute | 100 per minute | 30 per minute |
 
 "10 per minute" means up to 10 requests at once, then one more every 6 seconds:
 the allowance refills steadily. Each endpoint keeps its own count, and every
@@ -133,7 +134,9 @@ who mistypes a few times never notices. Registration and password changes are
 rare and cost a bcrypt hash or comparison each, so they are counted per hour.
 Refresh costs no bcrypt, and a client refreshes about once per
 `ACCESS_TOKEN_TTL` per session, so `normal` covers about 3000 sessions behind
-one address. The limits are constants in `internal/bootstrap/rate_limit.go`.
+one address. Me costs no bcrypt either, only a token check and one indexed
+read, so it gets refresh's numbers. The limits are constants in
+`internal/bootstrap/rate_limit.go`.
 
 The counts are per address and kept in memory
 ([Limitations](limitations.md#rate-limiting-is-per-address-and-per-process)),

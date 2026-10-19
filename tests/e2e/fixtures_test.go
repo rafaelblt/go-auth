@@ -28,6 +28,14 @@ func (f *Fixtures) SaveUser(t *testing.T, usr *user.User) {
 	postgrestest.InsertUser(t, f.pool, usr)
 }
 
+// DeleteUser deletes a user, and its password and sessions by cascade, which
+// nothing in the service does.
+func (f *Fixtures) DeleteUser(t *testing.T, id user.ID) {
+	t.Helper()
+	_, err := f.pool.Exec(t.Context(), `DELETE FROM users WHERE id = $1`, id.Value())
+	require.NoError(t, err, "user delete failed")
+}
+
 func (f *Fixtures) SavePassword(t *testing.T, pwd *password.Password) {
 	t.Helper()
 	postgrestest.InsertPassword(t, f.pool, pwd)

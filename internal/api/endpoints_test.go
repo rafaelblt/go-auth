@@ -16,6 +16,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/me"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/usecase/verify"
@@ -363,6 +364,43 @@ func TestChangePasswordEncoder_ReturnsOnlyUserIDAndUsername(t *testing.T) {
 	output := changepassword.Output{User: apitest.NewUserDTO(t, nil)}
 
 	resp := changePasswordEncoder(output)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	actualJSON, err := json.Marshal(resp.Body)
+	require.NoError(t, err)
+	expectedJSON, err := json.Marshal(map[string]map[string]string{
+		"user": {
+			"id":       output.User.ID(),
+			"username": output.User.Username(),
+		},
+	})
+	require.NoError(t, err)
+	assert.JSONEq(t, string(expectedJSON), string(actualJSON))
+}
+
+func TestMeDecoder_ReturnsInput(t *testing.T) {
+	body := `{"access_token":"access token"}`
+	req := httptest.NewRequest("POST", "localhost:8080", strings.NewReader(body))
+
+	in, err := meDecoder(req)
+
+	require.NoError(t, err)
+	assert.Equal(t, me.Input{AccessToken: "access token"}, in)
+}
+
+func TestMeDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
+	req := httptest.NewRequest("POST", "localhost:8080", nil)
+
+	in, err := meDecoder(req)
+
+	assert.Error(t, err)
+	assert.Zero(t, in)
+}
+
+func TestMeEncoder_ReturnsOnlyUserIDAndUsername(t *testing.T) {
+	output := me.Output{User: apitest.NewUserDTO(t, nil)}
+
+	resp := meEncoder(output)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	actualJSON, err := json.Marshal(resp.Body)

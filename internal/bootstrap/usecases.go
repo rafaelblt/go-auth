@@ -9,6 +9,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/me"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/usecase/sessioncleanup"
@@ -21,6 +22,7 @@ type usecases struct {
 	Refresh        *refresh.Refresh
 	Verify         *verify.Verify
 	ChangePassword *changepassword.ChangePassword
+	Me             *me.Me
 	// SessionCleanup is nil while SESSION_RETENTION is off.
 	SessionCleanup *sessioncleanup.SessionCleanup
 }
@@ -56,6 +58,11 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		return usecases{}, err
 	}
 
+	meUC, err := buildMe(deps)
+	if err != nil {
+		return usecases{}, err
+	}
+
 	clean, err := buildSessionCleanup(cfg, deps)
 	if err != nil {
 		return usecases{}, err
@@ -67,6 +74,7 @@ func newUsecases(cfg config.Config, deps infraDeps) (usecases, error) {
 		Refresh:        refr,
 		Verify:         verf,
 		ChangePassword: &chpw,
+		Me:             meUC,
 		SessionCleanup: clean,
 	}
 	return uc, nil
@@ -155,6 +163,17 @@ func buildChangePassword(deps infraDeps, dummyHash password.Hashed) (changepassw
 	})
 	if err != nil {
 		return changepassword.ChangePassword{}, fmt.Errorf("change password creation failed: %w", err)
+	}
+	return uc, nil
+}
+
+func buildMe(deps infraDeps) (*me.Me, error) {
+	uc, err := me.New(me.Config{
+		AccessTokenValidator: deps.AccessTokenService,
+		UserReader:           deps.Users,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("me creation failed: %w", err)
 	}
 	return uc, nil
 }

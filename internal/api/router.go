@@ -15,6 +15,7 @@ import (
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/me"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
 	"github.com/rafaelblt/go-auth/internal/usecase/verify"
@@ -34,6 +35,7 @@ type Dependencies struct {
 	Refresh           useCase[refresh.Input, refresh.Output]
 	Verify            useCase[verify.Input, verify.Output]
 	ChangePassword    useCase[changepassword.Input, changepassword.Output]
+	Me                useCase[me.Input, me.Output]
 	PublicKeyProvider port.PublicKeyProvider
 }
 
@@ -44,6 +46,7 @@ type RateLimiting struct {
 	Login          port.RateLimit
 	Refresh        port.RateLimit
 	ChangePassword port.RateLimit
+	Me             port.RateLimit
 }
 
 func NewRouter(cfg Config) (http.Handler, error) {
@@ -68,11 +71,14 @@ func NewRouter(cfg Config) (http.Handler, error) {
 	if cfg.Dependencies.ChangePassword == nil {
 		return nil, errors.New("change password nil")
 	}
+	if cfg.Dependencies.Me == nil {
+		return nil, errors.New("me nil")
+	}
 	if cfg.Dependencies.PublicKeyProvider == nil {
 		return nil, errors.New("public key provider nil")
 	}
 
-	var registerLimit, loginLimit, refreshLimit, changePasswordLimit *endpointRateLimit
+	var registerLimit, loginLimit, refreshLimit, changePasswordLimit, meLimit *endpointRateLimit
 	if rl := cfg.RateLimiting; rl != nil {
 		if rl.Limiter == nil {
 			return nil, errors.New("rate limiter nil")
@@ -89,10 +95,14 @@ func NewRouter(cfg Config) (http.Handler, error) {
 		if !validRateLimit(rl.ChangePassword) {
 			return nil, errors.New("change password rate limit invalid")
 		}
+		if !validRateLimit(rl.Me) {
+			return nil, errors.New("me rate limit invalid")
+		}
 		registerLimit = newEndpointRateLimit(*rl, "register", rl.Register)
 		loginLimit = newEndpointRateLimit(*rl, "login", rl.Login)
 		refreshLimit = newEndpointRateLimit(*rl, "refresh", rl.Refresh)
 		changePasswordLimit = newEndpointRateLimit(*rl, "change-password", rl.ChangePassword)
+		meLimit = newEndpointRateLimit(*rl, "me", rl.Me)
 	}
 
 	register := adaptUseCase(useCaseAdapterParams[register.Input, register.Output]{
@@ -123,6 +133,13 @@ func NewRouter(cfg Config) (http.Handler, error) {
 		SuccessLog: changePasswordSuccessLog,
 		RateLimit:  changePasswordLimit,
 	})
+	me := adaptUseCase(useCaseAdapterParams[me.Input, me.Output]{
+		UseCase:    cfg.Dependencies.Me,
+		Decoder:    meDecoder,
+		Encoder:    meEncoder,
+		SuccessLog: meSuccessLog,
+		RateLimit:  meLimit,
+	})
 	// Never rate limited. See docs/architecture/http.md#rate-limiting.
 	verify := adaptUseCase(useCaseAdapterParams[verify.Input, verify.Output]{
 		UseCase:    cfg.Dependencies.Verify,
@@ -137,6 +154,7 @@ func NewRouter(cfg Config) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/auth/refresh", refresh)
 	mux.HandleFunc("POST /v1/auth/verify", verify)
 	mux.HandleFunc("POST /v1/auth/change-password", changePassword)
+	mux.HandleFunc("POST /v1/auth/me", me)
 	mux.Handle("GET /.well-known/jwks.json", &jwksHandler{cfg.Dependencies.PublicKeyProvider})
 
 	handler := jsonRouteErrors(mux)

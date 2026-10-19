@@ -24,7 +24,9 @@ That is the whole payload: no `iss`, `aud`, `iat` or `jti`, no username, no
 roles. A deployment serves one application, so there is no issuer or audience
 to tell apart, and a claim that verifiers are told to ignore only invites
 careless verification. If your application needs more than the user ID, look it
-up by `sub`. The `kid` header names the key that signed the token.
+up by `sub`, or ask `go-auth` for the user with
+[`POST /v1/auth/me`](reference.md#post-v1authme). The `kid` header names the
+key that signed the token.
 
 ## What to verify
 

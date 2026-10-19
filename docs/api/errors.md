@@ -27,7 +27,7 @@ recognise as a generic failure.
 |---|---|---|---|
 | `invalid_json_body` | 400 | every `POST` | The body is not a JSON object with fields of the expected types ([Request bodies](reference.md#request-bodies)) |
 | `invalid_credentials` | 401 | login, change password | The username or the password was rejected, for any reason |
-| `invalid_token` | 401 | refresh, verify | The token cannot be used, for any reason |
+| `invalid_token` | 401 | refresh, verify, me | The token cannot be used, for any reason |
 | `route_not_found` | 404 | any unknown path | No endpoint has this path |
 | `method_not_allowed` | 405 | every endpoint | Wrong method; `Allow` lists the accepted ones |
 | `username_already_exists` | 409 | register | The username is taken |
@@ -73,7 +73,7 @@ counts 1 code point and 4 bytes. In a client, count code points with
 
 ## Deliberately vague errors
 
-Four endpoints say less than they know, on purpose. The server logs which
+Five endpoints say less than they know, on purpose. The server logs which
 failure it was, as a `reason` on the request's log line
 ([Outcomes](../logging.md#outcomes)), so nothing is lost for whoever runs the
 service.
@@ -95,6 +95,9 @@ service.
 - **Verify** answers `invalid_token` to a malformed, a forged and an expired
   token alike: a service has one thing to do with any of them, turn the request
   away.
+- **Me** answers `invalid_token` to whatever verify rejects, and to a token
+  whose user no longer exists, alike: a client has one thing to do with any of
+  them, get a new token.
 
 ## Handling errors in a client
 
@@ -104,6 +107,7 @@ service.
         change password: "wrong username or current password"
         refresh: discard the token and send the user to log in
         verify: turn away the request that carried the token
+        me: refresh, and send the user to log in if that fails too
 404, 405, 413, 415  →  bug in your client: the path, method, body size or Content-Type
 409  →  ask for another username
 422  →  map error.fields[].field to your form fields and show a message for each
