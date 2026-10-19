@@ -26,15 +26,15 @@ recognise as a generic failure.
 | Code | Status | Endpoints | Meaning |
 |---|---|---|---|
 | `invalid_json_body` | 400 | every `POST` | The body is not a JSON object with fields of the expected types ([Request bodies](reference.md#request-bodies)) |
-| `invalid_credentials` | 401 | login, change password | The username or the password was rejected, for any reason |
-| `invalid_token` | 401 | refresh, verify, me | The token cannot be used, for any reason |
+| `invalid_credentials` | 401 | every endpoint that checks a password | The username or the password was rejected, for any reason |
+| `invalid_token` | 401 | every endpoint that takes a token | The token cannot be used, for any reason |
 | `route_not_found` | 404 | any unknown path | No endpoint has this path |
 | `method_not_allowed` | 405 | every endpoint | Wrong method; `Allow` lists the accepted ones |
 | `username_already_exists` | 409 | register | The username is taken |
 | `request_body_too_large` | 413 | every `POST` | The body's JSON value runs past 64 KiB |
 | `unsupported_media_type` | 415 | every `POST` | The `Content-Type` is not `application/json` |
 | `validation_failed` | 422 | register, change password | The input broke a rule; `fields` says which |
-| `too_many_requests` | 429 | every `POST` but verify | Rate limiting is on and the address used up its allowance; `Retry-After` gives the seconds to wait |
+| `too_many_requests` | 429 | the [rate-limited](../configuration.md#rate_limit) endpoints | Rate limiting is on and the address used up its allowance; `Retry-After` gives the seconds to wait |
 | `internal_server_error` | 500 | all | An unexpected failure |
 
 ## Validation errors
@@ -73,31 +73,9 @@ counts 1 code point and 4 bytes. In a client, count code points with
 
 ## Deliberately vague errors
 
-Five endpoints say less than they know, on purpose. The server logs which
-failure it was, as a `reason` on the request's log line
-([Outcomes](../logging.md#outcomes)), so nothing is lost for whoever runs the
-service.
-
-- **Login** answers `invalid_credentials` to an unknown username, a user with
-  no password, a wrong password, and a value that breaks the registration
-  rules alike, and a missing account costs a bcrypt comparison like a wrong
-  password does. So login tells an unknown username from a wrong password
-  neither by its answer nor, within a database round trip, by its time
-  ([unless `BCRYPT_COST` changed](../limitations.md#login-timing-after-a-bcrypt_cost-change)).
-  Registration, though, does reveal whether a username exists
-  ([Limitations](../limitations.md#registration-reveals-whether-a-username-exists)).
-- **Change password** checks the username and the current password as login
-  does, and answers the same way. Only the new password gets a `422`, which
-  depends on nothing but the two passwords sent.
-- **Refresh** answers `invalid_token` to a token that never existed, one that
-  expired, one already used, and one whose session was revoked, so the answer
-  tells someone holding a stolen token nothing about its state.
-- **Verify** answers `invalid_token` to a malformed, a forged and an expired
-  token alike: a service has one thing to do with any of them, turn the request
-  away.
-- **Me** answers `invalid_token` to whatever verify rejects, and to a token
-  whose user no longer exists, alike: a client has one thing to do with any of
-  them, get a new token.
+A `401` says less than the server knows, on purpose: one code covers every
+failure of its kind, and the server logs which one it was. What each endpoint
+keeps back, and why: [Deliberately vague answers](../system.md#deliberately-vague-answers).
 
 ## Handling errors in a client
 

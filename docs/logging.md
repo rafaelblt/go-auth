@@ -106,7 +106,7 @@ one of these, or a [defect](#defects).
 | `use case error` | `INFO` | `code`, `kind`, `reason` | `401` or `409` |
 
 `content_type` is the header as sent, empty when there was none. `client_ip` is
-the [client address](architecture/http.md#client-address) the request was
+the [client address](system.md#which-address-counts) the request was
 counted against, an IPv4 address or an IPv6 /64, and `retry_after` is a
 duration, formatted like `duration`. `pairs` lists the failed fields as
 `"<field> <code>"`, without the values.
@@ -124,9 +124,9 @@ which:
 | `invalid_credentials` | `password not found` | The account has no password row, which registration should make impossible |
 | `invalid_credentials` | `password mismatch` | Wrong password |
 | `invalid_credentials` | `password changed` | The password was replaced after it was checked: on login, by a change that committed first; on change password, by another change |
-| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](architecture/usecases.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](architecture/tokens.md#access-tokens), other than expiry |
+| `invalid_token` | `invalid token` | Refresh: the token is unknown or malformed, or the [session cleanup](system.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](system.md#checking-an-access-token), other than expiry |
 | `invalid_token` | `token expired` | The token is past its expiry |
-| `invalid_token` | `token already used` | Refresh: [reuse detected](architecture/usecases.md#reuse-detection); the session was just revoked |
+| `invalid_token` | `token already used` | Refresh: [reuse detected](system.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | Refresh: the session was already revoked |
 | `invalid_token` | `user not found` | Me: the access token is valid, but its user is no longer stored |
 
@@ -177,8 +177,8 @@ readiness signal there is, and a port already in use shows up as
 ### Background tasks
 
 All carry `task`: `jwt_keyring_rotation`, which syncs the
-[signing keys](architecture/tokens.md#signing-keys), and `session_cleanup`,
-which deletes [dead sessions](architecture/usecases.md#session-cleanup) unless
+[signing keys](system.md#signing-keys), and `session_cleanup`,
+which deletes [dead sessions](system.md#session-cleanup) unless
 `SESSION_RETENTION` is `off`. Each instance writes `background task done` for
 each task once per interval
 ([Background tasks](architecture/startup.md#background-tasks)).

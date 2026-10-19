@@ -4,7 +4,7 @@
 
 Read the [code conventions](docs/architecture/conventions.md): the patterns are
 specific enough that guessing produces code that does not fit. Each package's
-doc comment names the document that covers it, and the
+doc comment names the guide section that covers it, and the
 [package map](docs/architecture/overview.md#packages) lists them all.
 
 ## Compatibility
@@ -31,13 +31,35 @@ edited: a schema change is a new migration.
 - **The code is the source of truth.** The documents say what it does and why;
   when one disagrees with the code, fix the document, or the code if the code
   is what is wrong.
-- **Every fact has one home.** A document that needs a fact explained elsewhere
-  links to it rather than restating it.
+- **Every fact has one home**, by its kind. Any other document that needs it
+  links there, even when a reader would rather not click:
+
+  | Fact | Home |
+  |---|---|
+  | What the service does, why, the data it keeps, its limitations | [How go-auth works](docs/system.md) |
+  | What a client sends and receives: endpoints, fields, statuses, codes | the [API reference](docs/api/reference.md) and the [Error model](docs/api/errors.md), mirrored in [openapi.yaml](docs/api/openapi.yaml) |
+  | A setting, its values and its default | [Configuration](docs/configuration.md) |
+  | A log line, its fields, and what each reason means | [Logging](docs/logging.md) |
+  | How the code does something: files, types, rules, decisions | the package's section in its [architecture guide](docs/architecture/overview.md#packages) |
+  | The steps of a common change | [Recipes](docs/architecture/recipes.md) |
+
+  `How go-auth works` names no code: a guide links to the behaviour it
+  implements rather than describing it again. The OpenAPI spec is the one
+  deliberate copy, checked against the router.
+- **No lists or counts of things that grow.** "Register, login and refresh" or
+  "seven endpoints" goes wrong with the next endpoint: link to the table that
+  lists them.
+- **No function bodies.** A guide names files, types and the rules the code
+  keeps, not how a function is written, which the code says better.
 - **A decision is explained where its code is documented**, in that package's
   section: what has to hold, why, and the alternatives that were really
   weighed, when there were any. One that spans packages lives with the code
   that enforces it, and the others link there.
-- **A change updates the documents it makes wrong**, in the same commit.
+- **A change updates the documents it makes wrong**, in the same commit. To
+  find them: read the *When you change it* of each package section you touched,
+  follow its recipe if there is one, and search `docs/`, the READMEs and the
+  OpenAPI spec for the names the change affects, such as a log reason, an error
+  code, a variable, a path or a field.
 - **`docs/` describes what exists**, not plans or ideas. A deprecation is
   documented, with what replaces it.
 

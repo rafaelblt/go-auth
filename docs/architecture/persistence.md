@@ -3,7 +3,20 @@
 `internal/infra/postgres`, `internal/infra/migrate`, `migrations`
 
 PostgreSQL, through `pgx/v5` and `pgxpool`. The repositories implement the
-`internal/port` interfaces and are the only code that writes SQL.
+`internal/port` interfaces and are the only code that writes SQL. What is
+stored, for how long, and the migration policy, seen from outside:
+[Data](../system.md#data).
+
+| File | Holds |
+|---|---|
+| `pool.go` | `NewPool` |
+| `user_repo.go`, `password_repo.go`, `session_repo.go`, `refresh_token_repo.go`, `signing_key_repo.go` | one repository per table |
+| `models.go` | a model per table, and the mapping to and from the entities |
+| `uow.go` | `UnitOfWork` |
+| `schema.go` | `SchemaVersion` and its errors |
+| `interfaces.go` | `DB`, what a repository runs its queries on |
+| `internal/infra/migrate/migrate.go` | `RunMigrations` |
+| `migrations/` | the `.sql` pairs, and `embed.go`: `FS`, `Latest` |
 
 ## Connection pool
 
@@ -49,9 +62,9 @@ The SQL is in [`migrations/`](../../migrations). What the constraints are for:
   starts signing, and **`created_at`** when it was added and published. The key
   ID is derived from the key, so it is not stored.
 
-Nothing deletes users. The [session cleanup](usecases.md#session-cleanup)
-deletes dead sessions, with their refresh tokens
-([how](#deleting-dead-sessions)), and the keyring deletes retired signing keys.
+What deletes what: [Data](../system.md#data). The statements are
+[Deleting dead sessions](#deleting-dead-sessions) and
+`SigningKeyRepo.DeleteBefore`.
 
 ## Migrations
 
@@ -74,12 +87,8 @@ schema it was not built for would fail one request at a time instead.
 
 A missing table is recognised by its SQLSTATE, `42P01`, not by its message, so
 a server in another locale does not break the check. Applying migrations, as an
-operator: [Getting started](../getting-started.md#migrations).
-
-To add one, create the `up` and `down` pair with the next number, and check
-that the `down` undoes the `up` on the right table: a wrong `down` only shows up
-during a rollback. `Latest()` and the test helpers pick it up. A released
-migration is never edited; a change is a new migration.
+operator: [Getting started](../getting-started.md#migrations). Adding one:
+[Recipes](recipes.md#add-a-migration).
 
 `000006` builds its index `CONCURRENTLY`, so that logins and refreshes keep
 writing to `refresh_tokens` while it builds, however large the table has grown:
@@ -111,8 +120,7 @@ domain's constructors ([Constructors](conventions.md#constructors)), so a row
 that breaks a rule is an error, not a malformed entity. Inserts use
 `pgx.StrictStructArgs`, which fails when a named parameter and a model field do
 not match, so a column added on one side only fails loudly. Updates name only
-the columns they set: `SessionRepo.Update` with `pgx.StructArgs`, `UpdateHash`
-with `pgx.NamedArgs`, `RevokeAllByUserID` with positional arguments.
+the columns they set.
 
 A `Find*` that finds nothing returns `(nil, nil)`: whether a missing row is a
 problem is the caller's decision. An update that matches no row is an error,
@@ -207,13 +215,10 @@ deletes up to that many sessions created before the cutoff that were revoked
 before it, or that have no refresh token expiring at or after it, and returns
 how many it deleted.
 
-- **Whole sessions, never a token on its own.** `ON DELETE CASCADE` takes a
-  session's tokens with it. A spent token of a live session is what
-  [reuse detection](usecases.md#reuse-detection) looks for: once deleted, a
-  replay of it would get "not found" instead of revoking the session. The tokens
-  of a dead session can no longer be refreshed, so nothing is lost with them.
-- **By the stored `expires_at`**, never by `REFRESH_TOKEN_TTL`, which can change
-  between deploys: each token keeps the expiry it was issued with. Each refresh
+- **Whole sessions, never a token on its own**
+  ([why](../system.md#session-cleanup)): `ON DELETE CASCADE` takes a session's
+  tokens with it.
+- **By the stored `expires_at`**, never by the configured TTL. Each refresh
   issues a token that expires after the ones before it, so no token expiring at
   or after the cutoff means the latest one expired before it.
 - **`created_at` before the cutoff** keeps out a session that has no token yet.

@@ -172,14 +172,14 @@ the change: log in again with the new password.
 
 ## Deploying
 
-Read [Limitations](limitations.md) first. The two things most likely to matter:
+Read [Limitations](system.md#limitations) first. The two things most likely to matter:
 
 - `go-auth` has no TLS of its own, and its rate limiting is off unless you set
   [`RATE_LIMIT`](configuration.md#rate_limit): run it
-  [behind a reverse proxy](limitations.md#run-it-behind-a-reverse-proxy).
+  [behind a reverse proxy](system.md#run-it-behind-a-reverse-proxy).
 - Set [`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key),
   or the signing keys are stored unencrypted in the database
-  ([why it matters](limitations.md#signing-keys-are-stored-in-the-database)).
+  ([why it matters](system.md#signing-keys-are-stored-in-the-database)).
 
 ### The production image
 

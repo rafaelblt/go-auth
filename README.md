@@ -33,7 +33,7 @@ GET  /.well-known/jwks.json    public keys for verifying access tokens
 
 It has no email, OAuth or passwordless login, no password reset, no logout, no
 roles or scopes, and no TLS of its own: run it behind a reverse proxy. Read
-[Limitations](docs/limitations.md) before deciding whether it fits your
+[Limitations](docs/system.md#limitations) before deciding whether it fits your
 project.
 
 ## Quick start
@@ -57,8 +57,8 @@ curl -X POST http://localhost:8080/v1/auth/register \
 
 ## Documentation
 
-Start with [Getting started](docs/getting-started.md),
-[Configuration](docs/configuration.md) and the
+Start with [How go-auth works](docs/system.md), then
+[Getting started](docs/getting-started.md) and the
 [API reference](docs/api/reference.md); [docs/README.md](docs/README.md) lists
 every document. To contribute, read [CONTRIBUTING.md](CONTRIBUTING.md).
 

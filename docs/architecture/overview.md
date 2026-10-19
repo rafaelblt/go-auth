@@ -3,13 +3,22 @@
 `go-auth` is a layered application in the ports-and-adapters style. The
 business rules sit in the middle and know nothing about HTTP, PostgreSQL,
 bcrypt or JWT. Those live at the edges, and the middle reaches them only
-through interfaces.
+through interfaces. Everything is under `internal/`: the public interface is
+HTTP ([What it is](../system.md#what-it-is)).
 
-It is a standalone service with an HTTP and JSON API rather than a Go library,
-so that projects in any language can use it. The cost is a network round trip
-on every call, which is why access tokens can be verified without calling it
-([Token model](tokens.md#token-model)). Everything is under `internal/`: the
-public interface is HTTP.
+## Reading the guides
+
+The documents in `docs/architecture/` say how the code does what
+[How go-auth works](../system.md) describes, and never restate it: a guide
+links to the behaviour it implements. To work on a package:
+
+1. read the behaviour in [How go-auth works](../system.md), if it is not
+   familiar yet;
+2. read the [code conventions](conventions.md) once;
+3. read the package's section, which its doc comment names and the
+   [table below](#packages) lists. Every section has the package's files, the
+   rules its code keeps, what changes with it, and the decisions behind it;
+4. for a common change, follow its [recipe](recipes.md).
 
 ## Layers
 
@@ -44,7 +53,7 @@ Each package's doc comment names its document too.
 | Package | Role | Document |
 |---|---|---|
 | `cmd`, `internal/bootstrap` | Entry point, and the composition root: wires everything, runs the server and the background tasks | [Startup](startup.md) |
-| `internal/config` | Loads and validates the environment variables | [Configuration](../configuration.md) |
+| `internal/config` | Loads and validates the environment variables | [Startup](startup.md#configuration-loading) |
 | `internal/api` | HTTP: routing, JSON bodies, middleware, rate limiting, error translation | [HTTP](http.md) |
 | `internal/usecase/...` | One package per use case, `credential`, the check login and change password share, and the DTOs | [Use cases](usecases.md) |
 | `internal/port` | The interfaces the use cases depend on | [Use cases](usecases.md#ports) |
@@ -53,7 +62,7 @@ Each package's doc comment names its document too.
 | `internal/shared` | Generic helpers | [Domain](domain.md#shared) |
 | `internal/infra` | `SystemClock` | [Conventions](conventions.md#clock) |
 | `internal/infra/postgres`, `internal/infra/migrate`, `migrations` | Pool, repositories, unit of work, schema check, migrations | [Persistence](persistence.md) |
-| `internal/infra/bcrypt` | Password hashing | [`BCRYPT_COST`](../configuration.md#bcrypt_cost) |
+| `internal/infra/bcrypt` | Password hashing, and the 4 to 31 range of its cost | [`BCRYPT_COST`](../configuration.md#bcrypt_cost) |
 | `internal/infra/jwt`, `internal/infra/jwt/ed25519` | Access tokens and the signing keys | [Tokens](tokens.md) |
 | `internal/infra/ratelimit` | The in-memory rate limiter | [HTTP](http.md#rate-limiting) |
 | `internal/testutil/...`, `tests/e2e`, `tests/docs` | Test helpers, end-to-end and documentation tests | [Testing](../development/testing.md) |

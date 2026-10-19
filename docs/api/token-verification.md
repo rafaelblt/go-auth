@@ -57,11 +57,11 @@ fetch it again when a token has a `kid` you do not know, and limit how often
 that refetch can happen, so tokens with random `kid`s cannot force a flood of
 requests.
 
-A key is in the document a day before it starts signing, and for 25 hours
-after it stops, longer than any access token lives. So a verifier that fetches
-the document at least every 23 hours never meets a valid token whose `kid` it
-lacks, and no valid token loses its key
-([Signing keys](../architecture/tokens.md#signing-keys)).
+A key is in the document a day before it starts signing, and stays after it
+stops for longer than any access token lives
+([Signing keys](../system.md#signing-keys)). So a verifier that fetches the
+document at least every 23 hours never meets a valid token whose `kid` it
+lacks, and no valid token loses its key.
 
 ## Examples
 
@@ -154,9 +154,6 @@ the answer for that token until then and skip most of the round trips.
 
 ## Revocation is not immediate
 
-An access token holds everything needed to check it, and nothing more, not
-even its session, so nothing invalidates one before its `exp`: not reuse
-detection, not a password change, whether you verify it yourself or ask
-`go-auth`. A stolen access token keeps working for up to `ACCESS_TOKEN_TTL`, 30
-minutes by default, after its session is revoked
-([Limitations](../limitations.md#access-tokens-cannot-be-revoked)).
+Nothing invalidates an access token before its `exp`, whether you verify it
+yourself or ask `go-auth`
+([Access tokens cannot be revoked](../system.md#access-tokens-cannot-be-revoked)).

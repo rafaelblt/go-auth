@@ -2,7 +2,7 @@
 // variables or directly from code. Every problem it finds is reported at once,
 // so the service never starts half-configured.
 //
-// See docs/configuration.md.
+// See docs/architecture/startup.md#configuration-loading.
 package config
 
 import (

@@ -7,15 +7,14 @@ info:
     name: MIT
     identifier: MIT
   description: |
-    A self-hosted authentication service. Seven endpoints; every request and
-    response body is JSON. No endpoint takes a credential in a header.
+    A self-hosted authentication service. Every request and response body is
+    JSON. No endpoint takes a credential in a header.
 
     The `POST` endpoints require `Content-Type: application/json`
     (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
     decoded only up to its first 64 KiB, else `413`. When the operator turns
-    rate limiting on, register, login, change password, refresh and me answer
-    `429` with `Retry-After` once a client address has used up its allowance;
-    verify is never limited.
+    rate limiting on, the endpoints that list a `429` response answer it, with
+    `Retry-After`, once a client address has used up its allowance.
 
     A path no endpoint has is answered `404` with code `route_not_found`, in the
     usual error shape. A path not in canonical form (`//v1/auth/login`, or one
@@ -379,10 +378,9 @@ paths:
           $ref: '#/components/responses/InvalidJSONBody'
         '401':
           description: |
-            The token cannot be used. Every failure gets this one response: a
-            missing or malformed token, one signed with another algorithm or by
-            a key the JWKS does not publish, one altered after it was signed,
-            and an expired one.
+            The token cannot be used, for any reason: a malformed, forged or
+            expired token, and any other failure of the checks a correct
+            verifier makes. Every failure gets this one response.
           content:
             application/json:
               schema:
@@ -438,10 +436,9 @@ paths:
           $ref: '#/components/responses/InvalidJSONBody'
         '401':
           description: |
-            The token cannot be used. Every failure gets this one response: a
-            missing or malformed token, one signed with another algorithm or by
-            a key the JWKS does not publish, one altered after it was signed,
-            an expired one, and one whose user no longer exists.
+            The token cannot be used, for any reason: whatever verify rejects,
+            and a token whose user no longer exists. Every failure gets this one
+            response.
           content:
             application/json:
               schema:

@@ -1,6 +1,6 @@
 # API reference
 
-Seven endpoints, with JSON bodies. The same contract, machine-readable, is
+The endpoints, with JSON bodies. The same contract, machine-readable, is
 [openapi.yaml](openapi.yaml) (OpenAPI 3.1); a change to the contract updates
 both.
 
@@ -34,14 +34,12 @@ and `HEAD`. Another method on a known path is `405 method_not_allowed`, with an
 with `..` segments) gets a `307` redirect to its cleaned form from Go's
 `http.ServeMux`: a short HTML body for a `GET`, an empty one otherwise.
 
-**Rate limiting.** When the operator turns it on
-([`RATE_LIMIT`](../configuration.md#rate_limit)), register, login, change
-password, refresh and me allow each client address a number of requests, then
-answer `429 too_many_requests` with a `Retry-After` header in seconds. The
-limit is decided before the body is read, so nothing ran: send the same request
-again after the delay, and on `/v1/auth/refresh` the same token, which was not
-spent. A request answered `415` is never counted. Verify and the JWKS are never
-limited.
+**Rate limiting.** When the operator turns it on, the endpoints listed under
+[`RATE_LIMIT`](../configuration.md#rate_limit) allow each client address a
+number of requests, then answer `429 too_many_requests` with a `Retry-After`
+header in seconds. Nothing ran ([why](../system.md#rate-limiting)): send the
+same request again after the delay, and on `/v1/auth/refresh` the same token,
+which was not spent.
 
 **Timestamps.** RFC 3339, in UTC, to the whole second
 (`2026-09-08T12:00:00Z`). A fraction of a second is dropped, never rounded up,
@@ -50,8 +48,8 @@ so an `expires_at` is never later than the real expiry.
 **Errors.** One shape, described in the [Error model](errors.md). Besides the
 errors listed for each endpoint, every `POST` endpoint can answer
 `400 invalid_json_body`, `413 request_body_too_large`,
-`415 unsupported_media_type` and `500 internal_server_error`, and all but verify
-`429 too_many_requests`.
+`415 unsupported_media_type` and `500 internal_server_error`, and a rate-limited
+one `429 too_many_requests`.
 
 ### Request bodies
 
@@ -83,7 +81,7 @@ UTF-8, with each field once and in lower case, and do not depend on these:
   value;
 - an escaped lone surrogate such as `\ud800` becomes `U+FFFD`, which in a
   password has consequences
-  ([Limitations](../limitations.md#a-lone-surrogate-in-a-password-becomes-ufffd)).
+  ([Limitations](../system.md#a-lone-surrogate-in-a-password-becomes-ufffd)).
 
 ---
 
@@ -104,7 +102,7 @@ Usernames are lower-cased before they are checked and stored, so `Alice` and
 `alice` are the same user. Spaces are not trimmed: a leading or trailing space
 is a character outside the allowed set. Passwords are stored and compared
 exactly as sent, with no trimming and no Unicode normalisation. The reasons:
-[Domain](../architecture/domain.md#user).
+[Usernames and passwords](../system.md#usernames-and-passwords).
 
 ### Response: `201 Created`
 
@@ -133,9 +131,6 @@ A `422` names every field at fault, so one request reports every problem:
   }
 }
 ```
-
-Of any number of registrations of one username sent at once, exactly one
-creates the account; the others get `409`, as they would one after the other.
 
 ---
 
@@ -181,7 +176,7 @@ private, never log it, never put it in a URL.
 | `401` | `invalid_credentials` | Any failure: an unknown username, a wrong password, or a value that breaks the registration rules |
 
 Login never answers `422`
-([Deliberately vague errors](errors.md#deliberately-vague-errors)).
+([why](../system.md#deliberately-vague-answers)).
 
 ---
 
@@ -212,7 +207,7 @@ The old password stops working at once, and **every session of the user is
 revoked**: every refresh token issued before the change, on any device, is
 answered `401 invalid_token` from then on. Access tokens already issued stay
 valid until they expire
-([Limitations](../limitations.md#access-tokens-cannot-be-revoked)).
+([Limitations](../system.md#access-tokens-cannot-be-revoked)).
 
 ### Errors
 
@@ -235,10 +230,8 @@ A `422` names only `new_password`, and comes before the account is looked up:
 }
 ```
 
-Of any number of changes sent at once with the same current password, exactly
-one applies, and the others get `401 invalid_credentials`. A login with the old
-password still running when the change applies either finishes first, and its
-session is revoked with the others, or gets `401 invalid_credentials`.
+What happens to the logins and changes running at the same moment:
+[Changing the password](../system.md#changing-the-password).
 
 ---
 
@@ -264,7 +257,7 @@ spent**: replace your stored copy with the new one.
 **Reuse detection.** A token that was already used revokes its whole session
 before the `401`: the session's current refresh token stops working too, and
 the user has to log in again. Two concurrent refreshes with the same token
-count as reuse: one succeeds, the other revokes the session.
+count as reuse ([why](../system.md#reuse-detection)).
 
 ### Client obligations
 
@@ -315,7 +308,7 @@ sooner, not even revoking its session.
 
 | Status | Code | Cause |
 |---|---|---|
-| `401` | `invalid_token` | Any failure: a missing or malformed token, another algorithm, a key the JWKS does not publish, an altered token, an expired one |
+| `401` | `invalid_token` | Any failure of the [checks](../system.md#checking-an-access-token), an expired token included |
 
 ---
 
