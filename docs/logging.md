@@ -1,8 +1,8 @@
 # Logging
 
 Logs are the only record `go-auth` keeps of what it did: there is no audit
-table and no metrics endpoint. This document lists every line the service can
-write, what its fields mean, and how to work back from a response to the line
+table and no metrics endpoint. This document lists every line the service
+writes itself, what its fields mean, and how to work back from a response to the line
 that explains it. The rules for adding a line are in the
 [code conventions](architecture/conventions.md#logging).
 
@@ -21,6 +21,11 @@ soon as the configuration is known, writes every line:
 configured logger exists, so it goes to **standard error** in Go's default
 format. If the service dies at startup and standard output is empty, look
 there.
+
+Lines written through Go's standard `log` package, by `net/http` (such as
+`http: Accept error: …`, when the process runs out of file descriptors) or by a
+library, go through the same handler, in the same format, at `INFO`, with no
+field beyond `msg`. They are not listed below.
 
 ## Request correlation
 
@@ -77,8 +82,8 @@ Written for every request.
 **nanoseconds as a number in `json`**, and a string such as `62ms` in `text`.
 
 A `request received` with no `request finished` means the panic was
-`http.ErrAbortHandler`, which `recovery` lets through to `net/http`, whose own
-log line is outside this format.
+`http.ErrAbortHandler`, which `recovery` lets through to `net/http`. `net/http`
+drops it without a line, so those two facts are all the log shows of it.
 
 ### Outcomes
 
@@ -177,6 +182,8 @@ which deletes [dead sessions](architecture/usecases.md#session-cleanup) unless
 `SESSION_RETENTION` is `off`. Each instance writes `background task done` for
 each task once per interval
 ([Background tasks](architecture/startup.md#background-tasks)).
+
+`interval` and `elapsed` are durations, formatted like `duration`.
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|

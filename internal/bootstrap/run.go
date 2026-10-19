@@ -20,8 +20,9 @@ func Run(ctx context.Context) error {
 	}
 
 	logger := newLogger(cfg.LogFormat())
-	// Nothing reads the default logger. Setting it only keeps stray slog calls,
-	// from a library or from code with no logger in hand, in the same format.
+	// The service passes its logger by hand. Setting the default keeps stray
+	// slog calls, and the standard log package that net/http writes through, in
+	// the same format.
 	slog.SetDefault(logger)
 
 	logger.Info("building app...")
