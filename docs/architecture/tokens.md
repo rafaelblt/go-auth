@@ -38,9 +38,23 @@ every refresh hundreds of milliseconds.
 ([Token format](../api/token-verification.md#token-format)), and a lifetime
 that it accepts only between 1 minute and 24 hours (`MaxExpiration`).
 `ed25519.Signer` signs them with the key the keyring says signs now, putting its
-ID in the `kid` header. Validation pins `EdDSA`, picks the key by `kid` among the
-published ones and requires `exp`, by the injected clock; the verify and me
-endpoints run the same code.
+ID in the `kid` header.
+
+Validation, by the injected clock, is what the verify and me endpoints run. A
+token is `token expired` when its `exp` has passed, and `invalid token` when
+any other check fails:
+
+- it is not a well-formed JWT;
+- its `alg` is not `EdDSA`;
+- its `kid` is missing, or names no published key;
+- its signature does not verify under that key;
+- it has no `exp`, or an `nbf` still in the future;
+- its `sub` is not a user ID: missing, not a UUID, or the nil UUID.
+
+`ed25519.Signer.Parse` makes every check but the last, which is
+`AccessTokenService.Validate`'s. A change to what they accept changes this
+list, which [Logging](../logging.md#outcomes) and
+[Verify](usecases.md#verify) link to.
 
 ## Signing keys
 
