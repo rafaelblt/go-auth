@@ -83,6 +83,12 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 
 		resp := p.Encoder(output)
 		p.SuccessLog(ctx, output)
+		// A 204 has no body, where writeJSON would send null and a
+		// Content-Type. See docs/architecture/http.md#use-case-adapter.
+		if resp.Body == nil {
+			w.WriteHeader(resp.StatusCode)
+			return
+		}
 		writeJSON(ctx, w, resp)
 	}
 }

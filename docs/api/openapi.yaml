@@ -7,8 +7,9 @@ info:
     name: MIT
     identifier: MIT
   description: |
-    A self-hosted authentication service. Every request and response body is
-    JSON. No endpoint takes a credential in a header.
+    A self-hosted authentication service. Every request body is JSON, and so
+    is every response body but logout's `204`, which has none. No endpoint
+    takes a credential in a header.
 
     The `POST` endpoints require `Content-Type: application/json`
     (parameters such as `; charset=utf-8` are ignored), else `415`. A body is
@@ -341,6 +342,59 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      summary: End the session of a refresh token
+      description: |
+        Revokes the session of a refresh token, whatever the token's state:
+        current, already used, or expired. None of the session's refresh
+        tokens works from then on, and the user's other sessions stay active.
+        The access tokens already issued stay valid until they expire. A
+        logout that went through can be sent again, and gets `204` again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+            examples:
+              logout:
+                value:
+                  refresh_token: kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01
+      responses:
+        '204':
+          description: |
+            The session is revoked, or already was. No body, and no
+            `Content-Type`.
+        '400':
+          $ref: '#/components/responses/InvalidJSONBody'
+        '401':
+          description: |
+            The token is malformed or unknown, a missing field included. Every
+            failure gets this one response; unlike RFC 7009, an unknown token
+            is not answered with success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_token:
+                  value:
+                    error:
+                      code: invalid_token
+                      message: Not authorized.
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestBodyTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /v1/auth/verify:
     post:
       operationId: verify
@@ -560,6 +614,16 @@ components:
           description: |
             The `refresh_token.value` from the last login or refresh. A missing
             field is read as `""`.
+
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          description: |
+            The `refresh_token.value` from the last login or refresh. A missing
+            field is read as `""`, which is `401`.
 
     VerifyRequest:
       type: object

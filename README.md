@@ -15,6 +15,7 @@ POST /v1/auth/register         create a user
 POST /v1/auth/login            exchange credentials for tokens
 POST /v1/auth/change-password  replace a password and revoke every session
 POST /v1/auth/refresh          exchange a refresh token for a new token pair
+POST /v1/auth/logout           end the session of a refresh token
 POST /v1/auth/verify           check an access token on your service's behalf
 POST /v1/auth/me               return the user an access token was issued to
 GET  /.well-known/jwks.json    public keys for verifying access tokens
@@ -22,8 +23,8 @@ GET  /.well-known/jwks.json    public keys for verifying access tokens
 
 ## What it does
 
-- Registration and login with a username and password, and password changes
-  that sign the user out of every session.
+- Registration and login with a username and password, logout from one
+  session, and password changes that sign the user out of every session.
 - Passwords stored as bcrypt hashes; refresh tokens stored only as a SHA-256
   hash.
 - Single-use refresh tokens: presenting one twice revokes its whole session.
@@ -31,8 +32,8 @@ GET  /.well-known/jwks.json    public keys for verifying access tokens
 - Optional rate limiting per client address, structured logs with a request
   ID, and migrations embedded in the binary.
 
-It has no email, OAuth or passwordless login, no password reset, no logout, no
-roles or scopes, and no TLS of its own: run it behind a reverse proxy. Read
+It has no email, OAuth or passwordless login, no password reset, no roles or
+scopes, and no TLS of its own: run it behind a reverse proxy. Read
 [Limitations](docs/system.md#limitations) before deciding whether it fits your
 project.
 

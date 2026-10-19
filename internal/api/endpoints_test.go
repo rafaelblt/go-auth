@@ -12,10 +12,12 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/apitest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
 	"github.com/rafaelblt/go-auth/internal/usecase/changepassword"
 	"github.com/rafaelblt/go-auth/internal/usecase/login"
+	"github.com/rafaelblt/go-auth/internal/usecase/logout"
 	"github.com/rafaelblt/go-auth/internal/usecase/me"
 	"github.com/rafaelblt/go-auth/internal/usecase/refresh"
 	"github.com/rafaelblt/go-auth/internal/usecase/register"
@@ -413,6 +415,73 @@ func TestMeEncoder_ReturnsOnlyUserIDAndUsername(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.JSONEq(t, string(expectedJSON), string(actualJSON))
+}
+
+func TestLogoutDecoder_ReturnsInput(t *testing.T) {
+	body := `{"refresh_token":"refresh token"}`
+	req := httptest.NewRequest("POST", "localhost:8080", strings.NewReader(body))
+
+	in, err := logoutDecoder(req)
+
+	require.NoError(t, err)
+	assert.Equal(t, logout.Input{RefreshToken: "refresh token"}, in)
+}
+
+func TestLogoutDecoder_ReturnsError_WhenRequestBodyIsNil(t *testing.T) {
+	req := httptest.NewRequest("POST", "localhost:8080", nil)
+
+	in, err := logoutDecoder(req)
+
+	assert.Error(t, err)
+	assert.Zero(t, in)
+}
+
+func TestLogoutEncoder_ReturnsNoContentWithoutBody(t *testing.T) {
+	output := logout.Output{
+		UserID:        "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		SessionID:     "0b9f3f02-9a1f-4f7f-9a0e-4a1b6f2d9c77",
+		ReuseDetected: true,
+	}
+
+	resp := logoutEncoder(output)
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Nil(t, resp.Body)
+}
+
+func TestLogoutSuccessLog_LogsTheIDs(t *testing.T) {
+	ctx, buf := contextWithLoggedLines(t)
+	output := logout.Output{
+		UserID:    "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		SessionID: "0b9f3f02-9a1f-4f7f-9a0e-4a1b6f2d9c77",
+	}
+
+	logoutSuccessLog(ctx, output)
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "success logout", line["msg"])
+	assert.Equal(t, "INFO", line["level"])
+	assert.Equal(t, output.UserID, line["user_id"])
+	assert.Equal(t, output.SessionID, line["session_id"])
+	assert.NotContains(t, line, "reason")
+}
+
+// Reuse is found in the logs by this reason, whether refresh or logout met it.
+// See docs/logging.md#reading-the-logs.
+func TestLogoutSuccessLog_LogsReuseWithTheReasonRefreshLogs(t *testing.T) {
+	ctx, buf := contextWithLoggedLines(t)
+	output := logout.Output{
+		UserID:        "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		SessionID:     "0b9f3f02-9a1f-4f7f-9a0e-4a1b6f2d9c77",
+		ReuseDetected: true,
+	}
+
+	logoutSuccessLog(ctx, output)
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "success logout", line["msg"])
+	assert.Equal(t, output.SessionID, line["session_id"])
+	assert.Equal(t, "token already used", line["reason"])
 }
 
 func TestJWKS(t *testing.T) {

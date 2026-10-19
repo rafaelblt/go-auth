@@ -84,6 +84,7 @@ keeps back, and why: [Deliberately vague answers](../system.md#deliberately-vagu
 401  →  login: "wrong username or password"
         change password: "wrong username or current password"
         refresh: discard the token and send the user to log in
+        logout: nothing is left to end; discard the token
         verify: turn away the request that carried the token
         me: refresh, and send the user to log in if that fails too
 404, 405, 413, 415  →  bug in your client: the path, method, body size or Content-Type

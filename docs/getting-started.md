@@ -159,7 +159,19 @@ curl -sX POST http://localhost:8080/v1/auth/me \
 { "user": { "id": "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37", "username": "alice" } }
 ```
 
-### 6. Change the password
+### 6. Log out
+
+```bash
+curl -sX POST http://localhost:8080/v1/auth/logout \
+  -H 'Content-Type: application/json' \
+  -d '{"refresh_token":"kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01"}'
+```
+
+The answer is `204`, with no body. The session's refresh tokens stop working at
+once, and its access tokens when they expire
+([client obligations](api/reference.md#client-obligations-on-logout)).
+
+### 7. Change the password
 
 ```bash
 curl -sX POST http://localhost:8080/v1/auth/change-password \

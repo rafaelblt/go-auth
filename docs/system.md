@@ -13,9 +13,9 @@ how the code does it in the [architecture guides](architecture/overview.md).
 answers in JSON, so applications in any language can use it. It has two kinds
 of callers:
 
-- **client applications**, which register users, log them in, keep them signed
-  in with refresh tokens, change passwords, and ask whose access token they
-  hold;
+- **client applications**, which register users, log them in and out, keep
+  them signed in with refresh tokens, change passwords, and ask whose access
+  token they hold;
 - **your services**, which receive access tokens with each request and check
   them, either themselves, with the public keys the service publishes, or by
   asking the service.
@@ -42,8 +42,8 @@ user ──1:0..1── password
   bcrypt hash that keeps the cost it was made with. It is separate from the
   user so that another kind of credential could be added without changing what
   a user is.
-- A **session** is one login. It is active until it is revoked, by
-  [reuse detection](#reuse-detection) or by a
+- A **session** is one login. It is active until it is revoked, by a
+  [logout](#logging-out), by [reuse detection](#reuse-detection) or by a
   [password change](#changing-the-password). It is **dead** once it is revoked
   or its latest refresh token has expired: nothing can refresh it again.
 - A **refresh token** keeps a session going. The client holds it, and the
@@ -236,6 +236,48 @@ refresh already past step 3 when its session is revoked can still finish, as if
 it had finished just before, and the refresh token it returns belongs to the
 revoked session.
 
+### Logging out
+
+Ends the session of a refresh token: none of the session's refresh tokens can
+be used again, and the user's other sessions stay active. It takes the refresh
+token rather than the access token, which names no session, passes through
+every service that checks it, and may have expired by the time the user logs
+out. Whoever holds a refresh token could already end its session through
+[reuse detection](#reuse-detection), so logging out gives no one a power they
+lacked. In order:
+
+1. A token that is malformed or unknown is rejected, and so is a token whose
+   session the [session cleanup](#session-cleanup) deleted, as in steps 1 and 2
+   of [Refreshing](#refreshing): `401 invalid_token`.
+2. A session already revoked is left as it is.
+3. Otherwise the session is revoked, whatever state the token is in: current,
+   already used, or expired.
+
+Steps 2 and 3 answer `204`, with no body. So a logout can be sent again, and
+its answer says nothing about the state of the token.
+
+- **A spent token still ends the session.** When an attacker refreshes first,
+  the client is left holding a spent token, and its logout has to end the
+  attacker's chain of tokens. That is reuse, and the log records it as it does
+  at refresh ([Outcomes](logging.md#outcomes)).
+- **An unknown token is a `401`**, where RFC 7009 would answer a revocation
+  with success either way: a missing or misspelled field is read as an empty
+  token ([Request bodies](api/reference.md#request-bodies)), and a success there
+  would hide a client that never logs anyone out.
+- **The access tokens already issued keep working** until they expire, for up
+  to `ACCESS_TOKEN_TTL` ([Limitations](#access-tokens-cannot-be-revoked)).
+- **The session is revoked as any other is**: the data keeps when it was
+  revoked, not why ([Data](#data)), and the log says it was a logout.
+
+A refresh with the same token that is already past step 3 when the logout
+revokes the session can still finish, as after any revocation: the refresh
+token it returns belongs to the revoked session, and its access token works
+until it expires. Avoiding that is the client's part
+([obligations](api/reference.md#client-obligations-on-logout)). Logouts, reuse
+detection and password changes running alongside all revoke, with the same
+result. If the session cleanup deletes the session while a logout runs, the
+token is answered as unknown, as it would be a moment later.
+
 ### Checking an access token
 
 `POST /v1/auth/verify` checks an access token for a service that would rather
@@ -336,16 +378,19 @@ the service runs; withdrawing one means
 
 ### Deliberately vague answers
 
-Login, change password, refresh, verify and me answer every failure of a kind
-with one code, and say which failure it was only in the log, as the request's
-`reason` ([Outcomes](logging.md#outcomes)), so nothing is lost for whoever runs
-the service.
+Login, change password, refresh, logout, verify and me answer every failure of
+a kind with one code, and say which failure it was only in the log, as the
+request's `reason` ([Outcomes](logging.md#outcomes)), so nothing is lost for
+whoever runs the service.
 
 - **Login and change password** answer a wrong password, an unknown username, a
   user without a password and a malformed value alike, in about the same time
   ([Login](#login)). What they keep secret is whether a password is right, not
   whether its account exists, which registration reveals.
 - **Refresh** tells someone holding a stolen token nothing about its state.
+- **Logout** answers every token the service knows alike, whatever its state,
+  so it tells nothing about the state either: only, unlike refresh, whether the
+  service knows the token ([why](#logging-out)).
 - **Verify and me** give a service, or a client, one thing to do with any
   failure: turn the request away, or get a new token.
 
@@ -450,8 +495,6 @@ Everything here is current behaviour, not a defect waiting for a fix.
 provide:
 
 - email, OAuth or passwordless login, or password reset;
-- logout: a session ends only when its refresh token expires, or when reuse
-  detection or a password change revokes it;
 - account or session management, such as listing sessions or suspending an
   account;
 - authorisation: there are no roles or scopes, and an access token carries
@@ -569,9 +612,9 @@ user registers, and keep it.
 
 #### Access tokens cannot be revoked
 
-Revoking a session, by reuse detection or by a password change, stops its
-refresh token at once, but the access tokens already issued stay valid until
-they expire: they hold everything needed to check them, not even their session.
+Revoking a session, by a logout or any other way, stops its refresh token at
+once, but the access tokens already issued stay valid until they expire: they
+hold everything needed to check them, not even their session.
 `ACCESS_TOKEN_TTL` is therefore how long a revoked session keeps working, 30
 minutes by default. Verify and me do not change that: they make the checks a
 local verifier makes, and me then reads only the user. An application that

@@ -10,7 +10,7 @@ import (
 )
 
 type rateLimits struct {
-	register, login, refresh, changePassword, me port.RateLimit
+	register, login, refresh, changePassword, me, logout port.RateLimit
 }
 
 var rateLimitsByLevel = map[config.RateLimitLevel]rateLimits{
@@ -20,6 +20,7 @@ var rateLimitsByLevel = map[config.RateLimitLevel]rateLimits{
 		refresh:        port.RateLimit{Requests: 300, Period: time.Minute},
 		changePassword: port.RateLimit{Requests: 30, Period: time.Hour},
 		me:             port.RateLimit{Requests: 300, Period: time.Minute},
+		logout:         port.RateLimit{Requests: 300, Period: time.Minute},
 	},
 	config.RateLimitNormal: {
 		register:       port.RateLimit{Requests: 10, Period: time.Hour},
@@ -27,6 +28,7 @@ var rateLimitsByLevel = map[config.RateLimitLevel]rateLimits{
 		refresh:        port.RateLimit{Requests: 100, Period: time.Minute},
 		changePassword: port.RateLimit{Requests: 10, Period: time.Hour},
 		me:             port.RateLimit{Requests: 100, Period: time.Minute},
+		logout:         port.RateLimit{Requests: 100, Period: time.Minute},
 	},
 	config.RateLimitStrict: {
 		register:       port.RateLimit{Requests: 3, Period: time.Hour},
@@ -34,6 +36,7 @@ var rateLimitsByLevel = map[config.RateLimitLevel]rateLimits{
 		refresh:        port.RateLimit{Requests: 30, Period: time.Minute},
 		changePassword: port.RateLimit{Requests: 3, Period: time.Hour},
 		me:             port.RateLimit{Requests: 30, Period: time.Minute},
+		logout:         port.RateLimit{Requests: 30, Period: time.Minute},
 	},
 }
 
@@ -54,6 +57,7 @@ func newRateLimiting(cfg config.Config, limiter port.RateLimiter) *api.RateLimit
 		Refresh:        limits.refresh,
 		ChangePassword: limits.changePassword,
 		Me:             limits.me,
+		Logout:         limits.logout,
 	}
 	return &rateLimiting
 }

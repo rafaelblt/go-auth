@@ -10,6 +10,7 @@ both.
 | `POST` | `/v1/auth/login` | Exchange credentials for a token pair |
 | `POST` | `/v1/auth/change-password` | Replace a password, given the current one, and revoke every session |
 | `POST` | `/v1/auth/refresh` | Exchange a refresh token for a new pair |
+| `POST` | `/v1/auth/logout` | End the session of a refresh token |
 | `POST` | `/v1/auth/verify` | Check an access token, for a service that does not verify it itself |
 | `POST` | `/v1/auth/me` | Return the user an access token was issued to |
 | `GET` | `/.well-known/jwks.json` | Public keys for verifying access tokens |
@@ -24,8 +25,9 @@ matched regardless of case, with any parameters (`; charset=utf-8`) ignored.
 Anything else, a missing header included, is answered
 `415 unsupported_media_type` before the body is read. `curl -d` sends a form
 type, so add `-H 'Content-Type: application/json'` or use `--json`. Every
-response body is JSON, except the redirects below, and the empty body of a
-`500` whose response could not be encoded.
+response body is JSON, except the redirects below, the empty body of a `500`
+whose response could not be encoded, and the `204` of
+[logout](#post-v1authlogout), which has no body and no `Content-Type`.
 
 **Methods and routes.** The auth endpoints accept `POST`, and the JWKS `GET`
 and `HEAD`. Another method on a known path is `405 method_not_allowed`, with an
@@ -271,6 +273,55 @@ count as reuse ([why](../system.md#reuse-detection)).
 
 A `429` is the exception to point 3: the token was not spent, so wait for
 `Retry-After` and send the same one.
+
+---
+
+## POST /v1/auth/logout
+
+Ends the session of a refresh token: none of the session's refresh tokens works
+from then on. The user's other sessions stay active.
+
+```json
+{ "refresh_token": "kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01" }
+```
+
+It takes the refresh token from the last login or refresh, not the access
+token ([why](../system.md#logging-out)).
+
+### Response: `204 No Content`
+
+No body, and no `Content-Type`. Every token the service knows gets this
+answer, whatever its state: current, already used, expired, or of a session
+already revoked. A logout that went through therefore gets it again.
+
+The access tokens already issued for the session stay valid until they expire,
+for up to `ACCESS_TOKEN_TTL`
+([Limitations](../system.md#access-tokens-cannot-be-revoked)).
+
+### Errors
+
+| Status | Code | Cause |
+|---|---|---|
+| `401` | `invalid_token` | The token is malformed or unknown, a missing field included |
+
+An unknown token is not answered with success, as
+[RFC 7009](https://www.rfc-editor.org/rfc/rfc7009) would have it
+([why](../system.md#logging-out)).
+
+### Client obligations on logout
+
+1. Log the user out locally at once, whatever happens next: stop using both
+   tokens. Keep the refresh token only until a logout with it answers `204` or
+   `401`, either of which means there is nothing left to end.
+2. Send the logout again, with the same token, after a `5xx`, a `429` (once
+   `Retry-After` has passed) or a network error: until a logout succeeds, the
+   session is alive. Unlike a refresh, which must never be repeated, a logout
+   can be: one that went through answers `204` again.
+3. Log out under the lock that keeps two refreshes from running at once
+   ([point 4](#client-obligations)), and discard the answer of a refresh that
+   arrives after the logout was sent: its access token would keep the user
+   signed in until it expires. A logout that races a refresh with the same
+   token can also be logged as reuse.
 
 ---
 
