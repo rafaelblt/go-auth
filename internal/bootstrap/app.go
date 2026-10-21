@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/config"
+	"github.com/rafaelblt/go-auth/internal/usecase/sessioncleanup"
 )
 
 type dependencies struct {
@@ -147,7 +148,7 @@ func (app *App) backgroundTasks() []periodicTask {
 			name:     "jwt_keyring_rotation",
 			interval: 10 * time.Minute,
 			timeout:  3 * time.Second,
-			run:      app.deps.Infra.Ed25519Keyring.Sync,
+			run:      withoutAttrs(app.deps.Infra.Ed25519Keyring.Sync),
 		},
 	}
 
@@ -156,11 +157,21 @@ func (app *App) backgroundTasks() []periodicTask {
 			name:     "session_cleanup",
 			interval: time.Hour,
 			timeout:  5 * time.Minute,
-			run:      cleanup.Execute,
+			run:      runSessionCleanup(cleanup),
 		})
 	}
 
 	return tasks
+}
+
+func runSessionCleanup(cleanup *sessioncleanup.SessionCleanup) func(ctx context.Context) ([]any, error) {
+	return func(ctx context.Context) ([]any, error) {
+		output, err := cleanup.Execute(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return []any{"deleted", output.Deleted, "limit_reached", output.LimitReached}, nil
+	}
 }
 
 func (app *App) Close() error {

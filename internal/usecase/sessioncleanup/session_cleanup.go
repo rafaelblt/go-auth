@@ -21,20 +21,31 @@ type SessionCleanup struct {
 	maxBatches int
 }
 
+type Output struct {
+	// Deleted is how many sessions the run deleted.
+	Deleted int
+	// LimitReached is set when the run stopped after MaxBatches full batches
+	// rather than at a short one, so it may have left dead sessions behind.
+	LimitReached bool
+}
+
 // Execute deletes the sessions that died before now minus the retention, a
 // batch at a time, until a batch comes back short or MaxBatches have run. What
 // is left is the next run's, so a backlog never makes one run long.
-func (uc *SessionCleanup) Execute(ctx context.Context) error {
+func (uc *SessionCleanup) Execute(ctx context.Context) (Output, error) {
 	cutoff := uc.clock.Now().Add(-uc.retention)
 
+	output := Output{}
 	for range uc.maxBatches {
 		deleted, err := uc.sessions.DeleteDeadBefore(ctx, cutoff, uc.batchSize)
 		if err != nil {
-			return fmt.Errorf("dead sessions delete failed: %w", err)
+			return Output{}, fmt.Errorf("dead sessions delete failed: %w", err)
 		}
+		output.Deleted += deleted
 		if deleted < uc.batchSize {
-			return nil
+			return output, nil
 		}
 	}
-	return nil
+	output.LimitReached = true
+	return output, nil
 }

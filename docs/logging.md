@@ -200,7 +200,7 @@ each task once per interval
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
 | `background task started` | `INFO` | `interval` | The ticker started, with the app |
-| `background task done` | `INFO` | `elapsed` | One run succeeded |
+| `background task done` | `INFO` | `elapsed`; for `session_cleanup`, `deleted` and `limit_reached` | One run succeeded |
 | `background task failed` | `ERROR` | `error`, `elapsed` | One run failed or timed out; the next tick tries again |
 | `background task stopped` | `INFO` | — | The app's context was cancelled |
 
@@ -209,6 +209,13 @@ shorter one, that it returned an error. What a failing sync leaves
 behind: [Signing keys](architecture/tokens.md#signing-keys). A failing cleanup
 leaves the sessions it did not reach to the next run: each batch it deleted
 before the failure stays deleted.
+
+`deleted` is how many sessions a cleanup run deleted. `limit_reached` is `true`
+when the run stopped at its [limit](architecture/startup.md#background-tasks)
+of batches rather than at a short one, so dead sessions may be left over for
+the next run. That is expected while a backlog drains, such as the one a
+deployment that ran without the cleanup starts with; when it keeps happening,
+the deployment is [falling behind](system.md#the-session-cleanup-can-fall-behind).
 
 ## What is never logged
 

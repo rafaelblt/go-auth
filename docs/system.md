@@ -612,9 +612,9 @@ each run deletes a bounded number of sessions
   that stops idle instances, nothing is deleted, and the tables grow as they do
   with `SESSION_RETENTION` set to `off`.
 - **a deployment that opens sessions faster than its instances delete them
-  falls behind**, and its dead sessions pile up until the rate drops. Nothing in
-  the logs shows it: the line a run writes says how long it took, not how many
-  sessions it deleted ([Background tasks](logging.md#background-tasks)).
+  falls behind**, and its dead sessions pile up until the rate drops. Its runs
+  then keep stopping at their limit, which the line each one writes says
+  ([Background tasks](logging.md#background-tasks)).
 
 ### Accounts
 
