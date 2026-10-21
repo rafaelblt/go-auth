@@ -242,8 +242,10 @@ A login running alongside is covered by [the password lock](#the-password-lock).
   foreign key keeps a token from outliving its session, so the session cleanup
   deleted both between the two reads.
 
-**When you change it:** the steps in [Refreshing](../system.md#refreshing), and
-each error's reason in [Logging](../logging.md#outcomes).
+**When you change it:** the steps in [Refreshing](../system.md#refreshing),
+each error's reason in [Logging](../logging.md#outcomes), and
+[logout](#logout), whose `resolveToken` and `getSessionOfToken` are copies of
+refresh's.
 
 ### Rotation
 
