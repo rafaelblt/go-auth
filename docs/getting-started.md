@@ -161,10 +161,14 @@ curl -sX POST http://localhost:8080/v1/auth/me \
 
 ### 6. Log out
 
+Send the refresh token from the last login or refresh: here, the one step 3
+returned. The one step 3 spent would end the session too, but be logged as
+[reuse](system.md#reuse-detection).
+
 ```bash
 curl -sX POST http://localhost:8080/v1/auth/logout \
   -H 'Content-Type: application/json' \
-  -d '{"refresh_token":"kZ8m2Q1nR7yTxV3bC0dEfGhIjKlMnOpQrStUvWxYz01"}'
+  -d '{"refresh_token":"Yqo30b9bo0untCbS0P5dC2tG-fhtw33BI0cJhMK0VyA"}'
 ```
 
 The answer is `204`, with no body. The session's refresh tokens stop working at
