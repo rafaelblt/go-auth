@@ -63,7 +63,7 @@ listed in [Configuration](../configuration.md#values-that-are-not-configurable).
 the app's context is cancelled. The first run of each task comes one interval
 after startup, and a failed run is logged and retried at the next tick
 ([Background tasks](../logging.md#background-tasks)). Each run is timed with
-`time.Now`, not the injected clock ([Clock](conventions.md#clock)).
+`time.Now`, not the injected clock ([why](conventions.md#clock)).
 
 | Task | Runs | Every | Timeout |
 |---|---|---|---|

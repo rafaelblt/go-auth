@@ -104,9 +104,9 @@ The router is wrapped in `logging`, then `recovery`, then `jsonRouteErrors`,
 from the outside in ([A request, end to end](overview.md#a-request-end-to-end)).
 
 - `logging` gives every request an ID, puts a logger tagged with it in the
-  request context, and times the request with the clock it was given. Code in
-  this package takes its logger with `loggerFrom(ctx)`
-  ([Logging](conventions.md#logging)).
+  request context, and times the request with the clock it was given
+  ([what that costs](conventions.md#clock)). Code in this package takes its
+  logger with `loggerFrom(ctx)` ([Logging](conventions.md#logging)).
 - `recovery` turns a panic into a logged `500`, except `http.ErrAbortHandler`, a
   deliberate abort, which it lets through. A panic in `logging` itself is outside
   it.

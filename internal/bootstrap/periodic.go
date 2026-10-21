@@ -35,6 +35,8 @@ func execPeriodic(ctx context.Context, logger *slog.Logger, task periodicTask) {
 	ctx, cancel := context.WithTimeout(ctx, task.timeout)
 	defer cancel()
 
+	// time.Now, not a port.Clock, for its monotonic reading. See
+	// docs/architecture/conventions.md#clock.
 	start := time.Now()
 	if err := task.run(ctx); err != nil {
 		logger.Error("background task failed", "error", err, "elapsed", time.Since(start))
