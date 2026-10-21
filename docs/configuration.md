@@ -135,7 +135,8 @@ Refresh costs no bcrypt, and a client refreshes about once per
 `ACCESS_TOKEN_TTL` per session, so `normal` covers about 3000 sessions behind
 one address. Me costs no bcrypt either, only a token check and one indexed
 read, so it gets refresh's numbers. So does logout, which costs less than a
-refresh: two indexed reads and at most one write. The counts are per address
+refresh: two indexed reads and at most one write, plus one more read when
+another revocation of the session got there first. The counts are per address
 and kept in memory
 ([Limitations](system.md#rate-limiting-is-per-address-and-per-process)).
 
