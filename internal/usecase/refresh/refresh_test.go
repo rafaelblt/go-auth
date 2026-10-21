@@ -159,9 +159,9 @@ func TestRefresh_RevokesSessionOfTokenAlreadyUsed(t *testing.T) {
 	_, err := helper.UseCase().Execute(context.Background(), fixture.Input())
 
 	require.ErrorIs(t, err, refresh.ErrTokenAlreadyUsed)
-	updated := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Updates())
-	assert.Equal(t, fixture.Session.ID(), updated.ID())
-	revokedAt, isRevoked := updated.RevokedAt()
+	revoked := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked())
+	assert.Equal(t, fixture.Session.ID(), revoked.ID())
+	revokedAt, isRevoked := revoked.RevokedAt()
 	require.True(t, isRevoked)
 	assert.Equal(t, helper.FakeClock.Now(), revokedAt)
 }
@@ -189,9 +189,9 @@ func TestRefresh_RevokesSession_WhenTokenIsSpentConcurrently(t *testing.T) {
 
 	assert.Zero(t, out)
 	require.ErrorIs(t, err, refresh.ErrTokenAlreadyUsed)
-	updated := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Updates())
-	assert.Equal(t, fixture.Session.ID(), updated.ID())
-	revokedAt, isRevoked := updated.RevokedAt()
+	revoked := testutil.Only(t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked())
+	assert.Equal(t, fixture.Session.ID(), revoked.ID())
+	revokedAt, isRevoked := revoked.RevokedAt()
 	require.True(t, isRevoked)
 	assert.Equal(t, helper.FakeClock.Now(), revokedAt)
 }
@@ -207,6 +207,22 @@ func TestRefresh_ReturnsTokenInvalidError_WhenSessionOfTokenAlreadyUsedIsGone(t 
 	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
 
 	assert.ErrorIs(t, err, refresh.ErrTokenInvalid)
+	assert.Zero(t, out)
+	helper.AssertNoAccessTokenIssued()
+	helper.AssertNoRefreshTokenWrites()
+}
+
+// A logout, a password change or another reuse detection can revoke the session
+// of a spent token between the read of the session and its revocation.
+func TestRefresh_ReturnsSessionRevokedError_WhenSessionOfTokenAlreadyUsedIsRevokedFirst(t *testing.T) {
+	helper := NewTestHelper(t)
+	fixture := helper.SeedUsedToken()
+
+	helper.FakeUnitOfWork.FakeSessionWriter.SetError(session.ErrSessionAlreadyRevoked)
+
+	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
+
+	assert.ErrorIs(t, err, refresh.ErrSessionRevoked)
 	assert.Zero(t, out)
 	helper.AssertNoAccessTokenIssued()
 	helper.AssertNoRefreshTokenWrites()
@@ -315,5 +331,5 @@ func TestRefresh_ReturnsError_WhenRefreshTokenWriterFails(t *testing.T) {
 	assert.Zero(t, out)
 	assert.ErrorIs(t, err, expectedErr)
 	AssertUnexpectedError(t, err)
-	assert.Empty(t, helper.FakeUnitOfWork.FakeSessionWriter.Updates(), "session updated")
+	assert.Empty(t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked(), "session revoked")
 }

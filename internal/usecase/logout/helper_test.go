@@ -7,6 +7,7 @@ import (
 
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/shared"
+	"github.com/rafaelblt/go-auth/internal/testutil"
 	"github.com/rafaelblt/go-auth/internal/testutil/porttest"
 	"github.com/rafaelblt/go-auth/internal/testutil/sessiontest"
 	"github.com/rafaelblt/go-auth/internal/usecase"
@@ -138,7 +139,7 @@ func (helper *TestHelper) seed(
 // AssertNoWrites checks that neither sessions nor refresh tokens were written.
 func (helper *TestHelper) AssertNoWrites() {
 	helper.t.Helper()
-	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Updates(), "session updated")
+	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked(), "session revoked")
 	helper.AssertNoRefreshTokenWrites()
 }
 
@@ -152,10 +153,9 @@ func (helper *TestHelper) AssertNoRefreshTokenWrites() {
 // the clock's time.
 func (helper *TestHelper) AssertSessionRevokedNow(sess *session.Session) {
 	helper.t.Helper()
-	updates := helper.FakeUnitOfWork.FakeSessionWriter.Updates()
-	require.Len(helper.t, updates, 1)
-	assert.Equal(helper.t, sess.ID(), updates[0].ID())
-	revokedAt, isRevoked := updates[0].RevokedAt()
+	revoked := testutil.Only(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked())
+	assert.Equal(helper.t, sess.ID(), revoked.ID())
+	revokedAt, isRevoked := revoked.RevokedAt()
 	require.True(helper.t, isRevoked)
 	assert.Equal(helper.t, helper.FakeClock.Now(), revokedAt)
 }

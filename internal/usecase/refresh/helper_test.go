@@ -147,7 +147,7 @@ func (helper *TestHelper) AssertNoRefreshTokenWrites() {
 func (helper *TestHelper) AssertNoWrites() {
 	helper.t.Helper()
 	helper.AssertNoRefreshTokenWrites()
-	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Updates(), "session updated")
+	assert.Empty(helper.t, helper.FakeUnitOfWork.FakeSessionWriter.Revoked(), "session revoked")
 }
 
 // AssertUnexpectedError checks that err is not a use case error, so the API

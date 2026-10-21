@@ -176,28 +176,6 @@ func TestSessionRepo_Add(t *testing.T) {
 	require.True(t, helper.CheckSessionExists(sess))
 }
 
-func TestSessionRepo_Update(t *testing.T) {
-	helper := NewSessionRepoTestHelper(t)
-	sess := helper.PersistentSession()
-	sess.Revoke(time.Now().UTC())
-
-	repo := helper.Repo()
-	err := repo.Update(t.Context(), sess)
-
-	require.NoError(t, err)
-	require.True(t, helper.CheckSessionExists(sess))
-}
-
-func TestSessionRepo_Update_ReturnsSessionNotFound_WhenSessionNotExists(t *testing.T) {
-	helper := NewSessionRepoTestHelper(t)
-	sess := sessiontest.NewSession(t, nil)
-
-	repo := helper.Repo()
-	err := repo.Update(t.Context(), sess)
-
-	assert.ErrorIs(t, err, session.ErrSessionNotFound)
-}
-
 func TestSessionRepo_Revoke(t *testing.T) {
 	helper := NewSessionRepoTestHelper(t)
 	sess := helper.PersistentSession()
