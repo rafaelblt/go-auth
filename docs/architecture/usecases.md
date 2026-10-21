@@ -51,8 +51,8 @@ Each use case is a package under `internal/usecase` with:
 - its rejections as package-level `UseCaseError`s.
 
 The [session cleanup](#session-cleanup) runs on a timer rather than for a
-request, and has nothing to take or give back, so its `Execute` takes only the
-context and returns only an error.
+request, and has nothing to take, so its `Execute` takes only the context. Its
+`Output` says what the run did, for the line `internal/bootstrap` logs.
 
 `internal/usecase` itself holds what they share: the [DTOs](#dtos) outputs
 carry, with their mappers (`dtos.go`), and `UseCaseError` (`error.go`).
@@ -379,7 +379,7 @@ of them check both. The cause is in the log, not in the database.
 
 | File | Holds |
 |---|---|
-| `session_cleanup.go` | `Execute` |
+| `session_cleanup.go` | `Execute`, `Output` |
 | `config.go` | `Config`, `New`: the retention, the batch size and the maximum number of batches |
 
 **Rules the code keeps**
@@ -388,6 +388,11 @@ of them check both. The cause is in the log, not in the database.
   with `now` minus the retention, a batch at a time, until a batch comes back
   short or it has made `MaxBatches` calls. Which sessions count as dead is the
   statement's: [Deleting dead sessions](persistence.md#deleting-dead-sessions).
+- The `Output` counts the sessions the run deleted, and sets `LimitReached`
+  when it stopped after `MaxBatches` full batches. That says dead sessions may
+  be left, not that they are: the last full batch may have taken the last one,
+  and only another statement could tell. A failed run returns a zero `Output`,
+  which leaves uncounted the batches it deleted before the failure.
 - `internal/bootstrap` sets the numbers and registers it as a
   [background task](startup.md#background-tasks), and builds none while the
   retention is `off`.

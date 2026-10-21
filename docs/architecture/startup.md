@@ -63,7 +63,11 @@ listed in [Configuration](../configuration.md#values-that-are-not-configurable).
 the app's context is cancelled. The first run of each task comes one interval
 after startup, and a failed run is logged and retried at the next tick
 ([Background tasks](../logging.md#background-tasks)). Each run is timed with
-`time.Now`, not the injected clock ([why](conventions.md#clock)).
+`time.Now`, not the injected clock ([why](conventions.md#clock)). A task's
+`run` returns, with its error, the attributes its `background task done` line
+adds, as key-value pairs: `runSessionCleanup` turns the cleanup's `Output` into
+them, and `withoutAttrs` wraps a function that has none to add, such as
+`Keyring.Sync`.
 
 | Task | Runs | Every | Timeout |
 |---|---|---|---|

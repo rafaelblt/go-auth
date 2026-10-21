@@ -10,7 +10,15 @@ type periodicTask struct {
 	name     string
 	interval time.Duration
 	timeout  time.Duration
-	run      func(ctx context.Context) error
+	// run returns the attributes its background task done line adds, as
+	// key-value pairs.
+	run func(ctx context.Context) ([]any, error)
+}
+
+func withoutAttrs(run func(ctx context.Context) error) func(ctx context.Context) ([]any, error) {
+	return func(ctx context.Context) ([]any, error) {
+		return nil, run(ctx)
+	}
 }
 
 func runPeriodic(ctx context.Context, logger *slog.Logger, task periodicTask) {
@@ -38,10 +46,11 @@ func execPeriodic(ctx context.Context, logger *slog.Logger, task periodicTask) {
 	// time.Now, not a port.Clock, for its monotonic reading. See
 	// docs/architecture/conventions.md#clock.
 	start := time.Now()
-	if err := task.run(ctx); err != nil {
+	attrs, err := task.run(ctx)
+	if err != nil {
 		logger.Error("background task failed", "error", err, "elapsed", time.Since(start))
 		return
 	}
 
-	logger.Info("background task done", "elapsed", time.Since(start))
+	logger.Info("background task done", append([]any{"elapsed", time.Since(start)}, attrs...)...)
 }

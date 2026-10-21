@@ -93,10 +93,13 @@ A released migration is never edited: a change is a new migration.
 
 ## Add a background task
 
-1. Its run function, which takes a context and returns an error, in the
-   component that owns the work: a use case for application logic.
+1. Its run function, which takes a context and returns an error, or an
+   `Output` and an error when the run has something to log, in the component
+   that owns the work: a use case for application logic.
 2. A `periodicTask` in `App.backgroundTasks` (`internal/bootstrap/app.go`), with
-   a name, an interval and a timeout; the tasks registered are checked in
-   `app_test.go`.
+   a name, an interval, a timeout and a `run`: the function wrapped in
+   `withoutAttrs`, or, as `runSessionCleanup` does, turning its `Output` into
+   attributes ([Background tasks](startup.md#background-tasks)). The tasks
+   registered are checked in `app_test.go`.
 3. Its row in [Background tasks](startup.md#background-tasks), and its `task`
-   name in [Logging](../logging.md#background-tasks).
+   name and any attribute it adds in [Logging](../logging.md#background-tasks).
