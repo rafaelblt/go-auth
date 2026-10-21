@@ -29,8 +29,8 @@ nothing in `usecase` or the domain names a concrete adapter.
   `UserExistsChecker`), so a use case's `Config` says what it can do:
   `register.Config` has a `UserExistsChecker` and no `UserReader`.
 - A sentinel a method returns for stored state, such as
-  `session.ErrSessionNotFound` from `SessionWriter.Update`, is documented on the
-  method ([Guarded writes](persistence.md#guarded-writes)).
+  `session.ErrSessionAlreadyRevoked` from `SessionWriter.Revoke`, is documented
+  on the method ([Guarded writes](persistence.md#guarded-writes)).
 - Three ports have no use case behind them: `PublicKeyProvider`, used by the
   JWKS handler; `RateLimiter`, used by the use case adapter before any use case
   runs; and `SigningKeyStore`, used by the keyring. They are ports anyway, so
@@ -268,12 +268,22 @@ rejected:
 ### Reuse detection
 
 `handleTokenReuse` revokes the session with `Session.Revoke` and
-`SessionWriter.Update`, then answers `ErrTokenAlreadyUsed`. `Update`, which
-[logout](#logout) calls too, is not guarded: two requests that both revoke
-write twice, harmlessly. A spent token reaches here however long ago it
-expired, so its session may be dead and deleted by the session cleanup after
-step 2: `Update` then returns `session.ErrSessionNotFound`, answered with
-`ErrTokenInvalid`, as at step 2.
+`SessionWriter.Revoke`, then answers `ErrTokenAlreadyUsed`. `Revoke` is a
+[guarded write](persistence.md#guarded-writes) on `revoked_at IS NULL`: a
+logout, a password change or another reuse detection can revoke the session
+after step 3 read it, and `Revoke` then returns
+`session.ErrSessionAlreadyRevoked`, answered with `ErrSessionRevoked`, as at
+step 3. A spent token reaches here however long ago it expired, so its session
+may be dead and deleted by the session cleanup after step 2: `Revoke` then
+returns `session.ErrSessionNotFound`, answered with `ErrTokenInvalid`, as at
+step 2. Either way, a request that loses a race gets the answer it would have
+got reading a moment later.
+
+Considered and rejected: answering a session revoked first with
+`ErrTokenAlreadyUsed`, since the token was reused all the same. The request
+would log a revocation it did not make, and a spent token would be logged as
+reuse or not depending on milliseconds, where step 3 already lets a revoked
+session win over a spent token.
 
 ## Logout
 
@@ -290,23 +300,26 @@ step 2: `Update` then returns `session.ErrSessionNotFound`, answered with
   [refresh](#refresh)'s do, and answer a token or a session that is missing
   with `ErrTokenInvalid`.
 - A revoked session is left as it is. Any other is revoked with
-  `Session.Revoke` and `SessionWriter.Update`, in a unit of work, whatever the
-  token's state; `session.ErrSessionNotFound` from `Update` is
-  `ErrTokenInvalid`, as in [reuse detection](#reuse-detection).
+  `Session.Revoke` and `SessionWriter.Revoke`, in a unit of work, whatever the
+  token's state. `revoke` answers a lost race as
+  [reuse detection](#reuse-detection) does: `session.ErrSessionAlreadyRevoked`
+  as a session read revoked, and `session.ErrSessionNotFound` as
+  `ErrTokenInvalid`.
 - The token is never written. Refresh checks the session before the token, so
   the revocation stops every token of the session, and a spent token stays one
   for reuse detection to find.
-- `Output.ReuseDetected` is set for a spent token of a session that was still
-  active, and `internal/api` logs it with refresh's reason for reuse
+- `Output.ReuseDetected` is set for a spent token of a session the logout
+  revoked, and `internal/api` logs it with refresh's reason for reuse
   ([Outcomes](../logging.md#outcomes)). The token's state is read for nothing
   else: an expired token ends its session like a current one.
 
-A logout and a refresh of the same session never wait on each other: the
+A logout and a rotation of the same session never wait on each other: the
 `UPDATE` locks the session row `FOR NO KEY UPDATE`, which does not conflict
-with the `FOR KEY SHARE` a rotation's insert takes through the foreign key. A
-refresh that spends the token between the logout's read and its write is not
-reported as reuse: the logout reads the token once and never writes it, and the
-session ends revoked either way.
+with the `FOR KEY SHARE` a rotation's insert takes through the foreign key.
+Revocations of the same session do wait on each other, and the one that waited
+then matches nothing. A refresh that spends the token between the logout's
+read and its write is not reported as reuse: the logout reads the token once
+and never writes it, and the session ends revoked either way.
 
 **When you change it:** the steps in [Logging out](../system.md#logging-out),
 and the `success logout` line in [Logging](../logging.md#outcomes).

@@ -61,9 +61,12 @@ func (uc *Logout) Execute(ctx context.Context, in Input) (Output, error) {
 		return output, nil
 	}
 
-	err = uc.revoke(ctx, sess, now)
+	revoked, err := uc.revoke(ctx, sess, now)
 	if err != nil {
 		return Output{}, err
+	}
+	if !revoked {
+		return output, nil
 	}
 
 	output.ReuseDetected = token.IsUsed()
@@ -101,23 +104,32 @@ func (uc *Logout) getSessionOfToken(ctx context.Context, token *session.RefreshT
 	return sess, nil
 }
 
-func (uc *Logout) revoke(ctx context.Context, sess *session.Session, now time.Time) error {
+// revoke reports whether it revoked the session: not when another revocation
+// got there first.
+func (uc *Logout) revoke(ctx context.Context, sess *session.Session, now time.Time) (bool, error) {
 	sess.Revoke(now)
 	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		if err := deps.SessionWriter.Update(ctx, sess); err != nil {
+		if err := deps.SessionWriter.Revoke(ctx, sess); err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
 		}
 		return nil
 	})
+	if errors.Is(err, session.ErrSessionAlreadyRevoked) {
+		// Another revocation committed after the session was read: the
+		// session is left as it is, as when it is read revoked.
+		//
+		// See docs/architecture/usecases.md#logout.
+		return false, nil
+	}
 	if errors.Is(err, session.ErrSessionNotFound) {
 		// The session cleanup deleted the session, and the token with it,
 		// after the session was read: the token is unknown from now on.
 		//
 		// See docs/architecture/usecases.md#logout.
-		return ErrTokenInvalid
+		return false, ErrTokenInvalid
 	}
 	if err != nil {
-		return fmt.Errorf("session revocation failed: %w", err)
+		return false, fmt.Errorf("session revocation failed: %w", err)
 	}
-	return nil
+	return true, nil
 }

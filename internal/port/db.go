@@ -72,10 +72,6 @@ type SessionReader interface {
 
 type SessionWriter interface {
 	Add(context.Context, *session.Session) error
-	// Update persists the state of a stored session, and returns
-	// session.ErrSessionNotFound when the session is no longer stored, as when
-	// the session cleanup deleted it after it was read.
-	Update(context.Context, *session.Session) error
 	// Revoke persists the revocation of a session already revoked in memory.
 	// It applies only while the stored session is active, and returns
 	// session.ErrSessionAlreadyRevoked when another revocation got there

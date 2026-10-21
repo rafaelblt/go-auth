@@ -125,9 +125,8 @@ the columns they set.
 A `Find*` that finds nothing returns `(nil, nil)`: whether a missing row is a
 problem is the caller's decision. An update that matches no row is an error,
 since the row vanished, with two exceptions. `RevokeAllByUserID` returns
-nothing, as a user may have no session left to revoke. `SessionRepo.Update`
-returns `session.ErrSessionNotFound`, without the lookup of a
-[guarded write](#guarded-writes). Nothing deletes a password, and the
+nothing, as a user may have no session left to revoke. `SessionRepo.Revoke`
+returns `session.ErrSessionNotFound`. Nothing deletes a password, and the
 [minimum retention](../configuration.md#session_retention) keeps the cleanup
 away from a token being rotated, so a row missing there is a bug. A session is
 different: the [session cleanup](usecases.md#session-cleanup) can delete one
@@ -151,6 +150,7 @@ database applies it only while the rule still holds:
 |---|---|---|
 | `UserRepo.Add` | `ON CONFLICT (username) DO NOTHING` | `user.ErrUsernameAlreadyExists`: register's `409` |
 | `RefreshTokenRepo.MarkUsed` | `WHERE id = @id AND used_at IS NULL` | `session.ErrTokenAlreadyUsed`: reuse ([Rotation](usecases.md#rotation)) |
+| `SessionRepo.Revoke` | `WHERE id = @id AND revoked_at IS NULL` | `session.ErrSessionAlreadyRevoked`: refresh's `session revoked`, logout's `204` ([Reuse detection](usecases.md#reuse-detection), [Logout](usecases.md#logout)) |
 | `PasswordRepo.UpdateHash` | `WHERE id = @id AND hash = @previous_hash` | `password.ErrHashChanged`: `401`, `password changed` |
 | `PasswordRepo.LockHash` | `WHERE id = @id AND hash = @hash FOR SHARE` | `password.ErrHashChanged`: `401`, `password changed` ([The password lock](usecases.md#the-password-lock)) |
 | `SigningKeyRepo.Add` | `ON CONFLICT (generation) DO NOTHING` | nothing: the keyring lists the keys again ([Signing keys](tokens.md#signing-keys)) |
@@ -170,16 +170,18 @@ column absorbs exactly one: a primary key collision stays an error.
 
 **A statement that matched nothing checks why.** No row changed means either
 the rule no longer holds or the row does not exist, and only the first is the
-domain error. `MarkUsed`, `UpdateHash` and `LockHash` then look the row up by
-ID, and report a missing one as an unexpected error, so a bug is not answered as
-a lost race. The lookup runs only on that path, and under `READ COMMITTED` it
-already sees the commit that won.
+domain error. `MarkUsed`, `UpdateHash`, `LockHash` and `Revoke` then look the
+row up by ID. The first three report a missing row as an unexpected error, so a
+bug is not answered as a lost race; `Revoke` reports a missing session as
+`session.ErrSessionNotFound`, since the session cleanup can delete one
+([Repositories](#repositories)). The lookup runs only on that path, and under
+`READ COMMITTED` it already sees the commit that won.
 
 **The sentinel is the domain's**, not the port's: the repository reports a fact
 about stored state, and what to do about it stays in the use case. The port
-documents it on the method. The methods say what they do, `MarkUsed` and an
-`UpdateHash` that takes the hash it replaces, rather than a generic `Update`
-that would refuse silently.
+documents it on the method. The methods say what they do, `MarkUsed`,
+`Revoke` and an `UpdateHash` that takes the hash it replaces, rather than a
+generic `Update` that would refuse silently.
 
 Why not the alternatives, for all of them: reading inside the transaction with
 `SELECT … FOR UPDATE` needs readers in the unit of work and holds a lock across

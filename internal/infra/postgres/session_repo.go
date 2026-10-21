@@ -41,33 +41,6 @@ func (repo *SessionRepo) Add(ctx context.Context, sess *session.Session) error {
 	return nil
 }
 
-// Update reports a missing session as session.ErrSessionNotFound, without the
-// lookup a guarded write makes: the session cleanup can delete a session after
-// it was read, so a missing one is stored state, not a bug.
-//
-// See docs/architecture/persistence.md#repositories.
-func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) error {
-	model, err := mapSessionToModel(sess)
-	if err != nil {
-		return fmt.Errorf("map session to model failed: %w", err)
-	}
-
-	sql := `UPDATE sessions
-			SET revoked_at = @revoked_at,
-				updated_at = @updated_at
-			WHERE id = @id`
-	tag, err := repo.db.Exec(ctx, sql, pgx.StructArgs(model))
-
-	if err != nil {
-		return fmt.Errorf("session update failed: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return session.ErrSessionNotFound
-	}
-
-	return nil
-}
-
 // Revoke guards the update with revoked_at IS NULL, so a revocation that got
 // there first keeps its time, and of two concurrent revocations only one is
 // applied. When nothing is updated, it checks whether the session exists, and

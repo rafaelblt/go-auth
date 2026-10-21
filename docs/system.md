@@ -227,7 +227,10 @@ attacker who replayed a token keep a rotating credential indefinitely.
 and has since expired still revokes the session. The other way round, someone
 holding an old stolen token could wait for it to expire, replay it, and never
 trip the alarm. If the session cleanup deletes the session while it is being
-revoked, the token is answered as unknown, as in step 2.
+revoked, the token is answered as unknown, as in step 2. If a logout, a
+password change or another refresh revokes it first, the token is answered as
+one of a revoked session, as in step 3, and only the request that revoked the
+session is logged as reuse.
 
 The legitimate client pays when it sends a token twice itself, after a lost
 response or from two tabs ([Limitations](#a-repeated-refresh-logs-the-user-out)).
@@ -273,9 +276,10 @@ A refresh with the same token that is already past step 3 when the logout
 revokes the session can still finish, as after any revocation: the refresh
 token it returns belongs to the revoked session, and its access token works
 until it expires. Avoiding that is the client's part
-([obligations](api/reference.md#client-obligations-on-logout)). Logouts, reuse
-detection and password changes running alongside all revoke, with the same
-result. If the session cleanup deletes the session while a logout runs, the
+([obligations](api/reference.md#client-obligations-on-logout)). Of logouts,
+reuse detection and password changes running alongside, the first to revoke
+the session keeps its time, and a logout that comes after it is answered as in
+step 2. If the session cleanup deletes the session while a logout runs, the
 token is answered as unknown, as it would be a moment later.
 
 ### Checking an access token

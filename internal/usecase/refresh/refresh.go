@@ -131,16 +131,23 @@ func (uc *Refresh) getSessionOfToken(ctx context.Context, token *session.Refresh
 	return sess, nil
 }
 
-// handleTokenReuse revokes the session of a reused token and reports the reuse.
-// It never returns nil.
+// handleTokenReuse revokes the session of a reused token and reports the reuse,
+// or the revocation that got there first. It never returns nil.
 func (uc *Refresh) handleTokenReuse(ctx context.Context, sess *session.Session, now time.Time) error {
 	sess.Revoke(now)
 	err := uc.uow.Do(ctx, func(deps port.UowDeps) error {
-		if err := deps.SessionWriter.Update(ctx, sess); err != nil {
+		if err := deps.SessionWriter.Revoke(ctx, sess); err != nil {
 			return fmt.Errorf("session writer failed: %w", err)
 		}
 		return nil
 	})
+	if errors.Is(err, session.ErrSessionAlreadyRevoked) {
+		// Another revocation committed after the session was read: the
+		// session is answered as revoked, as at step 3.
+		//
+		// See docs/architecture/usecases.md#reuse-detection.
+		return ErrSessionRevoked
+	}
 	if errors.Is(err, session.ErrSessionNotFound) {
 		// The session cleanup deleted the session, and the token with it,
 		// after the session was read: the token is unknown from now on.
