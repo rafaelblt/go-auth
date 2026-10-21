@@ -142,7 +142,16 @@ reuses `now` for the entities it creates, so they share a timestamp.
 
 The background-task runner in `internal/bootstrap/periodic.go` is the
 exception: it ticks with `time.NewTicker` and times each run with `time.Now`,
-for its log line only.
+for its log line only, because the clock cannot time it as well. `UTC()` strips
+the [monotonic clock reading](https://pkg.go.dev/time#hdr-Monotonic_Clocks),
+so the difference of two `SystemClock` readings is taken on the wall clock,
+and is off by however far the system clock is stepped in between. Measured from
+`time.Now` with `time.Since`, `elapsed` stays exact, which is what lets it tell
+a run that timed out ([Background tasks](../logging.md#background-tasks)).
+
+The `logging` middleware makes the other choice: it times each request with its
+`port.Clock`, which lets a test fix the `duration` it logs with the fake clock,
+and a clock step during a request skews that one line.
 
 ## Errors
 
