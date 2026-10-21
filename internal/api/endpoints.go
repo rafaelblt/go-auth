@@ -268,9 +268,12 @@ func logoutEncoder(logout.Output) response {
 
 func logoutSuccessLog(ctx context.Context, out logout.Output) {
 	attrs := []any{"user_id", out.UserID, "session_id", out.SessionID}
-	if out.ReuseDetected {
-		// Refresh's reason for reuse, so that one query finds both. See
-		// docs/logging.md#outcomes.
+	// Refresh's reasons, so that one query finds both. See
+	// docs/logging.md#outcomes.
+	switch {
+	case out.SessionAlreadyRevoked:
+		attrs = append(attrs, "reason", refresh.ErrSessionRevoked.Reason())
+	case out.ReuseDetected:
 		attrs = append(attrs, "reason", refresh.ErrTokenAlreadyUsed.Reason())
 	}
 	loggerFrom(ctx).Info("success logout", attrs...)

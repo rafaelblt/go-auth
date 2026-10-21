@@ -35,6 +35,7 @@ func TestLogout_ReturnsIDsOfSessionAndItsUser(t *testing.T) {
 	assert.Equal(t, fixture.Session.UserID().String(), out.UserID)
 	assert.Equal(t, fixture.Session.ID().String(), out.SessionID)
 	assert.False(t, out.ReuseDetected)
+	assert.False(t, out.SessionAlreadyRevoked)
 }
 
 func TestLogout_RevokesSession_WhenTokenIsExpired(t *testing.T) {
@@ -78,6 +79,17 @@ func TestLogout_WritesNothing_WhenSessionIsAlreadyRevoked(t *testing.T) {
 	helper.AssertNoWrites()
 }
 
+func TestLogout_ReportsSessionAlreadyRevoked_WhenSessionIsAlreadyRevoked(t *testing.T) {
+	helper := NewTestHelper(t)
+	fixture := helper.SeedRevokedSession()
+
+	out, err := helper.UseCase().Execute(context.Background(), fixture.Input())
+
+	require.NoError(t, err)
+	assert.True(t, out.SessionAlreadyRevoked)
+	assert.False(t, out.ReuseDetected)
+}
+
 // A revoked session takes precedence over a spent token, as at refresh.
 func TestLogout_DoesNotReportReuse_WhenSessionIsAlreadyRevoked(t *testing.T) {
 	helper := NewTestHelper(t)
@@ -92,7 +104,7 @@ func TestLogout_DoesNotReportReuse_WhenSessionIsAlreadyRevoked(t *testing.T) {
 
 // Another revocation can commit between the read of the session and its
 // revocation by the logout, which then leaves the session as it is.
-func TestLogout_DoesNotReportReuse_WhenSessionIsRevokedFirst(t *testing.T) {
+func TestLogout_ReportsSessionAlreadyRevoked_WhenSessionIsRevokedFirst(t *testing.T) {
 	helper := NewTestHelper(t)
 	fixture := helper.SeedUsedToken()
 
@@ -103,6 +115,7 @@ func TestLogout_DoesNotReportReuse_WhenSessionIsRevokedFirst(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fixture.Session.UserID().String(), out.UserID)
 	assert.Equal(t, fixture.Session.ID().String(), out.SessionID)
+	assert.True(t, out.SessionAlreadyRevoked)
 	assert.False(t, out.ReuseDetected)
 }
 

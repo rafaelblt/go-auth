@@ -270,7 +270,8 @@ its answer says nothing about the state of the token.
 - **The access tokens already issued keep working** until they expire, for up
   to `ACCESS_TOKEN_TTL` ([Limitations](#access-tokens-cannot-be-revoked)).
 - **The session is revoked as any other is**: the data keeps when it was
-  revoked, not why ([Data](#data)), and the log says it was a logout.
+  revoked, not why ([Data](#data)), and the log says it was a logout, or that
+  the logout found it already revoked.
 
 A refresh with the same token that is already past step 3 when the logout
 revokes the session can still finish, as after any revocation: the refresh

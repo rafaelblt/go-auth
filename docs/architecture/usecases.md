@@ -309,9 +309,10 @@ session win over a spent token.
   the revocation stops every token of the session, and a spent token stays one
   for reuse detection to find.
 - `Output.ReuseDetected` is set for a spent token of a session the logout
-  revoked, and `internal/api` logs it with refresh's reason for reuse
-  ([Outcomes](../logging.md#outcomes)). The token's state is read for nothing
-  else: an expired token ends its session like a current one.
+  revoked, and `Output.SessionAlreadyRevoked` for a session it left as it is.
+  `internal/api` logs them with refresh's reasons, for reuse and for a revoked
+  session ([Outcomes](../logging.md#outcomes)). The token's state is read for
+  nothing else: an expired token ends its session like a current one.
 
 A logout and a rotation of the same session never wait on each other: the
 `UPDATE` locks the session row `FOR NO KEY UPDATE`, which does not conflict
