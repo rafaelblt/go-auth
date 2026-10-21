@@ -68,6 +68,57 @@ func (repo *SessionRepo) Update(ctx context.Context, sess *session.Session) erro
 	return nil
 }
 
+// Revoke guards the update with revoked_at IS NULL, so a revocation that got
+// there first keeps its time, and of two concurrent revocations only one is
+// applied. When nothing is updated, it checks whether the session exists, and
+// reports a missing one as session.ErrSessionNotFound rather than as a bug: the
+// session cleanup can delete a session after it was read.
+//
+// See docs/architecture/persistence.md#guarded-writes.
+func (repo *SessionRepo) Revoke(ctx context.Context, sess *session.Session) error {
+	model, err := mapSessionToModel(sess)
+	if err != nil {
+		return fmt.Errorf("map session to model failed: %w", err)
+	}
+	if model.RevokedAt == nil {
+		return errors.New("session not revoked")
+	}
+
+	sql := `UPDATE sessions
+			SET revoked_at = @revoked_at,
+				updated_at = @updated_at
+			WHERE id = @id AND revoked_at IS NULL`
+	tag, err := repo.db.Exec(ctx, sql, pgx.StructArgs(model))
+
+	if err != nil {
+		return fmt.Errorf("session revoke failed: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		return nil
+	}
+
+	exists, err := repo.existsByID(ctx, model.ID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return session.ErrSessionNotFound
+	}
+
+	return session.ErrSessionAlreadyRevoked
+}
+
+func (repo *SessionRepo) existsByID(ctx context.Context, id string) (bool, error) {
+	sql := "SELECT EXISTS(SELECT 1 FROM sessions WHERE id = $1)"
+
+	var exists bool
+	if err := repo.db.QueryRow(ctx, sql, id).Scan(&exists); err != nil {
+		return false, fmt.Errorf("session exists query failed: %w", err)
+	}
+
+	return exists, nil
+}
+
 // RevokeAllByUserID revokes in SQL rather than through Session.Revoke, so the
 // sessions the caller never read are revoked too. revoked_at IS NULL keeps the
 // time of an earlier revocation, as Session.Revoke does in memory.

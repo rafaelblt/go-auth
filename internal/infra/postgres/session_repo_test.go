@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
@@ -36,6 +37,20 @@ func (helper *SessionRepoTestHelper) Repo() *postgres.SessionRepo {
 	require.NoError(helper.t, err)
 
 	return repo
+}
+
+func (helper *SessionRepoTestHelper) TxRepo() (pgx.Tx, *postgres.SessionRepo) {
+	helper.t.Helper()
+
+	tx, err := helper.db.Begin(helper.t.Context())
+	require.NoError(helper.t, err)
+	// t.Context() is already canceled when cleanups run.
+	helper.t.Cleanup(func() { tx.Rollback(context.Background()) })
+
+	repo, err := postgres.NewSessionRepo(tx)
+	require.NoError(helper.t, err)
+
+	return tx, repo
 }
 
 func (helper *SessionRepoTestHelper) PersistentUser() *user.User {
@@ -96,6 +111,22 @@ func (helper *SessionRepoTestHelper) PersistentChainOf(
 	}
 
 	return chain
+}
+
+// RevokedCopy returns a copy of sess revoked in memory at revokedAt, as held by
+// a request that read the session and called Revoke.
+func (helper *SessionRepoTestHelper) RevokedCopy(sess *session.Session, revokedAt time.Time) *session.Session {
+	helper.t.Helper()
+
+	cp := shared.ClonePtr(sess)
+	cp.Revoke(revokedAt)
+
+	return cp
+}
+
+func (helper *SessionRepoTestHelper) RequireWaitingOnLock(tx pgx.Tx) {
+	helper.t.Helper()
+	requireWaitingOnLock(helper.t, helper.db, tx)
 }
 
 func (helper *SessionRepoTestHelper) CheckSessionExists(sess *session.Session) bool {
@@ -165,6 +196,77 @@ func TestSessionRepo_Update_ReturnsSessionNotFound_WhenSessionNotExists(t *testi
 	err := repo.Update(t.Context(), sess)
 
 	assert.ErrorIs(t, err, session.ErrSessionNotFound)
+}
+
+func TestSessionRepo_Revoke(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := helper.PersistentSession()
+	sess.Revoke(time.Now().UTC())
+
+	repo := helper.Repo()
+	err := repo.Revoke(t.Context(), sess)
+
+	assert.NoError(t, err)
+	assert.True(t, helper.CheckSessionExists(sess))
+}
+
+func TestSessionRepo_Revoke_ReturnsSessionAlreadyRevoked_WhenStoredSessionIsRevoked(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := helper.PersistentSession()
+	// Distinct revocations, so an overwrite is visible at the column's precision.
+	now := time.Now().UTC()
+	first := helper.RevokedCopy(sess, now)
+	second := helper.RevokedCopy(sess, now.Add(time.Second))
+
+	repo := helper.Repo()
+	require.NoError(t, repo.Revoke(t.Context(), first))
+	err := repo.Revoke(t.Context(), second)
+
+	assert.ErrorIs(t, err, session.ErrSessionAlreadyRevoked)
+	assert.True(t, helper.CheckSessionExists(first), "first revocation was overwritten")
+}
+
+func TestSessionRepo_Revoke_AppliesOnlyOneOfConcurrentRevocations(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := helper.PersistentSession()
+	now := time.Now().UTC()
+	first := helper.RevokedCopy(sess, now)
+	second := helper.RevokedCopy(sess, now.Add(time.Second))
+	tx1, repo1 := helper.TxRepo()
+	tx2, repo2 := helper.TxRepo()
+
+	require.NoError(t, repo1.Revoke(t.Context(), first))
+	result := make(chan error, 1)
+	go func() { result <- repo2.Revoke(t.Context(), second) }()
+	helper.RequireWaitingOnLock(tx2)
+	require.NoError(t, tx1.Commit(t.Context()))
+
+	assert.ErrorIs(t, <-result, session.ErrSessionAlreadyRevoked)
+	require.NoError(t, tx2.Commit(t.Context()))
+	assert.True(t, helper.CheckSessionExists(first), "first revocation was overwritten")
+}
+
+func TestSessionRepo_Revoke_ReturnsSessionNotFound_WhenSessionNotExists(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := sessiontest.NewSession(t, nil)
+	sess.Revoke(time.Now().UTC())
+
+	repo := helper.Repo()
+	err := repo.Revoke(t.Context(), sess)
+
+	assert.ErrorIs(t, err, session.ErrSessionNotFound)
+}
+
+func TestSessionRepo_Revoke_Fails_WhenSessionNotRevoked(t *testing.T) {
+	helper := NewSessionRepoTestHelper(t)
+	sess := helper.PersistentSession()
+
+	repo := helper.Repo()
+	err := repo.Revoke(t.Context(), sess)
+
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, session.ErrSessionAlreadyRevoked)
+	assert.True(t, helper.CheckSessionExists(sess), "session changed")
 }
 
 func TestSessionRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {

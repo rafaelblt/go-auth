@@ -12,6 +12,7 @@ import (
 type FakeSessionWriter struct {
 	adds        []*session.Session
 	updates     []*session.Session
+	revoked     []*session.Session
 	revocations []FakeSessionRevocation
 	err         error
 }
@@ -25,6 +26,7 @@ func NewFakeSessionWriter() *FakeSessionWriter {
 	return &FakeSessionWriter{
 		adds:        []*session.Session{},
 		updates:     []*session.Session{},
+		revoked:     []*session.Session{},
 		revocations: []FakeSessionRevocation{},
 	}
 }
@@ -61,6 +63,25 @@ func (w *FakeSessionWriter) Update(
 	return nil
 }
 
+func (w *FakeSessionWriter) Revoke(
+	ctx context.Context, sess *session.Session,
+) error {
+	if w.err != nil {
+		return w.err
+	}
+	if sess == nil {
+		return errors.New("session nil")
+	}
+	if sess.IsZero() {
+		return errors.New("session zero")
+	}
+	if !sess.IsRevoked() {
+		return errors.New("session not revoked")
+	}
+	w.revoked = append(w.revoked, sess)
+	return nil
+}
+
 func (w *FakeSessionWriter) RevokeAllByUserID(
 	ctx context.Context, userID user.ID, revokedAt time.Time,
 ) error {
@@ -83,6 +104,10 @@ func (w *FakeSessionWriter) Adds() []*session.Session {
 
 func (w *FakeSessionWriter) Updates() []*session.Session {
 	return w.updates
+}
+
+func (w *FakeSessionWriter) Revoked() []*session.Session {
+	return w.revoked
 }
 
 func (w *FakeSessionWriter) Revocations() []FakeSessionRevocation {
