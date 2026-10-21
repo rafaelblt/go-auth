@@ -484,6 +484,24 @@ func TestLogoutSuccessLog_LogsReuseWithTheReasonRefreshLogs(t *testing.T) {
 	assert.Equal(t, "token already used", line["reason"])
 }
 
+// A logout that changed nothing is told apart from one that ended the session,
+// with the reason refresh logs for a revoked session.
+func TestLogoutSuccessLog_LogsTheReasonRefreshLogs_WhenSessionWasAlreadyRevoked(t *testing.T) {
+	ctx, buf := contextWithLoggedLines(t)
+	output := logout.Output{
+		UserID:                "0f1c2e5a-7b3d-4c8e-9a1f-2b6d4e8c0a37",
+		SessionID:             "0b9f3f02-9a1f-4f7f-9a0e-4a1b6f2d9c77",
+		SessionAlreadyRevoked: true,
+	}
+
+	logoutSuccessLog(ctx, output)
+
+	line := testutil.Only(t, loggedLines(t, buf))
+	assert.Equal(t, "success logout", line["msg"])
+	assert.Equal(t, output.SessionID, line["session_id"])
+	assert.Equal(t, "session revoked", line["reason"])
+}
+
 func TestJWKS(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "url:8080", nil)

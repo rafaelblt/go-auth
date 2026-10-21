@@ -138,11 +138,16 @@ logs `invalid token` from then on.
 A code that already says everything, such as `username_already_exists`, has
 no reason, and the field is left out.
 
-`success logout` has a `reason` only when the token had already been spent and
-its session was still active: `token already used`, as refresh logs
-[reuse](system.md#reuse-detection), so one query finds both
-([Reading the logs](#reading-the-logs)). The logout revoked the session, as it
-does whatever the token's state, and answered `204`.
+`success logout` has a `reason` in two cases, each the one refresh logs for the
+same state, so one query finds both ([Reading the logs](#reading-the-logs)):
+
+- `token already used`: the token had already been spent and its session was
+  still active, which is [reuse](system.md#reuse-detection). The logout revoked
+  the session, as it does whatever the token's state.
+- `session revoked`: the session was already revoked, by an earlier logout,
+  reuse detection or a password change, and the logout changed nothing.
+
+Either way it answered `204`.
 
 ### Defects
 

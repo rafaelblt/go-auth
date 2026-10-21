@@ -32,6 +32,9 @@ type Output struct {
 	// ReuseDetected is set when the token was already spent and its session
 	// still active: someone else may hold the token's successor.
 	ReuseDetected bool
+	// SessionAlreadyRevoked is set when something else revoked the session
+	// first, and the logout changed nothing.
+	SessionAlreadyRevoked bool
 }
 
 var ErrTokenInvalid = usecase.NewErrorWithReason(
@@ -58,6 +61,7 @@ func (uc *Logout) Execute(ctx context.Context, in Input) (Output, error) {
 		SessionID: sess.ID().String(),
 	}
 	if sess.IsRevoked() {
+		output.SessionAlreadyRevoked = true
 		return output, nil
 	}
 
@@ -66,6 +70,7 @@ func (uc *Logout) Execute(ctx context.Context, in Input) (Output, error) {
 		return Output{}, err
 	}
 	if !revoked {
+		output.SessionAlreadyRevoked = true
 		return output, nil
 	}
 
