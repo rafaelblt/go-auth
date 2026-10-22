@@ -263,7 +263,9 @@ count as reuse ([why](../system.md#reuse-detection)).
 
 ### Client obligations
 
-1. Store the refresh token privately and durably.
+1. Store the refresh token privately; losing it costs only a new login. In a
+   browser, where to keep it is a trade-off
+   ([Tokens in a browser](../system.md#tokens-in-a-browser)).
 2. After a successful refresh, replace it with the new one at once.
 3. Never retry a refresh with the old token: if the response was lost, the
    retry trips reuse detection and logs the user out. Log in again instead.

@@ -414,6 +414,37 @@ its own address, past any per-address limit. A reverse proxy that answers CORS
 preflights for these endpoints, for origins the operator does not control,
 undoes this.
 
+### Tokens in a browser
+
+`go-auth` returns tokens in JSON bodies and sets no cookies, so where they are
+kept is up to the client application. A page that receives them can keep them
+only where its own scripts can read them, in memory or in web storage, and a
+script injected into the page can read them there too. The refresh token is
+the one to protect: each refresh issues another, valid for
+`REFRESH_TOKEN_TTL`, so a stolen copy can keep the session going until the
+user's own client refreshes again and trips [reuse detection](#reuse-detection).
+
+The ways to keep them, from the most protected to the most convenient:
+
+- **On the application's server, which is the recommended way.** A
+  backend-for-frontend calls `go-auth`, holds both tokens, and gives the
+  browser a cookie of its own, `HttpOnly`, `Secure` and `SameSite`. No script
+  can read that cookie, so an injected one can act as the user only from the
+  open page, and cannot take the session elsewhere. `go-auth` then need not be
+  reachable from browsers, and keeping refreshes one at a time
+  ([client obligations](api/reference.md#client-obligations)) is simpler on a
+  server than across tabs. Its users share one rate-limit allowance unless it
+  forwards their addresses ([why](#rate-limiting-is-per-address-and-per-process)).
+- **In the page's memory**, for a page that calls `go-auth` itself, which it
+  can only from the same origin ([why](#requests-from-browsers)). Only that
+  page can reach the tokens, and only while it is open; the cost is a new login
+  on every page load and in every tab.
+- **In web storage, such as `localStorage`.** The user stays signed in across
+  page loads and tabs, but any script that runs on the origin can read the
+  refresh token for as long as it is valid. An application that chooses it for
+  that convenience can make injection harder with a strict Content Security
+  Policy.
+
 ### Rate limiting
 
 Off unless [`RATE_LIMIT`](configuration.md#rate_limit) chooses a level, which
@@ -509,7 +540,9 @@ provide:
 - multi-tenancy: one deployment serves one application;
 - an audit trail: authentication events are log lines, not stored records;
 - health or readiness endpoints, or metrics;
-- TLS or CORS.
+- TLS or CORS;
+- cookies: tokens travel in JSON bodies
+  ([where a browser keeps them](#tokens-in-a-browser)).
 
 ### Deployment
 
