@@ -94,7 +94,7 @@ func TestRefresh_ReturnsInvalidTokenResponse_WhenTokenIsAlreadyUsed(t *testing.T
 
 func TestRefresh_ReturnsInvalidTokenResponse_WhenSessionIsRevoked(t *testing.T) {
 	env := testApp.NewEnv(t)
-	_, raw := env.Fixtures.CreateRefreshTokenAlreadyUsed(t)
+	_, raw := env.Fixtures.CreateRefreshTokenWithSessionRevoked(t)
 	reqBody := RefreshRequestBody{RefreshToken: raw}
 
 	resp := env.Client.Post(t, RefreshPath, reqBody)
