@@ -13,9 +13,9 @@ how the code does it in the [architecture guides](architecture/overview.md).
 answers in JSON, so applications in any language can use it. It has two kinds
 of callers:
 
-- **client applications**, which register users, log them in and out, keep
-  them signed in with refresh tokens, change passwords, and ask whose access
-  token they hold;
+- **client applications**, which sign their users up and in, and keep them
+  signed in with refresh tokens, through the
+  [endpoints](api/reference.md) for that;
 - **your services**, which receive access tokens with each request and check
   them, either themselves, with the public keys the service publishes, or by
   asking the service.
@@ -227,10 +227,9 @@ attacker who replayed a token keep a rotating credential indefinitely.
 and has since expired still revokes the session. The other way round, someone
 holding an old stolen token could wait for it to expire, replay it, and never
 trip the alarm. If the session cleanup deletes the session while it is being
-revoked, the token is answered as unknown, as in step 2. If a logout, a
-password change or another refresh revokes it first, the token is answered as
-one of a revoked session, as in step 3, and only the request that revoked the
-session is logged as reuse.
+revoked, the token is answered as unknown, as in step 2. If anything else
+revokes it first, the token is answered as one of a revoked session, as in step
+3, and only the request that revoked the session is logged as reuse.
 
 The legitimate client pays when it sends a token twice itself, after a lost
 response or from two tabs ([Limitations](#a-repeated-refresh-logs-the-user-out)).
@@ -274,14 +273,14 @@ its answer says nothing about the state of the token.
   the logout found it already revoked.
 
 A refresh with the same token that is already past step 3 when the logout
-revokes the session can still finish, as after any revocation: the refresh
-token it returns belongs to the revoked session, and its access token works
-until it expires. Avoiding that is the client's part
-([obligations](api/reference.md#client-obligations-on-logout)). Of logouts,
-reuse detection and password changes running alongside, the first to revoke
-the session keeps its time, and a logout that comes after it is answered as in
-step 2. If the session cleanup deletes the session while a logout runs, the
-token is answered as unknown, as it would be a moment later.
+revokes the session can still finish, as after any revocation: the refresh token
+it returns belongs to the revoked session, and its access token works until it
+expires. Avoiding that is the client's part
+([obligations](api/reference.md#client-obligations-on-logout)). Of the requests
+revoking the session at once, the first keeps its time, and a logout that comes
+after it is answered as in step 2. If the session cleanup deletes the session
+while a logout runs, the token is answered as unknown, as it would be a moment
+later.
 
 ### Checking an access token
 
@@ -386,10 +385,10 @@ the service runs; withdrawing one means
 
 ### Deliberately vague answers
 
-Login, change password, refresh, logout, verify and me answer every failure of
-a kind with one code, and say which failure it was only in the log, as the
-request's `reason` ([Outcomes](logging.md#outcomes)), so nothing is lost for
-whoever runs the service.
+The endpoints below answer every failure of a kind with one code, and say which
+failure it was only in the log, as the request's `reason`
+([Outcomes](logging.md#outcomes)), so nothing is lost for whoever runs the
+service.
 
 - **Login and change password** answer a wrong password, an unknown username, a
   user without a password and a malformed value alike, in about the same time
@@ -653,13 +652,13 @@ user registers, and keep it.
 
 #### Access tokens cannot be revoked
 
-Revoking a session, by a logout or any other way, stops its refresh token at
-once, but the access tokens already issued stay valid until they expire: they
-hold everything needed to check them, not even their session.
-`ACCESS_TOKEN_TTL` is therefore how long a revoked session keeps working, 30
-minutes by default. Verify and me do not change that: they make the checks a
-local verifier makes, and me then reads only the user. An application that
-needs revocation to take effect at once cannot get it from access tokens.
+Revoking a session ([how](#concepts)) stops its refresh token at once, but the
+access tokens already issued stay valid until they expire: they hold everything
+needed to check them, not even their session. `ACCESS_TOKEN_TTL` is therefore
+how long a revoked session keeps working, 30 minutes by default. Verify and me
+do not change that: they make the checks a local verifier makes, and me then
+reads only the user. An application that needs revocation to take effect at once
+cannot get it from access tokens.
 
 #### Sessions have no maximum age
 

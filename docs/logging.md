@@ -144,8 +144,8 @@ same state, so one query finds both ([Reading the logs](#reading-the-logs)):
 - `token already used`: the token had already been spent and its session was
   still active, which is [reuse](system.md#reuse-detection). The logout revoked
   the session, as it does whatever the token's state.
-- `session revoked`: the session was already revoked, by an earlier logout,
-  reuse detection or a password change, and the logout changed nothing.
+- `session revoked`: the session was already revoked
+  ([how](system.md#concepts)), and the logout changed nothing.
 
 Either way it answered `204`.
 
@@ -233,9 +233,10 @@ sites, not because of a filter:
 
 Otherwise, a configured value is echoed only when it fails to parse, and only
 for a number, a duration, a boolean or a trusted proxy entry. Success lines
-carry `user_id`, and login, refresh and logout `session_id`, which tie an
-account's requests together; failures carry neither, since naming the account
-behind a rejected attempt would put its existence in the log.
+carry `user_id`, and `session_id` when the request works on a session
+([Outcomes](#outcomes)), which tie an account's requests together; failures
+carry neither, since naming the account behind a rejected attempt would put its
+existence in the log.
 
 ## Reading the logs
 

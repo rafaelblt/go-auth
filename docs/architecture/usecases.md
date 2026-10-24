@@ -271,9 +271,9 @@ rejected:
 
 `handleTokenReuse` revokes the session with `Session.Revoke` and
 `SessionWriter.Revoke`, then answers `ErrTokenAlreadyUsed`. `Revoke` is a
-[guarded write](persistence.md#guarded-writes) on `revoked_at IS NULL`: a
-logout, a password change or another reuse detection can revoke the session
-after step 3 read it, and `Revoke` then returns
+[guarded write](persistence.md#guarded-writes) on `revoked_at IS NULL`: any
+other [revocation](../system.md#concepts) can revoke the session after step 3
+read it, and `Revoke` then returns
 `session.ErrSessionAlreadyRevoked`, answered with `ErrSessionRevoked`, as at
 step 3. A spent token reaches here however long ago it expired, so its session
 may be dead and deleted by the session cleanup after step 2: `Revoke` then
@@ -329,13 +329,12 @@ and the `success logout` line in [Logging](../logging.md#outcomes).
 
 ### One revoked state
 
-Logout revokes the session as reuse detection and the password change do,
-rather than with a state of its own, such as a `logged_out_at`: `revoked_at`
-means the session issues no more tokens, whatever the cause, and everything
-that reads it, step 3 of the refresh, the
-[session cleanup](persistence.md#deleting-dead-sessions) and
-`RevokeAllByUserID`, treats every cause alike. A second state would have each
-of them check both. The cause is in the log, not in the database.
+Logout revokes the session as every other cause does, rather than with a state
+of its own, such as a `logged_out_at`: `revoked_at` means the session issues no
+more tokens, whatever the cause, and everything that reads it, step 3 of the
+refresh, the [session cleanup](persistence.md#deleting-dead-sessions) and
+`RevokeAllByUserID`, treats every cause alike. A second state would have each of
+them check both. The cause is in the log, not in the database.
 
 ## Verify
 
