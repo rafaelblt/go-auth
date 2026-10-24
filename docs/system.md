@@ -360,7 +360,10 @@ through three windows:
 - it signs for **7 days**, until the next key starts;
 - it stays published for **25 hours** more, an hour longer than the longest
   access token the service can issue, and is then deleted, so a copy of the
-  database holds only the keys of the last 9 days or so.
+  database holds only the keys of the last 9 days or so. The extra hour absorbs
+  clock skew between instances: with more skew than that, a token one instance
+  signed just before it switched could lose its key at another while still
+  valid.
 
 So a key is published for about **9 days**, and the JWKS holds one or two keys.
 Each instance re-reads the keys every few minutes
@@ -373,7 +376,7 @@ signing, never none.
 **Sealed keys.** When [`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key)
 is set, every key added is stored encrypted, and opens only in its own row. A
 key stored before it was set still loads, so setting it needs nothing else: the
-old keys age out within about 9 days. Sealing protects a copy of the database,
+old keys age out as their windows end. Sealing protects a copy of the database,
 not the database itself: whoever can write the table can store a key in the
 clear, as they could replace a password hash. A key cannot be withdrawn while
 the service runs; withdrawing one means
@@ -585,8 +588,8 @@ these endpoints undoes what the `415` protects
   [replacing every signing key](configuration.md#replacing-the-signing-keys),
   which invalidates the access tokens already issued.
 - **Instances go by their own clocks** to decide which key signs and when an old
-  one is dropped. The windows absorb up to an hour of skew, so keep the clocks
-  synchronised.
+  one is dropped. The windows absorb only so much skew
+  ([how much](#signing-keys)), so keep the clocks synchronised.
 
 #### A session in use keeps every refresh token
 

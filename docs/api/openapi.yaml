@@ -765,9 +765,11 @@ components:
           items:
             $ref: '#/components/schemas/Jwk'
           description: |
-            The key signing now, the next one from a day before it signs, and
-            the previous one for 25 hours after it stops. Select a key by the
-            `kid` in the token's header.
+            The key signing now and, around a rotation, the next one before it
+            starts signing or the previous one until every token it signed has
+            expired; how long each is published is in
+            `docs/api/token-verification.md`. Select a key by the `kid` in the
+            token's header.
 
     Error:
       type: object
