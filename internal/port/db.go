@@ -48,7 +48,6 @@ type UserWriter interface {
 // Password
 
 type PasswordReader interface {
-	FindByID(context.Context, password.ID) (*password.Password, error)
 	FindByUserID(context.Context, user.ID) (*password.Password, error)
 }
 

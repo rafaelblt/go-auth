@@ -20,16 +20,6 @@ func NewFakePasswordReader() *FakePasswordReader {
 	return &reader
 }
 
-func (r *FakePasswordReader) FindByID(
-	ctx context.Context, id password.ID,
-) (*password.Password, error) {
-	pwd, exists := r.data[id]
-	if exists {
-		return pwd, nil
-	}
-	return nil, nil
-}
-
 func (r *FakePasswordReader) FindByUserID(
 	ctx context.Context, userID user.ID,
 ) (*password.Password, error) {

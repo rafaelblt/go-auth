@@ -127,37 +127,6 @@ func TestPasswordRepo_Save(t *testing.T) {
 	require.True(t, helper.CheckPasswordIsSaved(pwd))
 }
 
-func TestPasswordRepo_FindByID_ReturnsNil_WhenIDNotExists(t *testing.T) {
-	helper := NewPasswordRepoTestHelper(t)
-	repo := helper.Repo()
-
-	ctx := context.Background()
-	pwd, err := repo.FindByID(ctx, password.NewID())
-
-	assert.NoError(t, err)
-	assert.Nil(t, pwd)
-}
-
-func TestPasswordRepo_FindByID_ReturnsPassword_WhenIDExists(t *testing.T) {
-	helper := NewPasswordRepoTestHelper(t)
-	usr := usertest.NewUser(t, nil)
-	helper.SaveUser(usr)
-
-	pwd := passwordtest.NewPassword(t, func(params *password.RestoreParams) {
-		params.UserID = usr.ID()
-	})
-
-	repo := helper.Repo()
-	ctx := context.Background()
-	require.NoError(t, repo.Add(ctx, pwd))
-
-	found, err := repo.FindByID(ctx, pwd.ID())
-
-	assert.NoError(t, err)
-	assert.NotNil(t, found)
-	assert.Equal(t, pwd.ID(), found.ID())
-}
-
 func TestPasswordRepo_FindByUserID_ReturnsNil_WhenNotExists(t *testing.T) {
 	helper := NewPasswordRepoTestHelper(t)
 	repo := helper.Repo()

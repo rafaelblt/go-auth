@@ -137,24 +137,12 @@ func (repo *PasswordRepo) existsByID(ctx context.Context, id string) (bool, erro
 	return exists, nil
 }
 
-func (repo *PasswordRepo) FindByID(ctx context.Context, id password.ID) (*password.Password, error) {
-	sql := "SELECT * FROM passwords WHERE id = $1"
-
-	return repo.findOne(ctx, sql, id.Value().String())
-}
-
 func (repo *PasswordRepo) FindByUserID(
 	ctx context.Context, userID user.ID,
 ) (*password.Password, error) {
 	sql := "SELECT * FROM passwords WHERE user_id = $1"
 
-	return repo.findOne(ctx, sql, userID.Value().String())
-}
-
-func (repo *PasswordRepo) findOne(
-	ctx context.Context, sql string, args ...any,
-) (*password.Password, error) {
-	rows, err := repo.db.Query(ctx, sql, args...)
+	rows, err := repo.db.Query(ctx, sql, userID.Value().String())
 	if err != nil {
 		return nil, fmt.Errorf("db query failed: %w", err)
 	}
