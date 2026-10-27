@@ -24,21 +24,3 @@ func (s Set[T]) Contains(value T) bool {
 	_, exists := s.data[value]
 	return exists
 }
-
-func (s Set[T]) Remove(value T) bool {
-	_, ok := s.data[value]
-	delete(s.data, value)
-	return ok
-}
-
-func (s Set[T]) Values() []T {
-	keys := make([]T, 0, len(s.data))
-	for k := range s.data {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func (s Set[T]) Len() int {
-	return len(s.data)
-}
