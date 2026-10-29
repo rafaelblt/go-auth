@@ -7,8 +7,9 @@ rotating, revocable refresh tokens. It is at v1.
 This repository keeps its reasoning in `docs/` rather than in comments, so check
 there before inferring intent from the code. Read only what the task needs:
 
-1. **What the service does**: [How go-auth works](docs/system.md), the section
-   of the process you are changing.
+1. **What the service does**: the section you are changing in its topic
+   document, which [How go-auth works](docs/system.md) lists with every
+   endpoint.
 2. **How the code does it**: the [architecture overview](docs/architecture/overview.md)
    once, then the guide section of each package you touch, which its doc
    comment names. A section lists the package's files, so you need not open

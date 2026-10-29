@@ -93,7 +93,7 @@ func adaptUseCase[In, Out any](p useCaseAdapterParams[In, Out]) http.HandlerFunc
 	}
 }
 
-// See docs/api/reference.md#request-bodies.
+// See docs/api/conventions.md#request-bodies.
 const requestBodyMaxBytes = 64 << 10
 
 var errInvalidUTF8 = errors.New("request body is not valid UTF-8")
@@ -105,7 +105,7 @@ func hasJSONContentType(r *http.Request) bool {
 
 // decodeJSONBody reads only the first JSON value, and checks its bytes before
 // encoding/json can turn invalid UTF-8 into U+FFFD. See
-// docs/api/reference.md#request-bodies.
+// docs/api/conventions.md#request-bodies.
 func decodeJSONBody(r *http.Request, body any) error {
 	var raw json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {

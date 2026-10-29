@@ -42,13 +42,12 @@ which depends on the host's CPU count and cannot be configured.
 
 The address the HTTP server listens on: `0.0.0.0:8080` inside a container,
 `localhost:8080` for local development. The service serves plain HTTP; for TLS,
-put it [behind a reverse proxy](system.md#run-it-behind-a-reverse-proxy).
+put it [behind a reverse proxy](getting-started.md#behind-a-reverse-proxy).
 
 ### `AUTO_MIGRATE`
 
-When `true`, pending migrations are applied at startup. Either way, the service
-starts only when the schema version is the latest migration in the binary
-([Migrations](getting-started.md#migrations)). Only `true` and `false` are
+When `true`, pending migrations are applied at startup; either way, the schema
+version is [checked](system.md#migrations). Only `true` and `false` are
 accepted, in any case.
 
 ### `BCRYPT_COST`
@@ -65,13 +64,11 @@ built rather than with the other variables.
 
 Cost 12 takes roughly 200–400 ms per hash on typical hardware. A login pays it
 once, a password change twice (checking the current password, hashing the new
-one), and startup once, for the dummy hash a missing account is checked
-against. Lower it only for tests; the end-to-end tests use 6.
+one), and startup once, for the [dummy hash](accounts.md#checking-credentials).
+Lower it only for tests; the end-to-end tests use 6.
 
-Stored passwords keep the cost they were hashed with until the user changes
-them. Changing it once there are users lets response times tell which accounts
-existed before the change
-([Limitations](system.md#login-timing-after-a-bcrypt_cost-change)).
+Choose it before the first user registers, and keep it
+([why](accounts.md#login-timing-after-a-bcrypt_cost-change)).
 
 ### `ACCESS_TOKEN_TTL`
 
@@ -85,16 +82,14 @@ is checked when the app is built, as
 | `NORMAL` | 30m |
 | `LONG` | 1h |
 
-An access token cannot be revoked, so this is also how long a revoked session
-keeps working ([Limitations](system.md#access-tokens-cannot-be-revoked)).
-Keep it short.
+Keep it short: it is also how long a revoked session keeps working
+([why](access-tokens.md#access-tokens-cannot-be-revoked)).
 
 ### `REFRESH_TOKEN_TTL`
 
-How long a refresh token stays valid. Every refresh issues a new token with
-this lifetime, so it is how long a session can go unused, not how long it can
-last ([Limitations](system.md#sessions-have-no-maximum-age)). It has no
-upper bound.
+How long a refresh token stays valid. Every refresh issues a new one with this
+lifetime, so it is how long a session can go unused, not how long it can last
+([why](sessions.md#sessions-have-no-maximum-age)). It has no upper bound.
 
 | Preset | Value |
 |---|---|
@@ -123,22 +118,16 @@ case-insensitive. No other request is ever limited.
 | `POST /v1/auth/me` | 300 per minute | 100 per minute | 30 per minute |
 
 "10 per minute" means up to 10 requests at once, then one more every 6 seconds:
-the allowance refills steadily. Past it, the endpoint answers
-`429 too_many_requests` with a `Retry-After` header in seconds. Which requests
-count, and against which address: [Rate limiting](system.md#rate-limiting).
+the allowance refills steadily. What happens past it, which requests count, and
+against which address: [Rate limiting](api/conventions.md#rate-limiting).
 
-The numbers: every login past the format checks pays a bcrypt comparison, so
-`normal` holds an address to about 10 password guesses a minute, which a user
-who mistypes a few times never notices. Registration and password changes are
-rare and cost a bcrypt hash or comparison each, so they are counted per hour.
-Refresh costs no bcrypt, and a client refreshes about once per
+**Why these numbers:** every login past the format checks pays a bcrypt
+comparison, so `normal` holds an address to about 10 password guesses a minute,
+which a user who mistypes a few times never notices. Registration and password
+changes are rare and cost bcrypt too, so they are counted per hour. Refresh, me
+and logout cost no bcrypt, and a client refreshes about once per
 `ACCESS_TOKEN_TTL` per session, so `normal` covers about 3000 sessions behind
-one address. Me costs no bcrypt either, only a token check and one indexed
-read, so it gets refresh's numbers. So does logout, which costs less than a
-refresh: two indexed reads and at most one write, plus one more read when
-another revocation of the session got there first. The counts are per address
-and kept in memory
-([Limitations](system.md#rate-limiting-is-per-address-and-per-process)).
+one address.
 
 **`off` is deprecated.** It is the v1 default, so upgrading changes nothing; v2
 removes it, and `RATE_LIMIT` will only choose the level. While it is `off`,
@@ -154,7 +143,7 @@ TRUSTED_PROXIES=10.0.0.0/8, 192.0.2.10
 
 By default there are none: the client address is the TCP peer, and no client
 can choose the address it is counted as. How a listed proxy's header is read:
-[Which address counts](system.md#which-address-counts). List every proxy hop
+[Which address counts](api/conventions.md#which-address-counts). List every proxy hop
 between the client and the service: the walk stops at the first one missing. An application
 server that calls the service for its users, such as a backend relaying their
 logins, is a proxy too: list it, and have it append each user's address to
@@ -177,16 +166,15 @@ invalid environment configuration: 'TRUSTED_PROXIES': invalid trusted proxy "pro
 ### `SIGNING_KEY_ENCRYPTION_KEY`
 
 The AES-256 key that seals the seeds of the signing keys stored in the database
-([Signing keys](system.md#signing-keys)): 32 random bytes, in standard
+([Sealed keys](access-tokens.md#sealed-keys)): 32 random bytes, in standard
 base64.
 
 ```bash
 openssl rand -base64 32
 ```
 
-Keep it out of the database and its backups. Once it is set, every signing key
-added is sealed, and the keys stored before keep working until they retire
-([Signing keys](system.md#signing-keys)): nothing needs migrating.
+Keep it out of the database and its backups. Setting it on a running
+deployment needs nothing else: the keys stored before keep loading.
 
 Every instance needs the same value, in the same rollout. Once sealed keys are
 stored, an instance without it, or with another, does not start
@@ -208,23 +196,20 @@ a `WARN`.
 
 ### `SESSION_RETENTION`
 
-How long a session stays stored once it is dead, revoked or with its latest
-refresh token expired, before the
-[session cleanup](system.md#session-cleanup) deletes it, with its
-refresh tokens. It counts from when the session died: it is not how long a
-session can last, and has nothing to do with `REFRESH_TOKEN_TTL`.
+How long a session stays stored once it is
+[dead](sessions.md#life-of-a-session), before the
+[session cleanup](sessions.md#session-cleanup) deletes it, with its refresh
+tokens. It counts from when the session died: it is not how long a session can
+last, and has nothing to do with `REFRESH_TOKEN_TTL`.
 
 `off`, in any case, keeps every session, and the cleanup never runs. Anything
 else is a [duration](#durations-and-presets) of at least `1h`:
 
-- **At least an hour**, because a refresh checks its session only at its start,
-  and a rotation fails its writes, with a `500`, if the session is deleted
-  before it ends. A rotation needs a live session, so the cleanup can delete
-  one under it only if the refresh started more than the retention ago, which
-  an hour rules out. Reuse detection and logout need no margin: they answer a
-  session deleted under them as an unknown token
-  ([Reuse detection](system.md#reuse-detection),
-  [Logging out](system.md#logging-out)).
+- **At least an hour**, so that the cleanup never deletes a session under a
+  refresh in flight: a refresh checks its session only at its start, and its
+  rotation fails, as an unexpected error, if the session is gone before it
+  ends. Reuse detection and logout need no margin: they answer a session
+  deleted under them as an unknown token.
 - **`0` does not mean `off`.** It is a duration under the minimum, and stops
   the service from starting like any other, so that no value can be read both
   as "keep nothing" and as "delete nothing".
@@ -236,7 +221,7 @@ invalid environment configuration: 'SESSION_RETENTION': too_small(min=1h0m0s)
 **The cleanup is on by default.** Before it existed, nothing was deleted: the
 first runs after upgrading delete every session dead for more than 30 days, and
 their refresh tokens, a little at a time
-([Session cleanup](system.md#session-cleanup)). Set it to `off`
+([Session cleanup](sessions.md#session-cleanup)). Set it to `off`
 before upgrading to keep them.
 
 ## Replacing the signing keys
@@ -253,7 +238,7 @@ signed before stop verifying here, and clients get new ones by refreshing.
 Other verifiers keep the old keys until they fetch the JWKS again: until then
 they still accept tokens signed with them, and accept the new ones only if they
 refetch on an unknown `kid`
-([caching](api/token-verification.md#fetching-and-caching-keys)).
+([caching](access-tokens.md#fetching-and-caching-keys)).
 
 ## Durations and presets
 
@@ -290,11 +275,11 @@ They are logged as `app build failed` ([Logging](logging.md#startup-and-shutdown
 | HTTP timeouts: read header, read, write, idle | 5s, 15s, 15s, 60s | `internal/bootstrap/app.go` |
 | Graceful shutdown | 10s | `internal/bootstrap/app.go` |
 | Schema version check | 5s | `internal/bootstrap/schema.go` |
-| Request body limit | 64 KiB | [Request bodies](api/reference.md#request-bodies) |
-| Signing key windows | | [Signing keys](system.md#signing-keys) |
+| Request body limit | | [Request bodies](api/conventions.md#request-bodies) |
+| Signing key windows | | [Signing keys](access-tokens.md#signing-keys) |
 | Background tasks: the key sync and the session cleanup, their intervals, timeouts and batches | | [Background tasks](architecture/startup.md#background-tasks) |
 | Rate limits of each level | | [`RATE_LIMIT`](#rate_limit) |
-| Username and password rules | | [Register](api/reference.md#post-v1authregister) |
+| Username and password rules | | [Usernames and passwords](accounts.md#usernames-and-passwords) |
 
 To build the configuration from code, as the tests do:
 [Configuration loading](architecture/startup.md#configuration-loading).

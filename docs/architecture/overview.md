@@ -8,12 +8,13 @@ HTTP ([What it is](../system.md#what-it-is)).
 
 ## Reading the guides
 
-The documents in `docs/architecture/` say how the code does what
-[How go-auth works](../system.md) describes, and never restate it: a guide
-links to the behaviour it implements. To work on a package:
+The documents in `docs/architecture/` say how the code does what the topic
+documents describe, and never restate it: a guide links to the behaviour it
+implements, and names errors by their code, not by their HTTP status. To work
+on a package:
 
-1. read the behaviour in [How go-auth works](../system.md), if it is not
-   familiar yet;
+1. read the behaviour in its topic document, which
+   [How go-auth works](../system.md) lists, if it is not familiar yet;
 2. read the [code conventions](conventions.md) once;
 3. read the package's section, which its doc comment names and the
    [table below](#packages) lists. Every section has the package's files, the
@@ -75,13 +76,14 @@ A login:
 POST /v1/auth/login
   │
   ├─ logging middleware      request ID, logger in the context, "request received"
-  ├─ recovery middleware     a panic from here on becomes a 500
-  ├─ jsonRouteErrors         the mux's 404 and 405 become JSON
+  ├─ recovery middleware     a panic from here on becomes internal_server_error
+  ├─ jsonRouteErrors         the mux's plain-text not found and wrong method become JSON
   ├─ ServeMux                match POST /v1/auth/login
   │
-  ├─ adaptUseCase            Content-Type not application/json → 415
-  │                          rate limit used up → 429
-  │                          body past 64 KiB → 413, not JSON → 400
+  ├─ adaptUseCase            Content-Type not application/json → unsupported_media_type
+  │                          rate limit used up → too_many_requests
+  │                          body past the limit → request_body_too_large
+  │                          not JSON → invalid_json_body
   ├─ loginDecoder            JSON body → login.Input
   ├─ login.Execute           check the credentials, open a session, issue both tokens
   ├─ loginEncoder            login.Output → response body

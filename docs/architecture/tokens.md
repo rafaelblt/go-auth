@@ -20,28 +20,29 @@ refresh token has no code here: it is a domain type
 **Rules the code keeps**
 
 - `Issue` sets two claims, `sub` and `exp`
-  ([Token format](../api/token-verification.md#token-format)), with a lifetime
-  `NewAccessTokenService` accepts only between 1 minute and `MaxExpiration`,
-  24 hours. `MaxExpiration` also sets how long a retired key stays published
-  ([Signing keys](#signing-keys)).
-- Validation implements the checks of
-  [Checking an access token](../system.md#checking-an-access-token).
+  ([Token format](../access-tokens.md#token-format)), with a lifetime
+  `NewAccessTokenService` accepts only between 1 minute and `MaxExpiration`
+  ([`ACCESS_TOKEN_TTL`](../configuration.md#access_token_ttl)). `MaxExpiration`
+  also sets how long a retired key stays published ([Signing keys](#signing-keys)).
+- Validation implements the
+  [checks of verify](../access-tokens.md#letting-go-auth-verify).
   `ed25519.Signer.Parse` makes all of them but one: it pins `EdDSA`, picks the
   key by `kid` among the published ones, requires `exp`, checks `nbf` when
   there is one, by the injected clock, and maps each `golang-jwt` failure to
   `ErrTokenInvalid` or `ErrTokenExpired`. `AccessTokenService.Validate` then
   parses `sub` as a `user.ID`, and maps everything to `session.ErrTokenInvalid`
-  or `session.ErrTokenExpired`. Any other error is unexpected, a `500`.
+  or `session.ErrTokenExpired`. Any other error is unexpected.
 
 **When you change it:** a change to what is accepted changes
-[Checking an access token](../system.md#checking-an-access-token), and, if a
-verifier elsewhere should follow, [What to verify](../api/token-verification.md#what-to-verify).
-A `golang-jwt` failure left out of the mapping becomes a `500`.
+[Letting go-auth verify](../access-tokens.md#letting-go-auth-verify), and, if a
+verifier elsewhere should follow, [What to verify](../access-tokens.md#what-to-verify).
+A `golang-jwt` failure left out of the mapping becomes an
+`internal_server_error`.
 
 ## Signing keys
 
 `internal/infra/jwt/ed25519` holds the keys, the keyring that loads, rotates and
-serves them, and the JWT signer. Implements [Signing keys](../system.md#signing-keys).
+serves them, and the JWT signer. Implements [Signing keys](../access-tokens.md#signing-keys).
 
 | File | Holds |
 |---|---|
@@ -79,8 +80,8 @@ serves them, and the JWT signer. Implements [Signing keys](../system.md#signing-
   [background task](startup.md#background-tasks).
 
 **When you change it:** a window changes
-[Signing keys](../system.md#signing-keys) and the caching advice in
-[Fetching and caching keys](../api/token-verification.md#fetching-and-caching-keys).
+[Signing keys](../access-tokens.md#signing-keys) and the caching advice in
+[Fetching and caching keys](../access-tokens.md#fetching-and-caching-keys).
 
 Considered and rejected:
 
@@ -102,5 +103,4 @@ stored ones as it reads them. The repository stores whatever bytes it is given.
 
 The length tells the two forms apart: 32 bytes is a plaintext seed and 60 a
 sealed one, so no column records it. A plaintext seed loads whether or not the
-key is set, which is what lets a running deployment set it with nothing else to
-do.
+key is set ([why](../access-tokens.md#sealed-keys)).

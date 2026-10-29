@@ -2,7 +2,7 @@
 // middleware, and turning errors into responses. The use cases never see an
 // http.Request.
 //
-// See docs/architecture/http.md, and docs/api/reference.md for the endpoints
+// See docs/architecture/http.md, and docs/system.md#endpoints for the endpoints
 // themselves.
 package api
 

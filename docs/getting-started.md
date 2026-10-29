@@ -40,10 +40,9 @@ Every variable is in [Configuration](configuration.md).
 
 ## Migrations
 
-The migrations are embedded in the binary, so the service can apply them
-itself. With `AUTO_MIGRATE=true` it applies the pending ones at startup;
-without it, it only checks. Either way, it refuses to start unless the schema
-version is exactly the latest migration it carries:
+With `AUTO_MIGRATE=true` the service applies the pending migrations at startup;
+without it, it only [checks the schema version](system.md#migrations). A
+mismatch stops it with one of:
 
 ```
 get current schema version failed: schema not initialized: schema_migrations table not found
@@ -121,19 +120,19 @@ curl -sX POST http://localhost:8080/v1/auth/refresh \
 ```
 
 The response has a new access token *and* a new refresh token. The old one is
-now spent, and sending it again revokes the whole session
-([client obligations](api/reference.md#client-obligations)).
+now spent: never send it again
+([client obligations](sessions.md#client-obligations)).
 
 ### 4. Verify an access token in your own service
 
 Fetch the public keys, cache them, and validate tokens in your service
-([how, with examples](api/token-verification.md)):
+([how, with examples](access-tokens.md#what-to-verify)):
 
 ```bash
 curl -s http://localhost:8080/.well-known/jwks.json
 ```
 
-Or let `go-auth` check each token, at the cost of a call on every request:
+Or [let `go-auth` check each token](access-tokens.md#letting-go-auth-verify):
 
 ```bash
 curl -sX POST http://localhost:8080/v1/auth/verify \
@@ -142,7 +141,7 @@ curl -sX POST http://localhost:8080/v1/auth/verify \
 ```
 
 The answer names the user the token was issued to, as `user_id`, or is
-`401 invalid_token`.
+an `invalid_token` error.
 
 ### 5. Find out whose token it is
 
@@ -163,7 +162,7 @@ curl -sX POST http://localhost:8080/v1/auth/me \
 
 Send the refresh token from the last login or refresh: here, the one step 3
 returned. The one step 3 spent would end the session too, but be logged as
-[reuse](system.md#reuse-detection).
+[reuse](sessions.md#reuse-detection).
 
 ```bash
 curl -sX POST http://localhost:8080/v1/auth/logout \
@@ -171,9 +170,8 @@ curl -sX POST http://localhost:8080/v1/auth/logout \
   -d '{"refresh_token":"Yqo30b9bo0untCbS0P5dC2tG-fhtw33BI0cJhMK0VyA"}'
 ```
 
-The answer is `204`, with no body. The session's refresh tokens stop working at
-once, and its access tokens when they expire
-([client obligations](api/reference.md#client-obligations-on-logout)).
+The answer is empty
+([what logging out does](sessions.md#logging-out)).
 
 ### 7. Change the password
 
@@ -183,19 +181,34 @@ curl -sX POST http://localhost:8080/v1/auth/change-password \
   -d '{"username":"alice","current_password":"correct-horse","new_password":"battery-staple"}'
 ```
 
-The old password stops working, and so does every refresh token issued before
-the change: log in again with the new password.
+Log in again with the new password
+([what the change does](accounts.md#changing-the-password)).
 
 ## Deploying
 
-Read [Limitations](system.md#limitations) first. The two things most likely to matter:
+Read [Limitations](system.md#limitations) first. Besides a reverse proxy, the
+thing most likely to matter: set
+[`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key), or
+the signing keys are stored unencrypted in the database
+([why it matters](access-tokens.md#signing-keys-are-stored-in-the-database)).
 
-- `go-auth` has no TLS of its own, and its rate limiting is off unless you set
-  [`RATE_LIMIT`](configuration.md#rate_limit): run it
-  [behind a reverse proxy](system.md#run-it-behind-a-reverse-proxy).
-- Set [`SIGNING_KEY_ENCRYPTION_KEY`](configuration.md#signing_key_encryption_key),
-  or the signing keys are stored unencrypted in the database
-  ([why it matters](system.md#signing-keys-are-stored-in-the-database)).
+### Behind a reverse proxy
+
+`go-auth` serves plain HTTP, and its rate limiting is off unless
+[`RATE_LIMIT`](configuration.md#rate_limit) turns it on. Put it behind a reverse
+proxy that:
+
+- terminates TLS;
+- rate limits the endpoints `RATE_LIMIT` would limit while it is `off`:
+  nothing else limits password guessing then, beyond the cost of a bcrypt
+  comparison;
+- exposes only the service's [endpoints](system.md#endpoints);
+- does not answer CORS preflights for them from origins you do not control
+  ([why](api/conventions.md#content-type)).
+
+With the service's own rate limiting on, set
+[`TRUSTED_PROXIES`](configuration.md#trusted_proxies) to the proxy, or every
+client is counted as the proxy.
 
 ### The production image
 

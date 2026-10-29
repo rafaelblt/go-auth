@@ -28,10 +28,10 @@ info:
 
     The rules this file cannot express (the tolerances of the request-body
     decoder, refresh token reuse detection, the deliberately vague errors,
-    caching the JWKS) are in `docs/api/reference.md`, `docs/api/errors.md` and
-    `docs/api/token-verification.md`. The code is the source of truth: where
-    this file or those documents disagree with it, the code is right and both
-    are fixed.
+    caching the JWKS) are in `docs/api/conventions.md` and in the document
+    `docs/system.md#endpoints` names for each endpoint. The code is the source
+    of truth: where this file or those documents disagree with it, the code is
+    right and both are fixed.
 
 servers:
   - url: http://localhost:8080
@@ -704,7 +704,7 @@ components:
           $ref: '#/components/schemas/Token'
           description: |
             Its value is a JWT signed with EdDSA. Verify it with the keys from
-            `/.well-known/jwks.json`; see `docs/api/token-verification.md`.
+            `/.well-known/jwks.json`; see `docs/access-tokens.md`.
         refresh_token:
           $ref: '#/components/schemas/Token'
           description: |
@@ -768,8 +768,8 @@ components:
             The key signing now and, around a rotation, the next one before it
             starts signing or the previous one until every token it signed has
             expired; how long each is published is in
-            `docs/api/token-verification.md`. Select a key by the `kid` in the
-            token's header.
+            `docs/access-tokens.md#signing-keys`. Select a key by the `kid` in
+            the token's header.
 
     Error:
       type: object
@@ -786,8 +786,8 @@ components:
           type: string
           description: |
             A stable identifier for the failure. Branch on this. The catalog is
-            in `docs/api/errors.md`; treat a code you do not recognise as a
-            generic failure.
+            in `docs/api/conventions.md#codes`; treat a code you do not
+            recognise as a generic failure.
         message:
           type: string
           description: |

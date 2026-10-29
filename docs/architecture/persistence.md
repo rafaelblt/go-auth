@@ -20,13 +20,11 @@ stored, for how long, and the migration policy, seen from outside:
 
 ## Connection pool
 
-`NewPool` rejects an empty or blank connection string itself, because pgx
-would accept it and fall back to the libpq environment variables, connecting to
-whatever database those name. It sets the session timezone to UTC and decodes
-`timestamptz` in UTC, so with `SystemClock` also in UTC, every time is UTC
-whatever the server's locale. It pings the database, so a bad connection fails
-at startup. Pool sizing is pgx's default, which depends on the CPU count, and is
-not configurable.
+`NewPool` rejects an empty or blank connection string itself
+([why](../configuration.md#database_url)). It sets the session timezone to UTC
+and decodes `timestamptz` in UTC, so with `SystemClock` also in UTC, every time
+is UTC whatever the server's locale. It pings the database, so a bad connection
+fails at startup. Everything else, pool sizing included, is pgx's default.
 
 ## Schema
 
@@ -45,9 +43,9 @@ The SQL is in [`migrations/`](../../migrations). What the constraints are for:
   lower case: the domain canonicalises them first.
 - **`passwords.user_id`** is `UNIQUE`: one password per user, which the domain
   does not enforce. **`passwords.hash`** holds the whole bcrypt string, with its
-  cost and salt, so each password keeps the cost it was hashed with: changing
-  `BCRYPT_COST` breaks no login, and nothing rehashes a password until the user
-  changes it.
+  cost and salt, which is how each password keeps the cost it was hashed with
+  ([Concepts](../system.md#concepts)), and why changing `BCRYPT_COST` breaks no
+  login.
 - **`sessions.revoked_at`** is `NULL` while the session is active: a timestamp
   rather than a flag, so the time is recorded.
 - **`refresh_tokens.hash`** is the raw SHA-256 digest, never the token, and
@@ -75,9 +73,8 @@ has a `down`.
 
 At startup, `bootstrap.verifySchema` compares `migrations.Latest()`, the highest
 embedded version, with `postgres.SchemaVersion()`, the one applied, and stops
-the service if they differ in either direction: a binary running against a
-schema it was not built for would fail one request at a time instead.
-`SchemaVersion` tells three failures apart:
+the service if they differ in either direction
+([why](../system.md#migrations)). `SchemaVersion` tells three failures apart:
 
 | Error | Meaning |
 |---|---|
@@ -148,11 +145,11 @@ database applies it only while the rule still holds:
 
 | Statement | Condition | When nothing matched |
 |---|---|---|
-| `UserRepo.Add` | `ON CONFLICT (username) DO NOTHING` | `user.ErrUsernameAlreadyExists`: register's `409` |
+| `UserRepo.Add` | `ON CONFLICT (username) DO NOTHING` | `user.ErrUsernameAlreadyExists`: register's `username_already_exists` |
 | `RefreshTokenRepo.MarkUsed` | `WHERE id = @id AND used_at IS NULL` | `session.ErrTokenAlreadyUsed`: reuse ([Rotation](usecases.md#rotation)) |
-| `SessionRepo.Revoke` | `WHERE id = @id AND revoked_at IS NULL` | `session.ErrSessionAlreadyRevoked`: refresh's `session revoked`, logout's `204` ([Reuse detection](usecases.md#reuse-detection), [Logout](usecases.md#logout)) |
-| `PasswordRepo.UpdateHash` | `WHERE id = @id AND hash = @previous_hash` | `password.ErrHashChanged`: `401`, `password changed` |
-| `PasswordRepo.LockHash` | `WHERE id = @id AND hash = @hash FOR SHARE` | `password.ErrHashChanged`: `401`, `password changed` ([The password lock](usecases.md#the-password-lock)) |
+| `SessionRepo.Revoke` | `WHERE id = @id AND revoked_at IS NULL` | `session.ErrSessionAlreadyRevoked`: refresh's `session revoked`, logout's already revoked session ([Reuse detection](usecases.md#reuse-detection), [Logout](usecases.md#logout)) |
+| `PasswordRepo.UpdateHash` | `WHERE id = @id AND hash = @previous_hash` | `password.ErrHashChanged`: `invalid_credentials`, `password changed` |
+| `PasswordRepo.LockHash` | `WHERE id = @id AND hash = @hash FOR SHARE` | `password.ErrHashChanged`: `invalid_credentials`, `password changed` ([The password lock](usecases.md#the-password-lock)) |
 | `SigningKeyRepo.Add` | `ON CONFLICT (generation) DO NOTHING` | nothing: the keyring lists the keys again ([Signing keys](tokens.md#signing-keys)) |
 
 `LockHash` takes a lock instead of writing, for a rule that spans two tables
@@ -218,7 +215,7 @@ before it, or that have no refresh token expiring at or after it, and returns
 how many it deleted.
 
 - **Whole sessions, never a token on its own**
-  ([why](../system.md#session-cleanup)): `ON DELETE CASCADE` takes a session's
+  ([why](../sessions.md#session-cleanup)): `ON DELETE CASCADE` takes a session's
   tokens with it.
 - **By the stored `expires_at`**, never by the configured TTL. Each refresh
   issues a token that expires after the ones before it, so no token expiring at

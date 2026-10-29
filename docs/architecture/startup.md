@@ -81,7 +81,8 @@ sessions, `sessionCleanupMaxBatches` and `sessionCleanupBatchSize` in
 `usecases.go`. The tasks are listed in `App.backgroundTasks`.
 
 **When you change it:** an interval or a batch size here is the one place it is
-stated; [How go-auth works](../system.md#processes) links to this table. A new
+stated; [Session cleanup](../sessions.md#session-cleanup) and
+[Signing keys](../access-tokens.md#signing-keys) link to this table. A new
 task: [Recipes](recipes.md#add-a-background-task).
 
 ## Configuration loading

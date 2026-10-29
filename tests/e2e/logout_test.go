@@ -108,7 +108,7 @@ func TestLogout_ReturnsNoContent_WhenRepeated(t *testing.T) {
 	requireNoContent(t, env.Client.Post(t, LogoutPath, reqBody))
 }
 
-// Access tokens cannot be revoked: see docs/system.md#access-tokens-cannot-be-revoked.
+// Access tokens cannot be revoked: see docs/access-tokens.md#access-tokens-cannot-be-revoked.
 func TestLogout_LeavesTheAccessTokenValid(t *testing.T) {
 	env := testApp.NewEnv(t)
 	usr, pwd := env.Fixtures.CreateUserAndPassword(t)

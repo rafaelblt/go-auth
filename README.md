@@ -58,10 +58,10 @@ curl -X POST http://localhost:8080/v1/auth/register \
 
 ## Documentation
 
-Start with [How go-auth works](docs/system.md), then
-[Getting started](docs/getting-started.md) and the
-[API reference](docs/api/reference.md); [docs/README.md](docs/README.md) lists
-every document. To contribute, read [CONTRIBUTING.md](CONTRIBUTING.md).
+Start with [How go-auth works](docs/system.md), which lists every endpoint and
+the topic that describes it, then [Getting started](docs/getting-started.md);
+[docs/README.md](docs/README.md) lists every document. To contribute, read
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

@@ -491,7 +491,7 @@ type testRequestBody struct {
 	Password string `json:"password"`
 }
 
-// These pin what docs/api/reference.md#request-bodies describes. Only ignoring
+// These pin what docs/api/conventions.md#request-bodies describes. Only ignoring
 // unknown fields is a rule; the rest may still be tightened, which is why that
 // section tells clients not to depend on them, and a change here updates it.
 func TestDecodeJSONBody_Tolerances(t *testing.T) {

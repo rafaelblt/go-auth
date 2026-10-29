@@ -3,7 +3,7 @@
 `internal/port`, `internal/usecase/...`
 
 The application logic, without HTTP and without SQL. What each use case does,
-seen from outside, is in [How go-auth works](../system.md#processes); this guide
+seen from outside, is in the topic document each section links; this guide
 covers how the code does it. Every section has the same parts: what the package
 is, its files, the rules its code keeps, what changes with it, and the decisions
 behind it.
@@ -62,10 +62,10 @@ optional `reason`, built with `NewError` or `NewErrorWithReason`. The HTTP layer
 maps the kind to a status, so `usecase` never refers to HTTP, and it logs the
 reason but never sends it ([Error translation](http.md#error-translation)). One
 code with several reasons is how a use case answers
-[vaguely](../system.md#deliberately-vague-answers).
+[vaguely](../api/conventions.md#deliberately-vague-answers).
 
 **When you change it:** a new reason goes in the reasons table of
-[Logging](../logging.md#outcomes); a new code in the [Error model](../api/errors.md#codes)
+[Logging](../logging.md#outcomes); a new code in the [codes](../api/conventions.md#codes)
 and the OpenAPI spec; a new kind in the catalogs of
 [Error translation](http.md#error-translation).
 
@@ -87,8 +87,8 @@ the right one: mapping the wrong user is for the use case tests to catch.
 ## Shared credential check
 
 `internal/usecase/credential` is not a use case: it is the check login and
-change password share, so that they reject alike. Implements the credential
-checks of [Login](../system.md#login).
+change password share, so that they reject alike. Implements
+[Checking credentials](../accounts.md#checking-credentials).
 
 | File | Holds |
 |---|---|
@@ -97,10 +97,9 @@ checks of [Login](../system.md#login).
 
 **Rules the code keeps**
 
-- `Parse` reads the username and the password with the registration rules
-  (`NewUsername`, `NewPlain`) and answers a value that breaks one like a wrong
-  password, never with a `422`. These checks fail fast: their time depends only
-  on the input, and the rules are public.
+- `Parse` is step 1: it reads the username and the password with
+  `NewUsername` and `NewPlain`, and turns a broken rule into one of the
+  `invalid_credentials` errors rather than a `ValidationError`.
 - `Checker.Check` finds the user, then its password, and verifies it. When
   either is missing, `rejectWithDummyVerify` verifies the password against the
   [dummy hash](#the-dummy-hash) first, and returns the rejection for that miss.
@@ -122,8 +121,8 @@ the time it takes, and an error from it can only mean the dummy hash is broken.
 Considered and rejected:
 
 - **A hash written in the code**: its cost is fixed, so any other `BCRYPT_COST`
-  reopens the gap, and another hasher would reject it with an error, a `500`
-  that reveals more than the timing did.
+  reopens the gap, and another hasher would reject it with an error, an
+  `internal_server_error` that reveals more than the timing did.
 - **Hashing it on the first miss**: that miss pays two hashes, and the use
   cases gain a dependency used only for this.
 - **Padding every response to a fixed duration**: the right duration depends on
@@ -131,7 +130,7 @@ Considered and rejected:
 
 ## Register
 
-`internal/usecase/register`. Implements [Registration](../system.md#registration).
+`internal/usecase/register`. Implements [Registration](../accounts.md#registration).
 
 | File | Holds |
 |---|---|
@@ -154,7 +153,7 @@ Considered and rejected:
 
 ## Login
 
-`internal/usecase/login`. Implements [Login](../system.md#login).
+`internal/usecase/login`. Implements [Login](../accounts.md#login).
 
 | File | Holds |
 |---|---|
@@ -204,7 +203,7 @@ outside the transaction. Considered and rejected:
 ## Change password
 
 `internal/usecase/changepassword`. Implements
-[Changing the password](../system.md#changing-the-password).
+[Changing the password](../accounts.md#changing-the-password).
 
 | File | Holds |
 |---|---|
@@ -225,7 +224,7 @@ A login running alongside is covered by [the password lock](#the-password-lock).
 
 ## Refresh
 
-`internal/usecase/refresh`. Implements [Refreshing](../system.md#refreshing).
+`internal/usecase/refresh`. Implements [Refreshing](../sessions.md#refreshing).
 
 | File | Holds |
 |---|---|
@@ -234,7 +233,7 @@ A login running alongside is covered by [the password lock](#the-password-lock).
 
 **Rules the code keeps**
 
-- `Execute` takes the steps of [Refreshing](../system.md#refreshing) in their
+- `Execute` takes the steps of [Refreshing](../sessions.md#refreshing) in their
   order: `resolveToken` (parse, hash, `FindByHash`), `getSessionOfToken`, the
   `IsRevoked` check, then `token.Use(now)`, whose `session.ErrTokenAlreadyUsed`
   goes to [reuse detection](#reuse-detection).
@@ -242,7 +241,7 @@ A login running alongside is covered by [the password lock](#the-password-lock).
   foreign key keeps a token from outliving its session, so the session cleanup
   deleted both between the two reads.
 
-**When you change it:** the steps in [Refreshing](../system.md#refreshing),
+**When you change it:** the steps in [Refreshing](../sessions.md#refreshing),
 each error's reason in [Logging](../logging.md#outcomes), and
 [logout](#logout), whose `resolveToken` and `getSessionOfToken` are copies of
 refresh's.
@@ -258,9 +257,9 @@ back, and go to reuse detection, as a replay found on read does. Considered and
 rejected:
 
 - **The `UNIQUE` on `parent_id` alone**: the second insert fails, so the loser
-  answers `500` and the session stays active. The constraint stays, so the
-  chain cannot fork.
-- **A plain `401` for the loser**: it would spare a client that refreshes from
+  answers `internal_server_error` and the session stays active. The constraint
+  stays, so the chain cannot fork.
+- **A plain `invalid_token` for the loser**: it would spare a client that refreshes from
   two tabs at once, but when the legitimate client loses and does not retry, an
   attacker who won keeps a rotating credential.
 - **Optimistic locking with a `version` column**: generic, but it needs a
@@ -272,14 +271,13 @@ rejected:
 `handleTokenReuse` revokes the session with `Session.Revoke` and
 `SessionWriter.Revoke`, then answers `ErrTokenAlreadyUsed`. `Revoke` is a
 [guarded write](persistence.md#guarded-writes) on `revoked_at IS NULL`: any
-other [revocation](../system.md#concepts) can revoke the session after step 3
+other [revocation](../sessions.md#life-of-a-session) can revoke the session after step 3
 read it, and `Revoke` then returns
 `session.ErrSessionAlreadyRevoked`, answered with `ErrSessionRevoked`, as at
 step 3. A spent token reaches here however long ago it expired, so its session
 may be dead and deleted by the session cleanup after step 2: `Revoke` then
 returns `session.ErrSessionNotFound`, answered with `ErrTokenInvalid`, as at
-step 2. Either way, a request that loses a race gets the answer it would have
-got reading a moment later.
+step 2.
 
 Considered and rejected: answering a session revoked first with
 `ErrTokenAlreadyUsed`, since the token was reused all the same. The request
@@ -289,7 +287,7 @@ session win over a spent token.
 
 ## Logout
 
-`internal/usecase/logout`. Implements [Logging out](../system.md#logging-out).
+`internal/usecase/logout`. Implements [Logging out](../sessions.md#logging-out).
 
 | File | Holds |
 |---|---|
@@ -301,9 +299,9 @@ session win over a spent token.
 - `resolveToken` and `getSessionOfToken` find the token and its session as
   [refresh](#refresh)'s do, and answer a token or a session that is missing
   with `ErrTokenInvalid`.
-- A revoked session is left as it is. Any other is revoked with
-  `Session.Revoke` and `SessionWriter.Revoke`, in a unit of work, whatever the
-  token's state. `revoke` answers a lost race as
+- Steps 2 and 3: a session read revoked is left as it is, and any other is
+  revoked with `Session.Revoke` and `SessionWriter.Revoke`, in a unit of work.
+  `revoke` answers a lost race as
   [reuse detection](#reuse-detection) does: `session.ErrSessionAlreadyRevoked`
   as a session read revoked, and `session.ErrSessionNotFound` as
   `ErrTokenInvalid`.
@@ -314,7 +312,7 @@ session win over a spent token.
   revoked, and `Output.SessionAlreadyRevoked` for a session it left as it is.
   `internal/api` logs them with refresh's reasons, for reuse and for a revoked
   session ([Outcomes](../logging.md#outcomes)). The token's state is read for
-  nothing else: an expired token ends its session like a current one.
+  nothing else.
 
 A logout and a rotation of the same session never wait on each other: the
 `UPDATE` locks the session row `FOR NO KEY UPDATE`, which does not conflict
@@ -324,7 +322,7 @@ then matches nothing. A refresh that spends the token between the logout's
 read and its write is not reported as reuse: the logout reads the token once
 and never writes it, and the session ends revoked either way.
 
-**When you change it:** the steps in [Logging out](../system.md#logging-out),
+**When you change it:** the steps in [Logging out](../sessions.md#logging-out),
 and the `success logout` line in [Logging](../logging.md#outcomes).
 
 ### One revoked state
@@ -339,7 +337,7 @@ them check both. The cause is in the log, not in the database.
 ## Verify
 
 `internal/usecase/verify`. Implements
-[Checking an access token](../system.md#checking-an-access-token).
+[Letting go-auth verify](../access-tokens.md#letting-go-auth-verify).
 
 | File | Holds |
 |---|---|
@@ -350,7 +348,7 @@ them check both. The cause is in the log, not in the database.
 
 - It reads the clock, then calls `port.AccessTokenValidator.Validate`, and maps
   `session.ErrTokenInvalid` and `session.ErrTokenExpired` to its own errors;
-  anything else is unexpected, a `500`. Which tokens are which is decided by the
+  anything else is unexpected. Which tokens are which is decided by the
   validator ([Access tokens](tokens.md#access-tokens)).
 - `ExpiresIn` is never negative, because the clock is read before the token is
   checked.
@@ -358,7 +356,7 @@ them check both. The cause is in the log, not in the database.
 
 ## Me
 
-`internal/usecase/me`. Implements [Looking up the user](../system.md#looking-up-the-user).
+`internal/usecase/me`. Implements [Looking up the user](../access-tokens.md#looking-up-the-user).
 
 | File | Holds |
 |---|---|
@@ -369,12 +367,12 @@ them check both. The cause is in the log, not in the database.
 
 - It validates the token as [verify](#verify) does, with the same mapping, then
   reads the user with `UserReader.FindByID`. Not found: `ErrUserNotFound`.
-- It reads nothing about the session: the token does not name one.
+- Its `Config` has no session reader: the token does not name a session.
 
 ## Session cleanup
 
 `internal/usecase/sessioncleanup`. Implements
-[Session cleanup](../system.md#session-cleanup).
+[Session cleanup](../sessions.md#session-cleanup).
 
 | File | Holds |
 |---|---|

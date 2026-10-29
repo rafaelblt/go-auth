@@ -90,44 +90,44 @@ drops it without a line, so those two facts are all the log shows of it.
 One line per request to a use case endpoint, between the two lifecycle lines:
 one of these, or a [defect](#defects).
 
-| Message | Level | Extra fields | Response |
+| Message | Level | Extra fields | Error code answered |
 |---|---|---|---|
-| `success register` | `INFO` | `user_id` | `201` |
-| `success login` | `INFO` | `user_id`, `session_id` | `200` |
-| `success change password` | `INFO` | `user_id` | `200` |
-| `success refresh` | `INFO` | `user_id`, `session_id` | `200` |
-| `success logout` | `INFO` | `user_id`, `session_id`, `reason` | `204` |
-| `success verify` | `INFO` | `user_id` | `200` |
-| `success me` | `INFO` | `user_id` | `200` |
-| `unsupported media type error` | `INFO` | `content_type` | `415` |
-| `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `429` |
-| `request body too large error` | `INFO` | — | `413` |
-| `invalid json body error` | `INFO` | `error` | `400` |
-| `validation error` | `INFO` | `pairs` | `422` |
-| `use case error` | `INFO` | `code`, `kind`, `reason` | `401` or `409` |
+| `success register` | `INFO` | `user_id` | — |
+| `success login` | `INFO` | `user_id`, `session_id` | — |
+| `success change password` | `INFO` | `user_id` | — |
+| `success refresh` | `INFO` | `user_id`, `session_id` | — |
+| `success logout` | `INFO` | `user_id`, `session_id`, `reason` | — |
+| `success verify` | `INFO` | `user_id` | — |
+| `success me` | `INFO` | `user_id` | — |
+| `unsupported media type error` | `INFO` | `content_type` | `unsupported_media_type` |
+| `rate limit exceeded` | `INFO` | `client_ip`, `retry_after` | `too_many_requests` |
+| `request body too large error` | `INFO` | — | `request_body_too_large` |
+| `invalid json body error` | `INFO` | `error` | `invalid_json_body` |
+| `validation error` | `INFO` | `pairs` | `validation_failed` |
+| `use case error` | `INFO` | `code`, `kind`, `reason` | the one in `code` |
 
 `content_type` is the header as sent, empty when there was none. `client_ip` is
-the [client address](system.md#which-address-counts) the request was
+the [client address](api/conventions.md#which-address-counts) the request was
 counted against, an IPv4 address or an IPv6 /64, and `retry_after` is a
 duration, formatted like `duration`. `pairs` lists the failed fields as
 `"<field> <code>"`, without the values.
 
-`reason` is the field to read. The API answers several failures with one
-deliberately generic code, and the log is where they are told apart. Login and
-change password write the `invalid_credentials` reasons alike; `path` says
-which:
+`reason` is the field to read: it tells apart the failures the API answers
+[with one code](api/conventions.md#deliberately-vague-answers). Login and
+change password write the `invalid_credentials` reasons alike
+([Checking credentials](accounts.md#checking-credentials)); `path` says which:
 
 | Code | `reason` | What failed |
 |---|---|---|
-| `invalid_credentials` | `malformed username` | The username breaks the registration rules |
-| `invalid_credentials` | `malformed password` | The password breaks the registration rules |
+| `invalid_credentials` | `malformed username` | The username breaks the [rules](accounts.md#usernames-and-passwords) |
+| `invalid_credentials` | `malformed password` | The password breaks the [rules](accounts.md#usernames-and-passwords) |
 | `invalid_credentials` | `user not found` | No account with that username |
 | `invalid_credentials` | `password not found` | The account has no password row, which registration should make impossible |
 | `invalid_credentials` | `password mismatch` | Wrong password |
 | `invalid_credentials` | `password changed` | The password was replaced after it was checked: on login, by a change that committed first; on change password, by another change |
-| `invalid_token` | `invalid token` | Refresh and logout: the token is unknown or malformed, or the [session cleanup](system.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](system.md#checking-an-access-token), other than expiry |
+| `invalid_token` | `invalid token` | Refresh and logout: the token is unknown or malformed, or the [session cleanup](sessions.md#session-cleanup) deleted its session. Verify and me: the access token fails one of the [checks](access-tokens.md#letting-go-auth-verify), other than expiry |
 | `invalid_token` | `token expired` | The token is past its expiry |
-| `invalid_token` | `token already used` | Refresh: [reuse detected](system.md#reuse-detection); the session was just revoked |
+| `invalid_token` | `token already used` | Refresh: [reuse detected](sessions.md#reuse-detection); the session was just revoked |
 | `invalid_token` | `session revoked` | Refresh: the session was already revoked |
 | `invalid_token` | `user not found` | Me: the access token is valid, but its user is no longer stored |
 
@@ -142,27 +142,25 @@ no reason, and the field is left out.
 same state, so one query finds both ([Reading the logs](#reading-the-logs)):
 
 - `token already used`: the token had already been spent and its session was
-  still active, which is [reuse](system.md#reuse-detection). The logout revoked
-  the session, as it does whatever the token's state.
-- `session revoked`: the session was already revoked
-  ([how](system.md#concepts)), and the logout changed nothing.
-
-Either way it answered `204`.
+  still active, which is [reuse](sessions.md#reuse-detection); the logout
+  revoked the session.
+- `session revoked`: the session was already
+  [revoked](sessions.md#life-of-a-session), and the logout changed nothing.
 
 ### Defects
 
 Every line here means something is wrong with the service. The `ERROR` lines
-answer `500`.
+answer `internal_server_error`.
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
 | `error kind not found in message catalog, using fallback` | `WARN` | `kind` | A `kind` is missing from `kindMessageCatalog`; the client gets the right status, with `An error occurred.` |
-| `error field not found in field catalog, using raw name` | `WARN` | `field` | A field is missing from `errorFieldCatalog`; the `422` names it by its internal name |
-| `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`; a real answer became a `500` |
+| `error field not found in field catalog, using raw name` | `WARN` | `field` | A field is missing from `errorFieldCatalog`; the `validation_failed` answer names it by its internal name |
+| `error kind not found in status catalog` | `ERROR` | `kind` | A `kind` is missing from `kindStatusCatalog`; a real answer became an `internal_server_error` |
 | `unexpected error for translation` | `ERROR` | `error` | An error that is not a use case or validation error reached the boundary: usually the database, otherwise a missing translation |
 | `rate limit check failed` | `ERROR` | `error` | The rate limiter failed; the request was not run. The in-memory limiter never fails |
 | `panic recovered` | `ERROR` | `panic` | A handler panicked: always a bug |
-| `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled; the client gets a `500` with an empty body |
+| `json marshal failed` | `ERROR` | `error`, `body_type` | A response body could not be marshalled; the client gets an empty error response ([Content type](api/conventions.md#content-type)) |
 
 The first three mean something was added without its entry in one of the
 catalogs of `internal/api/errors.go` ([Error translation](architecture/http.md#error-translation)).
@@ -189,8 +187,8 @@ readiness signal there is, and a port already in use shows up as
 ### Background tasks
 
 All carry `task`: `jwt_keyring_rotation`, which syncs the
-[signing keys](system.md#signing-keys), and `session_cleanup`,
-which deletes [dead sessions](system.md#session-cleanup) unless
+[signing keys](access-tokens.md#signing-keys), and `session_cleanup`,
+which deletes [dead sessions](sessions.md#session-cleanup) unless
 `SESSION_RETENTION` is `off`. Each instance writes `background task done` for
 each task once per interval
 ([Background tasks](architecture/startup.md#background-tasks)).
@@ -215,7 +213,7 @@ when the run stopped at its [limit](architecture/startup.md#background-tasks)
 of batches rather than at a short one, so dead sessions may be left over for
 the next run. That is expected while a backlog drains, such as the one a
 deployment that ran without the cleanup starts with; when it keeps happening,
-the deployment is [falling behind](system.md#the-session-cleanup-can-fall-behind).
+the deployment is [falling behind](sessions.md#the-session-cleanup-can-fall-behind).
 
 ## What is never logged
 
@@ -249,7 +247,7 @@ jq -c 'select(.request_id == "8f2c1e4a-7d33-4f8e-9a01-6b5c2d7e0f11")' < logs.jso
 # Every defect: the whole triage list
 jq -c 'select(.level == "ERROR")' < logs.json
 
-# Why clients are getting 401
+# Why clients are rejected with invalid_credentials or invalid_token
 jq -c 'select(.msg == "use case error") | {request_id, path, code, reason}' < logs.json
 
 # Reuse detected, by a refresh or a logout, either of which revoked a session

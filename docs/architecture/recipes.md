@@ -29,16 +29,14 @@ For a `POST` backed by a use case. The `me` endpoint (`19bb669`) followed it.
 5. **Tests**: the use case's own; `internal/api/endpoints_test.go` and
    `router_test.go`; `tests/e2e/<name>_test.go`, and the endpoint added to the
    tables of `content_type_test.go` and `request_body_size_test.go`.
-6. **The contract**: a section in [API reference](../api/reference.md) and the
-   path in [openapi.yaml](../api/openapi.yaml), which `tests/docs` checks
-   against the router; a new error code in the [Error model](../api/errors.md#codes),
-   and the endpoint in its client handling block.
-7. **The other documents**: the process in
-   [How go-auth works](../system.md#processes), and the endpoint among the
-   [deliberately vague answers](../system.md#deliberately-vague-answers) if it
-   answers several failures with one code; a section in the
-   [Use cases](usecases.md) guide; its success line and reasons in
-   [Logging](../logging.md#outcomes); its row in
+6. **The contract**: a section in the topic document it belongs to, in the
+   shape of the others there: what it does, in order; the request; the
+   response; and an errors table that says what a client does about each. Its
+   row in [Endpoints](../system.md#endpoints), and the path in
+   [openapi.yaml](../api/openapi.yaml), which `tests/docs` checks against the
+   router; a new error code in the [codes](../api/conventions.md#codes).
+7. **The other documents**: a section in the [Use cases](usecases.md) guide;
+   its success line and reasons in [Logging](../logging.md#outcomes); its row in
    [`RATE_LIMIT`](../configuration.md#rate_limit) if it is limited; and the list
    of endpoints in the [README](../../README.md).
 
@@ -49,10 +47,11 @@ For a `POST` backed by a use case. The `me` endpoint (`19bb669`) followed it.
 2. A new `ErrorKind`: its entries in the catalogs of `internal/api/errors.go`
    ([Error translation](http.md#error-translation)).
 3. A reason: its row in the reasons table of [Logging](../logging.md#outcomes),
-   and the failure in the process in [How go-auth works](../system.md#processes).
-4. A code: the [Error model](../api/errors.md#codes), the endpoint's errors in
-   the [API reference](../api/reference.md) and the OpenAPI spec. A new code is
-   compatible; a changed one is not ([Compatibility](../../CONTRIBUTING.md#compatibility)).
+   and the failure among the steps of the endpoint's section in its topic
+   document.
+4. A code: the [codes](../api/conventions.md#codes), the endpoint's errors
+   table in its topic document, and the OpenAPI spec. A new code is compatible;
+   a changed one is not ([Compatibility](../../CONTRIBUTING.md#compatibility)).
 
 ## Add a configuration variable
 

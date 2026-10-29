@@ -42,9 +42,10 @@ separate packages, each would import the other.
 
 **Rules the code keeps**
 
-- `NewUsername` lower-cases, then validates against the
-  [username rules](../system.md#usernames-and-passwords), built once from
-  constants into `usernameValidators`. A stored username is rebuilt with it.
+- `NewUsername` implements the
+  [username rules](../accounts.md#usernames-and-passwords), lower-casing before
+  it runs `usernameValidators`, built once from constants. A stored username is
+  rebuilt with it.
 - `Status` is a closed set with one value, `active`; `ParseStatus` rejects
   anything else, so an unexpected value in the database is an error rather than
   a state nobody handles.
@@ -68,7 +69,7 @@ separate packages, each would import the other.
 - `ChangeHash` replaces the hash and keeps the ID and `createdAt`: a new
   password is the same row with another hash, and the write that persists it is
   [guarded](persistence.md#guarded-writes).
-- `NewPlain` applies the [password rules](../system.md#usernames-and-passwords)
+- `NewPlain` applies the [password rules](../accounts.md#usernames-and-passwords)
   and changes nothing in the value. The validators are built once from
   constants; a fork that needs another minimum changes `PlainMinCodePoints`.
 - `NewPlainReplacing(value, current)` applies the same rules, then refuses
@@ -100,7 +101,7 @@ separate packages, each would import the other.
   being a return value rather than a field, never reaches a writer, a log line
   or a restored token.
 - **`Use` checks "already used" before "expired"**
-  ([why](../system.md#reuse-detection)). It decides in memory, on a token read
+  ([why](../sessions.md#reuse-detection)). It decides in memory, on a token read
   before the write, so the write checks again
   ([Rotation](usecases.md#rotation)).
 - **`RefreshTokenSecret`** is 32 bytes from `crypto/rand`, which `Value()`
@@ -117,7 +118,7 @@ separate packages, each would import the other.
 `internal/validation`
 
 The types for input rules, with two callers: the domain, whose failures the API
-answers with a `422`, and `internal/config`, whose failures become the
+answers with `validation_failed`, and `internal/config`, whose failures become the
 [startup error](startup.md#configuration-loading). It is not a domain package,
 and a change to it changes both reports.
 
@@ -142,7 +143,7 @@ and a change to it changes both reports.
 - `MinLength` and `MaxLength` are separate, so each produces one code; a single
   `Length(min, max)` would take two adjacent `int`s and invite swapping them.
   Every length is counted in an explicit `LengthUnit`, which reaches the API
-  response ([why](../system.md#usernames-and-passwords)).
+  response ([why](../api/conventions.md#validation-errors)).
 - `internal/config` writes its own validators where it needs one
   (`allowedLogFormat`, `allowedRateLimitLevel`, which return `not_allowed`), and
   `same_as_current` has no validator, since it compares two values.
@@ -153,7 +154,8 @@ and a change to it changes both reports.
   how a startup failure lists every misconfigured variable.
 
 **When you change it:** a new issue code is part of the API: it goes in the
-[Error model](../api/errors.md#validation-errors) and the OpenAPI spec.
+[validation errors](../api/conventions.md#validation-errors) and the OpenAPI
+spec.
 
 ## `shared`
 
