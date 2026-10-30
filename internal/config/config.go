@@ -1,38 +1,24 @@
-// Package config loads and validates the service's settings, from environment
-// variables or directly from code. Every problem it finds is reported at once,
-// so the service never starts half-configured.
+// Package config loads and checks the service's settings, from environment
+// variables or directly from code. Each setting is checked against the rules
+// of the code its value is passed to, and every problem is reported at once,
+// before anything is built, so the service never starts half-configured.
 //
 // See docs/architecture/startup.md#configuration-loading.
 package config
 
 import (
-	"errors"
-	"fmt"
 	"net/netip"
 	"reflect"
 	"slices"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
+	"github.com/rafaelblt/go-auth/internal/infra/bcrypt"
+	"github.com/rafaelblt/go-auth/internal/infra/jwt"
+	"github.com/rafaelblt/go-auth/internal/infra/jwt/ed25519"
+	"github.com/rafaelblt/go-auth/internal/infra/postgres"
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/validation"
-)
-
-// Fields tagged on the errors NewConfig returns. LoadConfig maps them back to
-// the environment variable that carried the value, so a user configuring the
-// app through the environment reads the key they actually set.
-const (
-	fieldAddress         = "address"
-	fieldDatabaseURL     = "database_url"
-	fieldAutoMigrate     = "auto_migrate"
-	fieldBcryptCost      = "bcrypt_cost"
-	fieldAccessTokenTTL  = "access_token_ttl"
-	fieldRefreshTokenTTL = "refresh_token_ttl"
-	fieldLogFormat       = "log_format"
-	fieldRateLimit       = "rate_limit"
-	fieldTrustedProxies  = "trusted_proxies"
-
-	fieldSigningKeyEncryptionKey = "signing_key_encryption_key"
-	fieldSessionRetention        = "session_retention"
+	"github.com/rafaelblt/go-auth/internal/usecase/sessioncleanup"
 )
 
 type Config struct {
@@ -78,19 +64,19 @@ const (
 	defaultSessionRetention = 30 * 24 * time.Hour
 )
 
-var (
-	requiredStringValidators = []validation.Validator[string]{
-		validation.Required[string](),
-	}
-	costValidators = []validation.Validator[int]{
-		validation.Positive[int](),
-	}
-	ttlValidators = []validation.Validator[time.Duration]{
-		validation.Positive[time.Duration](),
-	}
-)
-
 func NewConfig(params ConfigParams) (Config, error) {
+	cfg, problems := newConfig(params)
+	if len(problems) > 0 {
+		return Config{}, newConfigError(problems)
+	}
+	return cfg, nil
+}
+
+// newConfig applies the defaults and checks every setting, with the rules the
+// code its value is passed to exports rather than a copy of them.
+//
+// See docs/architecture/startup.md#configuration-loading.
+func newConfig(params ConfigParams) (Config, []problem) {
 	autoMigrate := shared.DerefOr(params.AutoMigrate, defaultAutoMigrate)
 	bcryptCost := shared.DerefOr(params.BcryptCost, defaultBcryptCost)
 	accessTokenTTL := shared.DerefOr(params.AccessTokenTTL, defaultAccessTokenTTL)
@@ -99,20 +85,21 @@ func NewConfig(params ConfigParams) (Config, error) {
 	rateLimit := shared.DerefOr(params.RateLimit, defaultRateLimit)
 	sessionRetention := shared.DerefOr(params.SessionRetention, SessionRetentionOf(defaultSessionRetention))
 
-	acc := validation.NewAccumulator()
-	acc.Add(fieldAddress, validation.Validate(params.Address, requiredStringValidators...))
-	acc.Add(fieldDatabaseURL, validation.Validate(params.DatabaseURL, requiredStringValidators...))
-	acc.Add(fieldBcryptCost, validation.Validate(bcryptCost, costValidators...))
-	acc.Add(fieldAccessTokenTTL, validation.Validate(accessTokenTTL, ttlValidators...))
-	acc.Add(fieldRefreshTokenTTL, validation.Validate(refreshTokenTTL, ttlValidators...))
-	acc.Add(fieldLogFormat, validation.Validate(logFormat, logFormatValidators...))
-	acc.Add(fieldRateLimit, validation.Validate(rateLimit, rateLimitLevelValidators...))
+	var problems []problem
+	check(&problems, envAddress.Key, params.Address, required, hostPort)
+	check(&problems, envDatabaseURL.Key, params.DatabaseURL, required, postgres.CheckConnString)
+	check(&problems, envBcryptCost.Key, bcryptCost, bcrypt.CheckCost)
+	check(&problems, envAccessTokenTTL.Key, accessTokenTTL, jwt.CheckExpiration)
+	check(&problems, envRefreshTokenTTL.Key, refreshTokenTTL, session.CheckRefreshTokenTTL)
+	check(&problems, envLogFormat.Key, logFormat, checkLogFormat)
+	check(&problems, envRateLimit.Key, rateLimit, checkRateLimitLevel)
+	check(&problems, envSigningKeyEncryptionKey.Key, params.SigningKeyEncryptionKey, ed25519.CheckEncryptionKey)
 	if retention, on := sessionRetention.Duration(); on {
-		acc.Add(fieldSessionRetention, validation.Validate(retention, sessionRetentionValidators...))
+		check(&problems, envSessionRetention.Key, retention, sessioncleanup.CheckRetention)
 	}
 
-	if err := acc.Err(); err != nil {
-		return Config{}, err
+	if len(problems) > 0 {
+		return Config{}, problems
 	}
 
 	var signingKeyEncryptionKey []byte
@@ -140,19 +127,19 @@ func NewConfig(params ConfigParams) (Config, error) {
 func LoadConfig() (Config, error) {
 	load := newEnvLoad()
 
-	address := resolveEnv(load, envAddress, fieldAddress)
-	databaseURL := resolveEnv(load, envDatabaseURL, fieldDatabaseURL)
-	autoMigrate := resolveEnv(load, envAutoMigrate, fieldAutoMigrate)
-	bcryptCost := resolveEnv(load, envBcryptCost, fieldBcryptCost)
-	accessTokenTTL := resolveEnv(load, envAccessTokenTTL, fieldAccessTokenTTL)
-	refreshTokenTTL := resolveEnv(load, envRefreshTokenTTL, fieldRefreshTokenTTL)
-	logFormat := resolveEnv(load, envLogFormat, fieldLogFormat)
-	rateLimit := resolveEnv(load, envRateLimit, fieldRateLimit)
-	trustedProxies := resolveEnv(load, envTrustedProxies, fieldTrustedProxies)
-	signingKeyEncryptionKey := resolveEnv(load, envSigningKeyEncryptionKey, fieldSigningKeyEncryptionKey)
-	sessionRetention := resolveEnv(load, envSessionRetention, fieldSessionRetention)
+	address := resolveEnv(load, envAddress)
+	databaseURL := resolveEnv(load, envDatabaseURL)
+	autoMigrate := resolveEnv(load, envAutoMigrate)
+	bcryptCost := resolveEnv(load, envBcryptCost)
+	accessTokenTTL := resolveEnv(load, envAccessTokenTTL)
+	refreshTokenTTL := resolveEnv(load, envRefreshTokenTTL)
+	logFormat := resolveEnv(load, envLogFormat)
+	rateLimit := resolveEnv(load, envRateLimit)
+	trustedProxies := resolveEnv(load, envTrustedProxies)
+	signingKeyEncryptionKey := resolveEnv(load, envSigningKeyEncryptionKey)
+	sessionRetention := resolveEnv(load, envSessionRetention)
 
-	cfg, err := NewConfig(ConfigParams{
+	cfg, problems := newConfig(ConfigParams{
 		Address:         shared.Deref(address),
 		DatabaseURL:     shared.Deref(databaseURL),
 		AutoMigrate:     autoMigrate,
@@ -167,10 +154,9 @@ func LoadConfig() (Config, error) {
 		SessionRetention:        sessionRetention,
 	})
 
-	errs := load.merge(err)
-	if len(errs) > 0 {
-		e := fmt.Errorf("invalid environment configuration: %w", errors.Join(errs...))
-		return Config{}, e
+	problems = load.merge(problems)
+	if len(problems) > 0 {
+		return Config{}, newConfigError(problems)
 	}
 
 	return cfg, nil

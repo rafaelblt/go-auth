@@ -117,10 +117,9 @@ separate packages, each would import the other.
 
 `internal/validation`
 
-The types for input rules, with two callers: the domain, whose failures the API
-answers with `validation_failed`, and `internal/config`, whose failures become the
-[startup error](startup.md#configuration-loading). It is not a domain package,
-and a change to it changes both reports.
+The types for the domain's input rules, whose failures the API answers with
+`validation_failed`. The configuration has rules of its own
+([Configuration loading](startup.md#configuration-loading)).
 
 | File | Holds |
 |---|---|
@@ -144,14 +143,11 @@ and a change to it changes both reports.
   `Length(min, max)` would take two adjacent `int`s and invite swapping them.
   Every length is counted in an explicit `LengthUnit`, which reaches the API
   response ([why](../api/conventions.md#validation-errors)).
-- `internal/config` writes its own validators where it needs one
-  (`allowedLogFormat`, `allowedRateLimitLevel`, which return `not_allowed`), and
-  `same_as_current` has no validator, since it compares two values.
+- `same_as_current` has no validator, since it compares two values.
 - The **`Accumulator`** collects the issues of several fields. `Add` returns
   nothing, so there is no `if err != nil` after each field, and `Err()` returns a
   `ValidationError` holding every `FieldError`, or `nil`. This is how
-  registration reports a bad username and a bad password in one response, and
-  how a startup failure lists every misconfigured variable.
+  registration reports a bad username and a bad password in one response.
 
 **When you change it:** a new issue code is part of the API: it goes in the
 [validation errors](../api/conventions.md#validation-errors) and the OpenAPI

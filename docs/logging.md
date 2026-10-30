@@ -17,10 +17,10 @@ soon as the configuration is known, writes every line:
 | Format | `json` (default) or `text` |
 | Level | `info`, and not configurable: nothing logs at `debug` |
 
-**A configuration failure is the exception.** It is logged before the
-configured logger exists, so it goes to **standard error** in Go's default
-format. If the service dies at startup and standard output is empty, look
-there.
+**A configuration failure is the exception.** It comes before the configured
+logger exists, and is not a log line but a report, one line per variable, on
+**standard error** ([Startup validation](configuration.md#startup-validation)).
+If the service dies at startup and standard output is empty, look there.
 
 Lines written through Go's standard `log` package, by `net/http` (such as
 `http: Accept error: …`, when the process runs out of file descriptors) or by a
@@ -169,9 +169,8 @@ catalogs of `internal/api/errors.go` ([Error translation](architecture/http.md#e
 
 | Message | Level | Extra fields | Means |
 |---|---|---|---|
-| `config load failed` | `ERROR` | `error` | Invalid configuration. **Standard error, default format.** Exit 1 |
 | `building app...` | `INFO` | — | `NewApp` started |
-| `app build failed` | `ERROR` | `error` | Wiring, migrations, the schema check or the signing keys failed. Exit 1 |
+| `app build failed` | `ERROR` | `error` | Connecting to the database, the migrations, the schema check or the signing keys failed, or the wiring has a bug. Exit 1 |
 | `rate limiting on` | `INFO` | `rate_limit`, `trusted_proxies` | The [`RATE_LIMIT`](configuration.md#rate_limit) level, and the [trusted proxies](configuration.md#trusted_proxies) |
 | `rate limiting is off; from v2 it cannot be turned off, only set to a level` | `WARN` | — | [`RATE_LIMIT`](configuration.md#rate_limit) is `off`, which is deprecated |
 | `trusted proxies ignored while rate limiting is off` | `WARN` | `trusted_proxies` | `TRUSTED_PROXIES` is set, but only rate limiting reads it |
@@ -229,12 +228,12 @@ sites, not because of a filter:
 | `SIGNING_KEY_ENCRYPTION_KEY` | Its errors give a byte offset or a size |
 | The password in `DATABASE_URL` | Configuration errors name the variable, not its value. A connection error at startup comes from pgx, which can show the host, user and database, with the password masked |
 
-Otherwise, a configured value is echoed only when it fails to parse, and only
-for a number, a duration, a boolean or a trusted proxy entry. Success lines
-carry `user_id`, and `session_id` when the request works on a session
-([Outcomes](#outcomes)), which tie an account's requests together; failures
-carry neither, since naming the account behind a rejected attempt would put its
-existence in the log.
+Otherwise, a configured value is echoed only in the configuration report, for
+a variable it rejects other than `DATABASE_URL` and
+`SIGNING_KEY_ENCRYPTION_KEY`. Success lines carry `user_id`, and `session_id`
+when the request works on a session ([Outcomes](#outcomes)), which tie an
+account's requests together; failures carry neither, since naming the account
+behind a rejected attempt would put its existence in the log.
 
 ## Reading the logs
 

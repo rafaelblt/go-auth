@@ -2,7 +2,9 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/rafaelblt/go-auth/internal/config"
 )
@@ -13,9 +15,10 @@ import (
 func Run(ctx context.Context) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		// The configured logger cannot exist yet, so this one line goes to
-		// standard error in slog's default format.
-		slog.Error("config load failed", "error", err)
+		// The configured logger cannot exist yet, and the error is a report of
+		// one line per setting, which a log line would quote onto one line: it
+		// goes to standard error as it is.
+		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
 

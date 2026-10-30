@@ -342,7 +342,7 @@ func TestTrustedProxiesEnvParser_ReturnsError(t *testing.T) {
 			value, err := trustedProxiesEnvParser(tC.value)
 
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "invalid trusted proxy")
+			assert.Contains(t, err.Error(), "is not one")
 			assert.Nil(t, value)
 		})
 	}
@@ -380,6 +380,11 @@ func TestEncryptionKeyEnvParser(t *testing.T) {
 			value:    "   ",
 			expected: nil,
 		},
+		{
+			desc:     "16 bytes, left to NewConfig to reject",
+			value:    base64.StdEncoding.EncodeToString(encryptionKeyForTest[:16]),
+			expected: encryptionKeyForTest[:16],
+		},
 	}
 
 	for _, tC := range testCases {
@@ -400,14 +405,6 @@ func TestEncryptionKeyEnvParser_ReturnsError(t *testing.T) {
 		{
 			desc:  "not base64",
 			value: "not base64!",
-		},
-		{
-			desc:  "base64 of 16 bytes",
-			value: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x2a}, 16)),
-		},
-		{
-			desc:  "base64 of 33 bytes",
-			value: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x2a}, 33)),
 		},
 		{
 			desc:  "url-safe base64 of 32 bytes",
