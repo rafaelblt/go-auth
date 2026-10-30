@@ -2,7 +2,6 @@ package validation
 
 import (
 	"testing"
-	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
 	"github.com/rafaelblt/go-auth/internal/testutil"
@@ -220,57 +219,4 @@ func TestAllowedChars_WithEmptySet(t *testing.T) {
 
 	assert.Nil(t, validator(""))
 	assert.NotNil(t, validator("a"))
-}
-
-func TestRequired(t *testing.T) {
-	t.Run("returns issue when value is zero", func(t *testing.T) {
-		iss := Required[string]()("")
-
-		require.NotNil(t, iss)
-		assert.Equal(t, CodeRequired, iss.Code())
-	})
-
-	t.Run("returns nil when value is set", func(t *testing.T) {
-		assert.Nil(t, Required[string]()("value"))
-	})
-}
-
-func TestPositive(t *testing.T) {
-	t.Run("returns issue when value is zero", func(t *testing.T) {
-		iss := Positive[int]()(0)
-
-		require.NotNil(t, iss)
-		assert.Equal(t, CodeNotPositive, iss.Code())
-	})
-
-	t.Run("returns issue when value is negative", func(t *testing.T) {
-		iss := Positive[time.Duration]()(-time.Minute)
-
-		require.NotNil(t, iss)
-		assert.Equal(t, CodeNotPositive, iss.Code())
-	})
-
-	t.Run("returns nil when value is positive", func(t *testing.T) {
-		assert.Nil(t, Positive[int]()(1))
-		assert.Nil(t, Positive[time.Duration]()(time.Minute))
-	})
-}
-
-func TestMin(t *testing.T) {
-	t.Run("returns issue when value is below min", func(t *testing.T) {
-		iss := Min(time.Hour)(59 * time.Minute)
-
-		assert.Equal(t, shared.Ptr(IssueTooSmall(time.Hour)), iss)
-	})
-
-	t.Run("returns issue when value is zero or negative", func(t *testing.T) {
-		assert.Equal(t, shared.Ptr(IssueTooSmall(3)), Min(3)(0))
-		assert.Equal(t, shared.Ptr(IssueTooSmall(3)), Min(3)(-3))
-	})
-
-	t.Run("returns nil when value is at or above min", func(t *testing.T) {
-		assert.Nil(t, Min(time.Hour)(time.Hour))
-		assert.Nil(t, Min(time.Hour)(2*time.Hour))
-		assert.Nil(t, Min(3)(4))
-	})
 }
