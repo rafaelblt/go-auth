@@ -53,6 +53,15 @@ type RefreshTokenRestoreParams struct {
 	UpdatedAt time.Time
 }
 
+// CheckRefreshTokenTTL is the rule for how long the refresh tokens login and
+// refresh issue stay valid, which REFRESH_TOKEN_TTL sets.
+func CheckRefreshTokenTTL(ttl time.Duration) error {
+	if ttl <= 0 {
+		return fmt.Errorf("must be longer than zero, not %s", shared.ShortDuration(ttl))
+	}
+	return nil
+}
+
 // NewRefreshToken returns the token together with its secret. The token keeps
 // only the hash, so the returned secret is the one chance to hand it out. The
 // params carry no hash, so a token's hash always comes from a real secret, and

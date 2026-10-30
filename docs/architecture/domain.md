@@ -84,7 +84,7 @@ separate packages, each would import the other.
 | File | Holds |
 |---|---|
 | `session.go` | `Session`, `SessionID`, `NewSession`, `RestoreSession`, `Revoke` |
-| `refresh_token.go` | `RefreshToken`, `RefreshTokenID`, `NewRefreshToken`, `RestoreRefreshToken`, `Use` |
+| `refresh_token.go` | `RefreshToken`, `RefreshTokenID`, `NewRefreshToken`, `RestoreRefreshToken`, `Use`; `CheckRefreshTokenTTL`, which login and refresh check their TTL with |
 | `refresh_token_secret.go` | `RefreshTokenSecret`, `ParseRefreshTokenSecret`, `Hash` |
 | `refresh_token_hash.go` | `RefreshTokenHash` |
 | `access_token.go` | `AccessToken` |
@@ -163,4 +163,5 @@ spec.
 
 Helpers with no domain meaning: the `EntityID` every identity wraps
 (`entity_id.go`), a `Set` (`collections.go`, the allowed username characters),
-and pointer helpers for optional fields (`utils.go`).
+pointer helpers for optional fields (`utils.go`), and `ShortDuration`, which
+writes `24h` rather than `24h0m0s` in error messages (`duration.go`).

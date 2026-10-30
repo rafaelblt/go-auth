@@ -66,6 +66,12 @@ func TestNewHasher(t *testing.T) {
 	}
 }
 
+func TestCheckCost_SaysTheRangeAndTheCost(t *testing.T) {
+	assert.EqualError(t, CheckCost(40), "must be between 4 and 31, not 40")
+	assert.NoError(t, CheckCost(bcrypt.MinCost))
+	assert.NoError(t, CheckCost(bcrypt.MaxCost))
+}
+
 func TestHash(t *testing.T) {
 	cfg := Config{Cost: bcrypt.MinCost}
 	hasher, err := NewHasher(cfg)

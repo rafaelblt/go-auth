@@ -22,12 +22,22 @@ type seedCipher struct {
 	aead cipher.AEAD // nil when no encryption key is set
 }
 
+// CheckEncryptionKey is the rule for the key that seals the seeds, which
+// SIGNING_KEY_ENCRYPTION_KEY sets: none, or an AES-256 key. Its error never
+// holds the key.
+func CheckEncryptionKey(key []byte) error {
+	if len(key) != 0 && len(key) != encryptionKeySize {
+		return fmt.Errorf("must be %d bytes, not %d", encryptionKeySize, len(key))
+	}
+	return nil
+}
+
 func newSeedCipher(encryptionKey []byte) (seedCipher, error) {
+	if err := CheckEncryptionKey(encryptionKey); err != nil {
+		return seedCipher{}, fmt.Errorf("encryption key %w", err)
+	}
 	if len(encryptionKey) == 0 {
 		return seedCipher{}, nil
-	}
-	if len(encryptionKey) != encryptionKeySize {
-		return seedCipher{}, fmt.Errorf("encryption key size %d, not %d", len(encryptionKey), encryptionKeySize)
 	}
 
 	block, err := aes.NewCipher(encryptionKey)

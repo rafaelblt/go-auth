@@ -74,7 +74,7 @@ Choose it before the first user registers, and keep it
 
 How long an access token stays valid, between 1 minute and 24 hours. The range
 is checked when the app is built, as
-`new access token service failed: expiration must be between 1m and 24h`.
+`new access token service failed: expiration must be between 1m and 24h, not 25h`.
 
 | Preset | Value |
 |---|---|

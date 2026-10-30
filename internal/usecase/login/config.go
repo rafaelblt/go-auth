@@ -2,9 +2,11 @@ package login
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/domain/password"
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/port"
 	"github.com/rafaelblt/go-auth/internal/usecase/credential"
 )
@@ -43,8 +45,8 @@ func New(cfg Config) (Login, error) {
 	if cfg.Clock == nil {
 		return Login{}, errors.New("clock cannot be nil")
 	}
-	if cfg.RefreshTokenTTL <= 0 {
-		return Login{}, errors.New("refresh ttl zero or negative")
+	if err := session.CheckRefreshTokenTTL(cfg.RefreshTokenTTL); err != nil {
+		return Login{}, fmt.Errorf("refresh token ttl %w", err)
 	}
 	uc := Login{
 		credentials:  credentials,

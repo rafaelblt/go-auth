@@ -2,9 +2,11 @@ package sessioncleanup
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/shared"
 )
 
 type Config struct {
@@ -26,8 +28,8 @@ func New(cfg Config) (*SessionCleanup, error) {
 	if cfg.Clock == nil {
 		return nil, errors.New("clock nil")
 	}
-	if cfg.Retention <= 0 {
-		return nil, errors.New("retention zero or negative")
+	if err := CheckRetention(cfg.Retention); err != nil {
+		return nil, fmt.Errorf("retention %w", err)
 	}
 	if cfg.BatchSize <= 0 {
 		return nil, errors.New("batch size zero or negative")
@@ -43,4 +45,19 @@ func New(cfg Config) (*SessionCleanup, error) {
 		maxBatches: cfg.MaxBatches,
 	}
 	return &uc, nil
+}
+
+// minRetention is far longer than any refresh runs, so the cleanup never
+// deletes a session under a rotation. Reuse detection needs no margin.
+//
+// See docs/configuration.md#session_retention.
+const minRetention = time.Hour
+
+// CheckRetention is the rule for how long a dead session is kept, which
+// SESSION_RETENTION sets when it is not off.
+func CheckRetention(retention time.Duration) error {
+	if retention < minRetention {
+		return fmt.Errorf("must be at least %s, not %s", shared.ShortDuration(minRetention), shared.ShortDuration(retention))
+	}
+	return nil
 }
