@@ -61,6 +61,12 @@ func TestNewSeedCipher_ReturnsError_WhenTheKeyIsNot32Bytes(t *testing.T) {
 	}
 }
 
+func TestCheckEncryptionKey(t *testing.T) {
+	assert.NoError(t, CheckEncryptionKey(nil))
+	assert.NoError(t, CheckEncryptionKey(make([]byte, 32)))
+	assert.EqualError(t, CheckEncryptionKey(make([]byte, 16)), "must be 32 bytes, not 16")
+}
+
 func TestSeedCipher_KeepsTheSeedAsItIs_WhenNoKeyIsSet(t *testing.T) {
 	seeds := seedCipherForTest(t, nil)
 	seed := seedForTest(t)

@@ -13,18 +13,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func NewPool(ctx context.Context, conn string) (*pgxpool.Pool, error) {
-	if strings.TrimSpace(conn) == "" {
-		return nil, errors.New("connection string empty")
-	}
-
-	cfg, err := pgxpool.ParseConfig(conn)
+	cfg, err := parseConnString(conn)
 	if err != nil {
-		return nil, fmt.Errorf("parse config: %w", err)
+		return nil, fmt.Errorf("connection string %w", err)
 	}
 
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
@@ -48,4 +45,40 @@ func NewPool(ctx context.Context, conn string) (*pgxpool.Pool, error) {
 	}
 
 	return pool, nil
+}
+
+// CheckConnString is the rule for the connection string, which DATABASE_URL
+// sets: what NewPool parses before it connects. Its error never holds the
+// connection string.
+func CheckConnString(conn string) error {
+	_, err := parseConnString(conn)
+	return err
+}
+
+// parseConnString refuses a blank string, which pgx would not: it would fall
+// back to the libpq environment variables.
+//
+// See docs/configuration.md#database_url.
+func parseConnString(conn string) (*pgxpool.Config, error) {
+	if strings.TrimSpace(conn) == "" {
+		return nil, errors.New("must not be blank")
+	}
+
+	cfg, err := pgxpool.ParseConfig(conn)
+	if err != nil {
+		return nil, fmt.Errorf("must be a PostgreSQL connection string: %s", parseFailure(err))
+	}
+	return cfg, nil
+}
+
+// parseFailure is what pgx says is wrong, without the connection string it
+// quotes, which masks the password but not the host, user or database.
+func parseFailure(err error) string {
+	var parseErr *pgconn.ParseConfigError
+	if !errors.As(err, &parseErr) {
+		return "pgx could not parse it"
+	}
+	unquoted := *parseErr
+	unquoted.ConnString = ""
+	return strings.TrimPrefix(unquoted.Error(), "cannot parse ``: ")
 }

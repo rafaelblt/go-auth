@@ -4,63 +4,30 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestEnvLoad_Merge_ReturnsParseErrors_WhenConfigIsValid(t *testing.T) {
+func TestEnvLoad_Merge_ReturnsParseProblems_WhenConfigIsValid(t *testing.T) {
 	load := newEnvLoad()
-	parseErr := errors.New("parse failed")
-	load.errs = append(load.errs, parseErr)
+	parseFailure := problem{key: envBcryptCost.Key, err: errors.New("parse failed")}
+	load.problems = append(load.problems, parseFailure)
 
-	errs := load.merge(nil)
+	problems := load.merge(nil)
 
-	require.Len(t, errs, 1)
-	assert.ErrorIs(t, errs[0], parseErr)
+	assert.Equal(t, []problem{parseFailure}, problems)
 }
 
-func TestEnvLoad_Merge_TranslatesFieldsToEnvKeys(t *testing.T) {
+func TestEnvLoad_Merge_SkipsVariablesThatFailedToParse(t *testing.T) {
 	load := newEnvLoad()
-	verr := validation.NewValidationError(
-		validation.NewFieldError(fieldBcryptCost, validation.IssueNotPositive()),
-	)
+	parseFailure := problem{key: envBcryptCost.Key, err: errors.New("must be a whole number")}
+	load.problems = append(load.problems, parseFailure)
+	load.failed[envBcryptCost.Key] = struct{}{}
+	addressMissing := problem{key: envAddress.Key, err: errors.New("must be set")}
 
-	errs := load.merge(verr)
+	problems := load.merge([]problem{
+		{key: envBcryptCost.Key, err: errors.New("must be between 4 and 31")},
+		addressMissing,
+	})
 
-	require.Len(t, errs, 1)
-	assert.Contains(t, errs[0].Error(), envBcryptCost.Key)
-	assert.Contains(t, errs[0].Error(), validation.CodeNotPositive)
-}
-
-func TestEnvLoad_Merge_SkipsFieldsThatFailedToParse(t *testing.T) {
-	load := newEnvLoad()
-	parseErr := errors.New("invalid int value")
-	load.errs = append(load.errs, parseErr)
-	load.failed[fieldBcryptCost] = struct{}{}
-
-	verr := validation.NewValidationError(
-		validation.NewFieldError(fieldBcryptCost, validation.IssueRequired()),
-		validation.NewFieldError(fieldAddress, validation.IssueRequired()),
-	)
-
-	errs := load.merge(verr)
-
-	require.Len(t, errs, 2)
-	assert.ErrorIs(t, errs[0], parseErr)
-	assert.Contains(t, errs[1].Error(), envAddress.Key)
-}
-
-func TestEnvLoad_Merge_PassesThroughUnexpectedErrorShape(t *testing.T) {
-	load := newEnvLoad()
-	other := errors.New("something else")
-
-	errs := load.merge(other)
-
-	require.Len(t, errs, 1)
-	assert.ErrorIs(t, errs[0], other)
-}
-
-func TestEnvKeyOf_FallsBackToTheFieldName(t *testing.T) {
-	assert.Equal(t, "unmapped", envKeyOf("unmapped"))
+	assert.Equal(t, []problem{parseFailure, addressMissing}, problems)
 }

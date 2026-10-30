@@ -55,15 +55,17 @@ For a `POST` backed by a use case. The `me` endpoint (`19bb669`) followed it.
 
 ## Add a configuration variable
 
-1. `internal/config`: an `env[T]` in `env_vars.go`, a parser in `parsers.go` if
-   none fits, the setting in `config.go` (a `field…` name, the `Config` field
-   and accessor, `ConfigParams`, the default, `NewConfig` and `LoadConfig`), the
-   name's entry in `envKeyByField` (`env_load.go`), and its validators
+1. The component that uses the value: its rule, as an exported `Check…` its
+   `New` calls ([Setting rules](conventions.md#setting-rules)).
+2. `internal/config`: an `env[T]` in `env_vars.go`, a parser in `parsers.go` if
+   none fits, and the setting in `config.go`: the `Config` field and accessor,
+   `ConfigParams`, the default, `LoadConfig`, and in `newConfig` the rules it is
+   checked with, the component's `Check…` and any of `config`'s own
    ([Configuration loading](startup.md#configuration-loading)).
-2. `internal/bootstrap`: pass the value to the component that needs it.
-3. [`.env.example`](../../.env.example), which `tests/docs` checks against
+3. `internal/bootstrap`: pass the value to the component that needs it.
+4. [`.env.example`](../../.env.example), which `tests/docs` checks against
    `env_vars.go`.
-4. [Configuration](../configuration.md): a row in the table and a section.
+5. [Configuration](../configuration.md): a row in the table and a section.
    Optional, with a default that keeps today's behaviour, or it breaks
    [Compatibility](../../CONTRIBUTING.md#compatibility).
 

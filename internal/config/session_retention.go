@@ -1,10 +1,6 @@
 package config
 
-import (
-	"time"
-
-	"github.com/rafaelblt/go-auth/internal/validation"
-)
+import "time"
 
 // SessionRetention is how long a session stays stored once it is dead, before
 // the session cleanup deletes it, or off, which keeps every session. Off is not
@@ -28,14 +24,4 @@ func (r SessionRetention) Duration() (time.Duration, bool) {
 		return 0, false
 	}
 	return r.duration, true
-}
-
-// minSessionRetention is far longer than any refresh runs, so the cleanup
-// never deletes a session under a rotation. Reuse detection needs no margin.
-//
-// See docs/configuration.md#session_retention.
-const minSessionRetention = time.Hour
-
-var sessionRetentionValidators = []validation.Validator[time.Duration]{
-	validation.Min(minSessionRetention),
 }

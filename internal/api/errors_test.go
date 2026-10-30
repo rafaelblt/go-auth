@@ -194,7 +194,7 @@ func TestTranslateValidationError(t *testing.T) {
 func TestTranslateValidationError_WarnsOnFieldNotInCatalog(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
 	verr := validation.NewValidationError(
-		validation.NewFieldError("Email", validation.IssueRequired()),
+		validation.NewFieldError("Email", validation.IssueInvalidChars()),
 	)
 
 	resp := translateValidationError(ctx, verr)
@@ -213,7 +213,7 @@ func TestTranslateValidationError_WarnsOnFieldNotInCatalog(t *testing.T) {
 func TestTranslateValidationError_DoesNotWarnForAKnownField(t *testing.T) {
 	ctx, buf := contextWithLoggedLines(t)
 	verr := validation.NewValidationError(
-		validation.NewFieldError(register.FieldUsername, validation.IssueRequired()),
+		validation.NewFieldError(register.FieldUsername, validation.IssueInvalidChars()),
 	)
 
 	translateValidationError(ctx, verr)

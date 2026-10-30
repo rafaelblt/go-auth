@@ -179,6 +179,13 @@ func TestNewAccessTokenService_ReturnsError_WhenConfigIsInvalid(t *testing.T) {
 	}
 }
 
+func TestCheckExpiration_SaysTheRangeAndTheExpiration(t *testing.T) {
+	assert.EqualError(t, CheckExpiration(25*time.Hour), "must be between 1m and 24h, not 25h")
+	assert.EqualError(t, CheckExpiration(30*time.Second), "must be between 1m and 24h, not 30s")
+	assert.NoError(t, CheckExpiration(minExpiration))
+	assert.NoError(t, CheckExpiration(MaxExpiration))
+}
+
 func TestAccessTokenService_Issue_ReturnsSignedTokenAndItsTimes(t *testing.T) {
 	helper := NewServiceTestHelper(t)
 

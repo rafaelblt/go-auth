@@ -72,6 +72,27 @@ The `Config` lists exactly what the component needs, and a wiring mistake fails
 at startup with an error that names it, not with a `nil` dereference on the
 first request that takes that path.
 
+## Setting rules
+
+A value that comes from a setting, such as a cost or a lifetime, is checked by
+an exported `Check<Value>` in the package of the code that relies on it. It
+returns an error saying what the value must be, and the value it refused,
+unless that is a secret:
+
+```go
+func CheckCost(cost int) error {
+    if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
+        return fmt.Errorf("must be between %d and %d, not %d", bcrypt.MinCost, bcrypt.MaxCost, cost)
+    }
+    return nil
+}
+```
+
+The component's `New` calls it and prefixes what it checked (`cost must be
+between 4 and 31, not 40`), and `config.NewConfig` calls it and prefixes the
+variable, so a bad setting is reported with all the others, before anything is
+built, by the one rule ([Configuration loading](startup.md#configuration-loading)).
+
 ## Constructors
 
 | Constructor | Builds | Returns |

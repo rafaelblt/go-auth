@@ -1,6 +1,6 @@
 // Package bcrypt hashes and verifies passwords, implementing
 // port.PasswordHasher and port.PasswordChecker. The work factor comes from the
-// configuration, and this package is what enforces bcrypt's own 4 to 31 range.
+// configuration, and CheckCost is bcrypt's own 4 to 31 range.
 //
 // See docs/configuration.md#bcrypt_cost.
 package bcrypt
@@ -22,14 +22,20 @@ type Config struct {
 }
 
 func NewHasher(cfg Config) (*Hasher, error) {
-	if cfg.Cost < bcrypt.MinCost || cfg.Cost > bcrypt.MaxCost {
-		e := fmt.Errorf("bcrypt cost %d is outside allowed inclusive range %d-%d",
-			cfg.Cost, bcrypt.MinCost, bcrypt.MaxCost)
-		return nil, e
+	if err := CheckCost(cfg.Cost); err != nil {
+		return nil, fmt.Errorf("cost %w", err)
 	}
 
 	hasher := Hasher{cost: cfg.Cost}
 	return &hasher, nil
+}
+
+// CheckCost is the rule for the work factor, which BCRYPT_COST sets.
+func CheckCost(cost int) error {
+	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
+		return fmt.Errorf("must be between %d and %d, not %d", bcrypt.MinCost, bcrypt.MaxCost, cost)
+	}
+	return nil
 }
 
 func (h Hasher) Hash(plain password.Plain) (password.Hashed, error) {

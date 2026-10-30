@@ -2,7 +2,7 @@
 
 All configuration comes from environment variables, read once at startup by
 `internal/config`: there is no config file, and a new value takes effect on
-restart. Every missing or malformed variable is reported in one error, and the
+restart. Every missing or invalid variable is reported in one error, and the
 service exits rather than start half-configured
 ([Startup validation](#startup-validation)).
 
@@ -53,8 +53,7 @@ accepted, in any case.
 ### `BCRYPT_COST`
 
 The bcrypt work factor: higher is slower, and harder to crack offline. It must
-be between 4 and 31, bcrypt's own limits, which are checked when the app is
-built rather than with the other variables.
+be between 4 and 31, bcrypt's own limits.
 
 | Preset | Value |
 |---|---|
@@ -72,9 +71,7 @@ Choose it before the first user registers, and keep it
 
 ### `ACCESS_TOKEN_TTL`
 
-How long an access token stays valid, between 1 minute and 24 hours. The range
-is checked when the app is built, as
-`new access token service failed: expiration must be between 1m and 24h`.
+How long an access token stays valid, between 1 minute and 24 hours.
 
 | Preset | Value |
 |---|---|
@@ -160,7 +157,8 @@ with a zone, and an IPv4-mapped prefix shorter than `/96` stop the service from
 starting:
 
 ```
-invalid environment configuration: 'TRUSTED_PROXIES': invalid trusted proxy "proxy.local": ParseAddr("proxy.local"): unexpected character (at "proxy.local")
+invalid configuration, 1 setting to fix:
+  TRUSTED_PROXIES  must list IP addresses and CIDR prefixes, separated by commas: "proxy.local" is not one (ParseAddr("proxy.local"): unexpected character (at "proxy.local"))
 ```
 
 ### `SIGNING_KEY_ENCRYPTION_KEY`
@@ -187,7 +185,8 @@ A value that is not standard base64, or not 32 bytes once decoded, stops the
 service from starting, and the error names the variable, never the value:
 
 ```
-invalid environment configuration: 'SIGNING_KEY_ENCRYPTION_KEY': decoded to 16 bytes, not 32
+invalid configuration, 1 setting to fix:
+  SIGNING_KEY_ENCRYPTION_KEY  must be 32 bytes, not 16
 ```
 
 An empty value means not set. **Leaving it unset is deprecated.** It is the v1
@@ -215,7 +214,8 @@ else is a [duration](#durations-and-presets) of at least `1h`:
   as "keep nothing" and as "delete nothing".
 
 ```
-invalid environment configuration: 'SESSION_RETENTION': too_small(min=1h0m0s)
+invalid configuration, 1 setting to fix:
+  SESSION_RETENTION  must be at least 1h, not 0s
 ```
 
 **The cleanup is on by default.** Before it existed, nothing was deleted: the
@@ -252,21 +252,29 @@ case-sensitive**: `ACCESS_TOKEN_TTL=short` is parsed as a duration, and fails.
 
 ## Startup validation
 
-Every variable is parsed, then checked: required values must not be empty,
-numbers and durations must be positive, `SESSION_RETENTION` at least `1h`
-unless it is `off`, and `LOG_FORMAT` and `RATE_LIMIT` must be one of their
-values. Every failure is reported in one error, each named by its variable, and
-a variable that failed to parse is reported once:
+Before anything is built, every variable is parsed, then checked against every
+rule its value has to meet: the required ones must be set, `ADDRESS` must be a
+`host:port` the server could listen on, `DATABASE_URL` must be a connection
+string pgx can parse, and every other value must be within what its section
+above allows. All the problems are reported together, one line per variable,
+saying what its value must be:
 
 ```
-invalid environment configuration: 'ACCESS_TOKEN_TTL': invalid duration value "7d": time: unknown unit "d" in duration "7d"
-'DATABASE_URL': required
+invalid configuration, 3 settings to fix:
+  ACCESS_TOKEN_TTL  must be a duration such as 30m, 1h30m or 168h, not "7d"
+  BCRYPT_COST       must be between 4 and 31, not 40
+  DATABASE_URL      must be set
 ```
 
-It is logged to standard error, and the process exits with status 1. Three
-checks come later, when the app is built, one failure at a time: the ranges of
-`BCRYPT_COST` and `ACCESS_TOKEN_TTL`, and a `DATABASE_URL` made only of spaces.
-They are logged as `app build failed` ([Logging](logging.md#startup-and-shutdown)).
+The report goes to standard error, as it is, and the process exits with status
+1. It never shows the value of `DATABASE_URL` or `SIGNING_KEY_ENCRYPTION_KEY`.
+
+A configuration that passes can still fail to start, for what only trying
+reveals: the database cannot be reached or refuses the credentials, the
+migrations fail, the schema version does not match, or the stored signing keys
+cannot be opened. These come one at a time, as `app build failed`, and a server
+that cannot listen on `ADDRESS`, because the port is taken or the host does not
+resolve, as `app run failed` ([Logging](logging.md#startup-and-shutdown)).
 
 ## Values that are not configurable
 

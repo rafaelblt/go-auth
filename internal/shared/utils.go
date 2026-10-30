@@ -1,5 +1,5 @@
 // Package shared holds generic helpers used across packages: the EntityID
-// every identity wraps, a Set, and pointer helpers.
+// every identity wraps, a Set, pointer helpers, and ShortDuration.
 //
 // See docs/architecture/domain.md#shared.
 package shared

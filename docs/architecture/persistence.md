@@ -20,8 +20,11 @@ stored, for how long, and the migration policy, seen from outside:
 
 ## Connection pool
 
-`NewPool` rejects an empty or blank connection string itself
-([why](../configuration.md#database_url)). It sets the session timezone to UTC
+`NewPool` parses the connection string with `CheckConnString`'s rule: a blank
+one is rejected, though pgx would accept it
+([why](../configuration.md#database_url)), and so is anything pgx cannot parse.
+Its errors leave out the string pgx quotes, which holds the host, the user and
+the database, and the masked password. It sets the session timezone to UTC
 and decodes `timestamptz` in UTC, so with `SystemClock` also in UTC, every time
 is UTC whatever the server's locale. It pings the database, so a bad connection
 fails at startup. Everything else, pool sizing included, is pgx's default.

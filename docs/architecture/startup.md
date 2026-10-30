@@ -43,7 +43,9 @@ sets it as `slog`'s default, and hands both to `NewApp`, which:
 - Every `New` rejects a `nil` dependency or an invalid value
   ([Config struct](conventions.md#config-struct-with-a-validating-constructor)),
   so a wiring mistake stops the service here rather than on the first request
-  that needs it.
+  that needs it. A setting reaches it already checked with the same rule
+  ([Configuration loading](#configuration-loading)), so a value refused here
+  is a wiring bug, not a configuration problem.
 - A failure after the pool exists closes the pool before returning, through a
   deferred cleanup guarded by the named error; on success, `App.Close` owns it.
 - The logger is the one dependency that may be `nil`: `NewApp` then builds it
@@ -87,29 +89,47 @@ task: [Recipes](recipes.md#add-a-background-task).
 
 ## Configuration loading
 
-`internal/config` reads the environment once, at startup, and reports every
-problem it finds in one error.
+`internal/config` reads the environment once, at startup, checks every setting
+with the rules of the code it is passed to, and reports every problem it finds
+in one error, before `NewApp` builds anything.
 
 | File | Holds |
 |---|---|
-| `config.go` | `Config` and its accessors, `ConfigParams`, `NewConfig`, `LoadConfig`, the defaults |
+| `config.go` | `Config` and its accessors, `ConfigParams`, `NewConfig`, `LoadConfig`, the defaults, and the rules each setting is checked with |
 | `env_vars.go` | one `env[T]` per variable: its key, its parser, its presets |
-| `env_var.go`, `env_load.go` | looking a variable up, applying presets, collecting parse errors |
+| `env_var.go`, `env_load.go` | looking a variable up, applying presets, collecting parse failures |
 | `parsers.go` | the parsers |
-| `log_format.go`, `rate_limit_level.go`, `session_retention.go` | the types with a closed set of values or a minimum, and their validators |
+| `rules.go` | the rules `config` owns: `required`, `hostPort`, `oneOf` |
+| `problems.go` | `check`, and the error that reports the problems |
+| `log_format.go`, `rate_limit_level.go`, `session_retention.go` | the types with a closed set of values, or `off` |
 
-It works in two stages, whose errors are merged:
+It works in two stages, whose problems are reported together:
 
 1. **Environment** (`LoadConfig`): each variable is looked up, matched against
-   its presets and parsed. A variable that is not set is not an error here; one
-   that fails to parse is.
+   its presets and parsed. A variable that is not set is not a problem here;
+   one that fails to parse is.
 2. **Values** (`NewConfig`): an optional setting that was not given takes its
-   default, and the result is validated with the
-   [`validation`](domain.md#validation) types, one `Accumulator` for all of them.
+   default, and each setting is checked with its rules, in order, up to the
+   first one it breaks.
 
-Each error is named by the variable that carried the value, and a variable that
-failed to parse is reported once, by the first stage. What the operator sees:
-[Startup validation](../configuration.md#startup-validation).
+**Rules the code keeps**
+
+- A rule that the code a value is passed to relies on is that code's exported
+  `Check…`, which its `New` calls too
+  ([Setting rules](conventions.md#setting-rules)): `config` calls it, and never
+  restates it. Its own rules are about the variable itself: `required`, the
+  closed sets (`oneOf`), and `hostPort`, which is what `net.Listen` parses
+  before it resolves anything.
+- Each problem is named by the variable of its setting, whether the settings
+  came from the environment or from code, and a setting has at most one: the
+  first rule it breaks, or, for a variable that failed to parse, that failure.
+- The error lists the problems sorted by variable, one per line.
+  `bootstrap.Run` writes it to standard error as it is, since a log line would
+  quote its line breaks. What the operator sees:
+  [Startup validation](../configuration.md#startup-validation).
+- No message holds the value of `DATABASE_URL` or `SIGNING_KEY_ENCRYPTION_KEY`:
+  `postgres.CheckConnString` leaves out the string pgx quotes, and the key's
+  errors give a size.
 
 **Configuring from code.** Tests, and programs that build the app themselves,
 skip the environment and call `NewConfig`:
@@ -126,8 +146,14 @@ cfg, err := config.NewConfig(config.ConfigParams{
 Optional settings are pointers, `nil` meaning "use the default": for a number or
 a duration, zero is an invalid setting, and must be reported rather than
 replaced by the default. `TrustedProxies` takes parsed `netip.Prefix` values,
-and `SigningKeyEncryptionKey` the raw 32 bytes, `nil` meaning none for both; a
-key of another length fails when the app is built. `SessionRetention` takes
-`config.SessionRetentionOff()` or `config.SessionRetentionOf(d)`.
+and `SigningKeyEncryptionKey` the raw 32 bytes, `nil` meaning none for both.
+`SessionRetention` takes `config.SessionRetentionOff()` or
+`config.SessionRetentionOf(d)`.
 
 **When you change it:** [Recipes](recipes.md#add-a-configuration-variable).
+
+**Why:** a `Config` exists only once `NewConfig` accepts it, so checking the
+settings in `bootstrap` would take a second report after the first is fixed,
+or hand `NewApp` a `Config` it may refuse; restating the rules in `config`
+would let the two copies drift apart. `config` imports the components' packages
+for their rules instead.

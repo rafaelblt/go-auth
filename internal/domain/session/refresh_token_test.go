@@ -82,6 +82,12 @@ func TestNewRefreshToken(t *testing.T) {
 	}
 }
 
+func TestCheckRefreshTokenTTL(t *testing.T) {
+	assert.NoError(t, session.CheckRefreshTokenTTL(time.Nanosecond))
+	assert.EqualError(t, session.CheckRefreshTokenTTL(0), "must be longer than zero, not 0s")
+	assert.EqualError(t, session.CheckRefreshTokenTTL(-time.Hour), "must be longer than zero, not -1h")
+}
+
 func TestNewRefreshToken_ClonesParentID(t *testing.T) {
 	provided := shared.Ptr(session.NewRefreshTokenID())
 	token, _, err := session.NewRefreshToken(session.RefreshTokenCreationParams{

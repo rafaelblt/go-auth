@@ -46,6 +46,8 @@ internal/api      internal/infra        adapters (inbound / outbound)
 and the domain packages, never `api`, `infra`, `bootstrap` or `config`. The
 adapters implement the `port` interfaces and are injected at startup, so every
 use case is tested against in-memory fakes, with no database and no HTTP.
+`config` imports the packages whose rules it checks the settings with, and only
+`bootstrap` imports it.
 
 ## Packages
 
@@ -54,7 +56,7 @@ Each package's doc comment names its document too.
 | Package | Role | Document |
 |---|---|---|
 | `cmd`, `internal/bootstrap` | Entry point, and the composition root: wires everything, runs the server and the background tasks | [Startup](startup.md) |
-| `internal/config` | Loads and validates the environment variables | [Startup](startup.md#configuration-loading) |
+| `internal/config` | Loads the environment variables, and checks every setting with the rules of the code it is passed to | [Startup](startup.md#configuration-loading) |
 | `internal/api` | HTTP: routing, JSON bodies, middleware, rate limiting, error translation | [HTTP](http.md) |
 | `internal/usecase/...` | One package per use case, `credential`, the check login and change password share, and the DTOs | [Use cases](usecases.md) |
 | `internal/port` | The interfaces the use cases depend on | [Use cases](usecases.md#ports) |

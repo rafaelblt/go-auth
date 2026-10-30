@@ -14,16 +14,17 @@ refresh token has no code here: it is a domain type
 
 | File | Holds |
 |---|---|
-| `access_token_service.go` | `AccessTokenService`: `Issue`, `Validate`, `MaxExpiration` |
+| `access_token_service.go` | `AccessTokenService`: `Issue`, `Validate`; `CheckExpiration`, `MaxExpiration` |
 | `errors.go` | `ErrTokenInvalid`, `ErrTokenExpired`, which the signer returns |
 
 **Rules the code keeps**
 
 - `Issue` sets two claims, `sub` and `exp`
   ([Token format](../access-tokens.md#token-format)), with a lifetime
-  `NewAccessTokenService` accepts only between 1 minute and `MaxExpiration`
-  ([`ACCESS_TOKEN_TTL`](../configuration.md#access_token_ttl)). `MaxExpiration`
-  also sets how long a retired key stays published ([Signing keys](#signing-keys)).
+  `CheckExpiration` accepts only between 1 minute and `MaxExpiration`
+  ([`ACCESS_TOKEN_TTL`](../configuration.md#access_token_ttl)), and
+  `NewAccessTokenService` calls. `MaxExpiration` also sets how long a retired
+  key stays published ([Signing keys](#signing-keys)).
 - Validation implements the
   [checks of verify](../access-tokens.md#letting-go-auth-verify).
   `ed25519.Signer.Parse` makes all of them but one: it pins `EdDSA`, picks the
@@ -49,7 +50,7 @@ serves them, and the JWT signer. Implements [Signing keys](../access-tokens.md#s
 | `keyring.go` | `Keyring`: `NewKeyring`, `Sync`, `SigningKey`, `PublicKeyByID`, `PublicKeys` |
 | `key.go` | the `key` type, seed generation, the RFC 7638 thumbprint that is a key's ID |
 | `signer.go` | `Signer`: `Sign`, `Parse` |
-| `seed_cipher.go` | sealing and opening seeds ([Sealed seeds](#sealed-seeds)) |
+| `seed_cipher.go` | sealing and opening seeds ([Sealed seeds](#sealed-seeds)); `CheckEncryptionKey`, none or 32 bytes |
 | `errors.go`, `consts.go` | the parse errors; the algorithm, curve and key type names |
 
 **Rules the code keeps**

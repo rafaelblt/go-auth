@@ -2,8 +2,10 @@ package refresh
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/port"
 )
 
@@ -33,8 +35,8 @@ func New(cfg Config) (*Refresh, error) {
 	if cfg.Clock == nil {
 		return nil, errors.New("clock nil")
 	}
-	if cfg.RefreshTokenTTL <= 0 {
-		return nil, errors.New("refresh ttl zero or negative")
+	if err := session.CheckRefreshTokenTTL(cfg.RefreshTokenTTL); err != nil {
+		return nil, fmt.Errorf("refresh token ttl %w", err)
 	}
 	uc := Refresh{
 		sessions:     cfg.SessionReader,

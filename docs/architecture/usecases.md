@@ -377,10 +377,12 @@ them check both. The cause is in the log, not in the database.
 | File | Holds |
 |---|---|
 | `session_cleanup.go` | `Execute`, `Output` |
-| `config.go` | `Config`, `New`: the retention, the batch size and the maximum number of batches |
+| `config.go` | `Config`, `New`: the retention, the batch size and the maximum number of batches; `CheckRetention` |
 
 **Rules the code keeps**
 
+- `New` refuses a retention under an hour, with `CheckRetention`
+  ([why](../configuration.md#session_retention)).
 - Each run reads the clock once, and calls `SessionCleaner.DeleteDeadBefore`
   with `now` minus the retention, a batch at a time, until a batch comes back
   short or it has made `MaxBatches` calls. Which sessions count as dead is the

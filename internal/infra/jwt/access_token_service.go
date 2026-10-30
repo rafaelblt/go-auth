@@ -14,14 +14,25 @@ import (
 	"github.com/rafaelblt/go-auth/internal/domain/session"
 	"github.com/rafaelblt/go-auth/internal/domain/user"
 	"github.com/rafaelblt/go-auth/internal/port"
+	"github.com/rafaelblt/go-auth/internal/shared"
 )
 
 const (
 	minExpiration = 1 * time.Minute
-	// MaxExpiration is the longest access token lifetime NewAccessTokenService
+	// MaxExpiration is the longest access token lifetime CheckExpiration
 	// accepts.
 	MaxExpiration = 24 * time.Hour
 )
+
+// CheckExpiration is the rule for the access token lifetime, which
+// ACCESS_TOKEN_TTL sets.
+func CheckExpiration(d time.Duration) error {
+	if d < minExpiration || d > MaxExpiration {
+		return fmt.Errorf("must be between %s and %s, not %s",
+			shared.ShortDuration(minExpiration), shared.ShortDuration(MaxExpiration), shared.ShortDuration(d))
+	}
+	return nil
+}
 
 type AccessTokenService struct {
 	signer     Signer
@@ -47,8 +58,8 @@ func NewAccessTokenService(cfg AccessTokenServiceConfig) (*AccessTokenService, e
 	if cfg.Clock == nil {
 		return nil, errors.New("clock nil")
 	}
-	if cfg.Expiration < minExpiration || cfg.Expiration > MaxExpiration {
-		return nil, errors.New("expiration must be between 1m and 24h")
+	if err := CheckExpiration(cfg.Expiration); err != nil {
+		return nil, fmt.Errorf("expiration %w", err)
 	}
 
 	service := AccessTokenService{

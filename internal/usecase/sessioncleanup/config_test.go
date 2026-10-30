@@ -2,6 +2,7 @@ package sessioncleanup_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rafaelblt/go-auth/internal/usecase/sessioncleanup"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,16 @@ func TestNewSessionCleanup(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			desc:      "retention under an hour",
+			mutate:    func(cfg *sessioncleanup.Config) { cfg.Retention = 59 * time.Minute },
+			expectErr: true,
+		},
+		{
+			desc:      "retention of exactly an hour",
+			mutate:    func(cfg *sessioncleanup.Config) { cfg.Retention = time.Hour },
+			expectErr: false,
+		},
+		{
 			desc:      "batch size zero",
 			mutate:    func(cfg *sessioncleanup.Config) { cfg.BatchSize = 0 },
 			expectErr: true,
@@ -65,4 +76,8 @@ func TestNewSessionCleanup(t *testing.T) {
 			assert.NotZero(t, uc)
 		})
 	}
+}
+
+func TestCheckRetention_SaysTheMinimumAndTheRetention(t *testing.T) {
+	assert.EqualError(t, sessioncleanup.CheckRetention(30*time.Minute), "must be at least 1h, not 30m")
 }

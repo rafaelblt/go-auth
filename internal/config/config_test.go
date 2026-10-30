@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/rafaelblt/go-auth/internal/shared"
-	"github.com/rafaelblt/go-auth/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfig_ReturnsConfig(t *testing.T) {
-	address := "add ress vlaue"
-	databaseURL := "db url vlaue"
+	address := "localhost:8080"
+	databaseURL := "postgres://user:password@localhost:5432/db"
 	autoMigrate := true
 	bcryptCost := 8
 	accessTokenTTL := 22 * time.Minute
@@ -53,8 +52,8 @@ func TestLoadConfig_ReturnsConfig(t *testing.T) {
 }
 
 func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
-	t.Setenv(envAddress.Key, "add ress vlaue")
-	t.Setenv(envDatabaseURL.Key, "db url vlaue")
+	t.Setenv(envAddress.Key, "localhost:8080")
+	t.Setenv(envDatabaseURL.Key, "postgres://user:password@localhost:5432/db")
 
 	cfg, err := LoadConfig()
 
@@ -71,8 +70,8 @@ func TestLoadConfig_ReturnsDefaults_WhenOptionalEnvsAreMissing(t *testing.T) {
 
 func setRequiredEnvs(t *testing.T) {
 	t.Helper()
-	t.Setenv(envAddress.Key, "add ress vlaue")
-	t.Setenv(envDatabaseURL.Key, "db url vlaue")
+	t.Setenv(envAddress.Key, "localhost:8080")
+	t.Setenv(envDatabaseURL.Key, "postgres://user:password@localhost:5432/db")
 }
 
 func TestLoadConfig_ReturnsError(t *testing.T) {
@@ -171,6 +170,41 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 				t.Setenv(envRefreshTokenTTL.Key, "-1h")
 			},
 		},
+		{
+			desc: "address without a port",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envAddress.Key, "8080")
+			},
+		},
+		{
+			desc: "database url blank",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envDatabaseURL.Key, "   ")
+			},
+		},
+		{
+			desc: "database url not a connection string",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envDatabaseURL.Key, "db.internal")
+			},
+		},
+		{
+			desc: "bcrypt cost above bcrypt's maximum",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envBcryptCost.Key, "32")
+			},
+		},
+		{
+			desc: "access token ttl over a day",
+			setup: func(t *testing.T) {
+				setRequiredEnvs(t)
+				t.Setenv(envAccessTokenTTL.Key, "25h")
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -187,8 +221,8 @@ func TestLoadConfig_ReturnsError(t *testing.T) {
 
 func TestNewConfig_ReturnsConfig(t *testing.T) {
 	params := ConfigParams{
-		Address:         "add ress vlaue",
-		DatabaseURL:     "db url vlaue",
+		Address:         "localhost:8080",
+		DatabaseURL:     "postgres://user:password@localhost:5432/db",
 		AutoMigrate:     shared.Ptr(true),
 		BcryptCost:      shared.Ptr(8),
 		AccessTokenTTL:  shared.Ptr(22 * time.Minute),
@@ -218,8 +252,8 @@ func TestNewConfig_ReturnsConfig(t *testing.T) {
 
 func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 	params := ConfigParams{
-		Address:     "add ress vlaue",
-		DatabaseURL: "db url vlaue",
+		Address:     "localhost:8080",
+		DatabaseURL: "postgres://user:password@localhost:5432/db",
 	}
 
 	cfg, err := NewConfig(params)
@@ -237,8 +271,8 @@ func TestNewConfig_ReturnsDefaults_WhenOptionalParamsAreMissing(t *testing.T) {
 
 func TestNewConfig_TreatsAnEmptySigningKeyEncryptionKeyAsNotSet(t *testing.T) {
 	params := ConfigParams{
-		Address:                 "add ress vlaue",
-		DatabaseURL:             "db url vlaue",
+		Address:                 "localhost:8080",
+		DatabaseURL:             "postgres://user:password@localhost:5432/db",
 		SigningKeyEncryptionKey: []byte{},
 	}
 
@@ -251,8 +285,8 @@ func TestNewConfig_TreatsAnEmptySigningKeyEncryptionKeyAsNotSet(t *testing.T) {
 func TestNewConfig_ReturnsError(t *testing.T) {
 	valid := func() ConfigParams {
 		return ConfigParams{
-			Address:         "add ress vlaue",
-			DatabaseURL:     "db url vlaue",
+			Address:         "localhost:8080",
+			DatabaseURL:     "postgres://user:password@localhost:5432/db",
 			BcryptCost:      shared.Ptr(8),
 			AccessTokenTTL:  shared.Ptr(22 * time.Minute),
 			RefreshTokenTTL: shared.Ptr(2 * 24 * time.Hour),
@@ -311,6 +345,34 @@ func TestNewConfig_ReturnsError(t *testing.T) {
 			desc:   "rate limit unknown",
 			mutate: func(p *ConfigParams) { p.RateLimit = shared.Ptr(RateLimitLevel("extreme")) },
 		},
+		{
+			desc:   "address without a port",
+			mutate: func(p *ConfigParams) { p.Address = "localhost" },
+		},
+		{
+			desc:   "address with a port out of range",
+			mutate: func(p *ConfigParams) { p.Address = "localhost:99999" },
+		},
+		{
+			desc:   "database url blank",
+			mutate: func(p *ConfigParams) { p.DatabaseURL = " " },
+		},
+		{
+			desc:   "database url with a bad port",
+			mutate: func(p *ConfigParams) { p.DatabaseURL = "postgres://localhost:abc/db" },
+		},
+		{
+			desc:   "bcrypt cost below bcrypt's minimum",
+			mutate: func(p *ConfigParams) { p.BcryptCost = shared.Ptr(3) },
+		},
+		{
+			desc:   "access token ttl under a minute",
+			mutate: func(p *ConfigParams) { p.AccessTokenTTL = shared.Ptr(30 * time.Second) },
+		},
+		{
+			desc:   "signing key encryption key of 16 bytes",
+			mutate: func(p *ConfigParams) { p.SigningKeyEncryptionKey = encryptionKeyForTest[:16] },
+		},
 	}
 
 	for _, tC := range testCases {
@@ -333,8 +395,8 @@ func TestConfig_IsZero(t *testing.T) {
 func TestConfig_TrustedProxies_IsACopy(t *testing.T) {
 	trusted := netip.MustParsePrefix("10.0.0.0/8")
 	params := ConfigParams{
-		Address:        "add ress vlaue",
-		DatabaseURL:    "db url vlaue",
+		Address:        "localhost:8080",
+		DatabaseURL:    "postgres://user:password@localhost:5432/db",
 		TrustedProxies: []netip.Prefix{trusted},
 	}
 	cfg, err := NewConfig(params)
@@ -348,8 +410,8 @@ func TestConfig_TrustedProxies_IsACopy(t *testing.T) {
 
 func TestConfig_SigningKeyEncryptionKey_IsACopy(t *testing.T) {
 	params := ConfigParams{
-		Address:                 "add ress vlaue",
-		DatabaseURL:             "db url vlaue",
+		Address:                 "localhost:8080",
+		DatabaseURL:             "postgres://user:password@localhost:5432/db",
 		SigningKeyEncryptionKey: bytes.Clone(encryptionKeyForTest),
 	}
 	cfg, err := NewConfig(params)
@@ -361,22 +423,16 @@ func TestConfig_SigningKeyEncryptionKey_IsACopy(t *testing.T) {
 	assert.Equal(t, encryptionKeyForTest, cfg.SigningKeyEncryptionKey())
 }
 
-func TestNewConfig_ReturnsErrorsTaggedWithTheirField(t *testing.T) {
+func TestNewConfig_NamesEachProblemByItsVariable(t *testing.T) {
 	params := ConfigParams{BcryptCost: shared.Ptr(0)}
 
 	_, err := NewConfig(params)
 
-	var verr validation.ValidationError
-	require.ErrorAs(t, err, &verr)
-
-	codes := make(map[string]string)
-	for _, fieldErr := range verr.Errors() {
-		codes[fieldErr.Field()] = fieldErr.Issue().Code()
-	}
-
-	assert.Equal(t, validation.CodeRequired, codes[fieldAddress])
-	assert.Equal(t, validation.CodeRequired, codes[fieldDatabaseURL])
-	assert.Equal(t, validation.CodeNotPositive, codes[fieldBcryptCost])
+	assert.Equal(t, map[string]string{
+		envAddress.Key:     "must be set",
+		envDatabaseURL.Key: "must be set",
+		envBcryptCost.Key:  "must be between 4 and 31, not 0",
+	}, problemsOf(t, err))
 }
 
 func TestLoadConfig_ReportsTheEnvironmentVariableKey(t *testing.T) {
@@ -386,10 +442,10 @@ func TestLoadConfig_ReportsTheEnvironmentVariableKey(t *testing.T) {
 
 	_, err := LoadConfig()
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), envBcryptCost.Key)
-	assert.Contains(t, err.Error(), envAccessTokenTTL.Key)
-	assert.Contains(t, err.Error(), validation.CodeNotPositive)
+	assert.Equal(t, map[string]string{
+		envBcryptCost.Key:     "must be between 4 and 31, not 0",
+		envAccessTokenTTL.Key: "must be between 1m and 24h, not -5m",
+	}, problemsOf(t, err))
 }
 
 func TestLoadConfig_ReportsTheEncryptionKeyVariable_WithoutItsValue(t *testing.T) {
@@ -421,7 +477,9 @@ func TestLoadConfig_ReportsTheEncryptionKeyVariable_WithoutItsValue(t *testing.T
 	}
 }
 
-func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
+func TestLoadConfig_ReportsParseAndValueProblemsTogether(t *testing.T) {
+	t.Setenv(envAddress.Key, "")
+	t.Setenv(envDatabaseURL.Key, "")
 	t.Setenv(envBcryptCost.Key, "twelve")
 	t.Setenv(envAccessTokenTTL.Key, "-5m")
 	t.Setenv(envLogFormat.Key, "xml")
@@ -430,16 +488,47 @@ func TestLoadConfig_GroupsParseAndValidationErrors(t *testing.T) {
 	_, err := LoadConfig()
 
 	require.Error(t, err)
-	msg := err.Error()
-	assert.Contains(t, msg, envAddress.Key)
-	assert.Contains(t, msg, envDatabaseURL.Key)
-	assert.Contains(t, msg, envBcryptCost.Key)
-	assert.Contains(t, msg, envAccessTokenTTL.Key)
-	assert.Contains(t, msg, envLogFormat.Key)
-	assert.Contains(t, msg, envRateLimit.Key)
-	assert.Contains(t, msg, validation.CodeRequired)
-	assert.Contains(t, msg, validation.CodeNotPositive)
-	assert.Contains(t, msg, validation.CodeNotAllowed)
+	assert.Equal(t, `invalid configuration, 6 settings to fix:
+  ACCESS_TOKEN_TTL  must be between 1m and 24h, not -5m
+  ADDRESS           must be set
+  BCRYPT_COST       must be a whole number, not "twelve"
+  DATABASE_URL      must be set
+  LOG_FORMAT        must be json or text, not "xml"
+  RATE_LIMIT        must be off, relaxed, normal or strict, not "extreme"`, err.Error())
+}
+
+// The checks that NewApp used to make one at a time, after connecting to the
+// database, are made with the others.
+func TestLoadConfig_ReportsWhatTheComponentsWouldRefuse_WithTheOtherSettings(t *testing.T) {
+	t.Setenv(envAddress.Key, "8080")
+	t.Setenv(envDatabaseURL.Key, "   ")
+	t.Setenv(envBcryptCost.Key, "40")
+	t.Setenv(envAccessTokenTTL.Key, "25h")
+	t.Setenv(envLogFormat.Key, "xml")
+
+	_, err := LoadConfig()
+
+	require.Error(t, err)
+	assert.Equal(t, `invalid configuration, 5 settings to fix:
+  ACCESS_TOKEN_TTL  must be between 1m and 24h, not 25h
+  ADDRESS           must be host:port, such as localhost:8080 (address 8080: missing port in address)
+  BCRYPT_COST       must be between 4 and 31, not 40
+  DATABASE_URL      must not be blank
+  LOG_FORMAT        must be json or text, not "xml"`, err.Error())
+}
+
+func TestLoadConfig_ReportsTheDatabaseURLVariable_WithoutItsValue(t *testing.T) {
+	setRequiredEnvs(t)
+	t.Setenv(envDatabaseURL.Key, "postgres://alice:s3cret@db.internal:abc/app")
+
+	_, err := LoadConfig()
+
+	require.Error(t, err)
+	assert.Equal(t, map[string]string{
+		envDatabaseURL.Key: `must be a PostgreSQL connection string: failed to parse as URL (invalid port ":abc" after host)`,
+	}, problemsOf(t, err))
+	assert.NotContains(t, err.Error(), "s3cret")
+	assert.NotContains(t, err.Error(), "db.internal")
 }
 
 func TestLoadConfig_SessionRetention(t *testing.T) {
@@ -491,19 +580,34 @@ func TestLoadConfig_ReportsTheSessionRetentionMinimum(t *testing.T) {
 
 	_, err := LoadConfig()
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "'SESSION_RETENTION': too_small(min=1h0m0s)")
+	assert.Equal(t, map[string]string{
+		envSessionRetention.Key: "must be at least 1h, not 30m",
+	}, problemsOf(t, err))
 }
 
 func TestNewConfig_RejectsASessionRetentionUnderAnHour(t *testing.T) {
 	for _, retention := range []SessionRetention{{}, SessionRetentionOf(0), SessionRetentionOf(59 * time.Minute)} {
 		cfg, err := NewConfig(ConfigParams{
-			Address:          "add ress vlaue",
-			DatabaseURL:      "db url vlaue",
+			Address:          "localhost:8080",
+			DatabaseURL:      "postgres://user:password@localhost:5432/db",
 			SessionRetention: &retention,
 		})
 
 		assert.Error(t, err)
 		assert.True(t, cfg.IsZero())
 	}
+}
+
+// problemsOf maps each variable err names to what it says about it.
+func problemsOf(t *testing.T, err error) map[string]string {
+	t.Helper()
+
+	var cfgErr *configError
+	require.ErrorAs(t, err, &cfgErr)
+
+	problems := make(map[string]string)
+	for _, p := range cfgErr.problems {
+		problems[p.key] = p.err.Error()
+	}
+	return problems
 }

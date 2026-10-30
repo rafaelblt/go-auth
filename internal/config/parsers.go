@@ -17,7 +17,7 @@ func stringEnvParser(val string) (string, error) {
 func intEnvParser(val string) (int, error) {
 	n, err := strconv.Atoi(val)
 	if err != nil {
-		return 0, fmt.Errorf("invalid int value %q: %w", val, err)
+		return 0, fmt.Errorf("must be a whole number, not %q", val)
 	}
 	return n, nil
 }
@@ -25,7 +25,7 @@ func intEnvParser(val string) (int, error) {
 func durationEnvParser(val string) (time.Duration, error) {
 	d, err := time.ParseDuration(val)
 	if err != nil {
-		return 0, fmt.Errorf("invalid duration value %q: %w", val, err)
+		return 0, fmt.Errorf("must be a duration such as 30m, 1h30m or 168h, not %q", val)
 	}
 	return d, nil
 }
@@ -37,12 +37,12 @@ func boolEnvParser(val string) (bool, error) {
 	case "false":
 		return false, nil
 	default:
-		return false, fmt.Errorf("invalid bool value %q", val)
+		return false, fmt.Errorf("must be true or false, not %q", val)
 	}
 }
 
 // logFormatEnvParser only converts. Whether the format is one the app knows
-// is decided by NewConfig, which can also report the accepted values.
+// is decided by NewConfig, which also reports the accepted values.
 func logFormatEnvParser(val string) (LogFormat, error) {
 	return LogFormat(strings.ToLower(val)), nil
 }
@@ -67,7 +67,7 @@ func trustedProxiesEnvParser(val string) ([]netip.Prefix, error) {
 		entry = strings.TrimSpace(entry)
 		prefix, err := parseTrustedProxy(entry)
 		if err != nil {
-			return nil, fmt.Errorf("invalid trusted proxy %q: %w", entry, err)
+			return nil, fmt.Errorf("must list IP addresses and CIDR prefixes, separated by commas: %q is not one (%w)", entry, err)
 		}
 		prefixes = append(prefixes, prefix)
 	}
@@ -82,14 +82,15 @@ func sessionRetentionEnvParser(val string) (SessionRetention, error) {
 		return SessionRetentionOff(), nil
 	}
 
-	d, err := durationEnvParser(val)
+	d, err := time.ParseDuration(val)
 	if err != nil {
-		return SessionRetention{}, err
+		return SessionRetention{}, fmt.Errorf("must be off or a duration such as 720h, not %q", val)
 	}
 	return SessionRetentionOf(d), nil
 }
 
 // encryptionKeyEnvParser never puts the value in its errors: it is a secret.
+// Whether the key has the right size is decided by NewConfig.
 func encryptionKeyEnvParser(val string) ([]byte, error) {
 	val = strings.TrimSpace(val)
 	if val == "" {
@@ -98,10 +99,7 @@ func encryptionKeyEnvParser(val string) ([]byte, error) {
 
 	key, err := base64.StdEncoding.DecodeString(val)
 	if err != nil {
-		return nil, fmt.Errorf("invalid base64 value: %w", err)
-	}
-	if len(key) != 32 {
-		return nil, fmt.Errorf("decoded to %d bytes, not 32", len(key))
+		return nil, fmt.Errorf("must be standard base64 (%w)", err)
 	}
 	return key, nil
 }
